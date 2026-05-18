@@ -1,0 +1,2743 @@
+Option Explicit
+
+
+'==================================================
+' 選択したファイルのVBAコードから詳細設計書を生成する
+' 出力先: 設計書生成マクロの "詳細設計書" シート
+'==================================================
+
+Public Sub GenerateVbaDetailDesignDocumentFromFile()
+
+    Dim filePath As Variant
+    Dim targetWb As Workbook
+    Dim outputWb As Workbook
+    Dim vbProj As Object
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim ws As Worksheet
+    Dim row As Long
+
+    Call BackupPreviousDesignSheet(ThisWorkbook) 'メイン処理の最初に追加
+
+    filePath = Application.GetOpenFilename( _
+        FileFilter:="Excel Macro Files (*.xlsm;*.xlsb;*.xlam),*.xlsm;*.xlsb;*.xlam", _
+        title:="仕様書を作成するマクロファイルを選択してください")
+
+    If filePath = False Then Exit Sub
+
+    Application.ScreenUpdating = False
+
+    Set outputWb = ThisWorkbook
+
+    Set targetWb = Workbooks.Open( _
+        Filename:=CStr(filePath), _
+        ReadOnly:=True)
+
+    Set vbProj = targetWb.VBProject
+    Set ws = PrepareDesignSheet(outputWb)
+
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+
+        If codeMod.CountOfLines > 0 Then
+            row = OutputComponentInfo(ws, row, vbComp, codeMod)
+        End If
+
+    Next vbComp
+
+    targetWb.Close SaveChanges:=False
+
+    ws.Columns.AutoFit
+    Application.ScreenUpdating = True
+
+    MsgBox "選択したマクロファイルの詳細設計書を生成しました。", vbInformation
+    
+    Call OutputVariableList(vbProj, ThisWorkbook)
+    Call OutputCallRelationList(vbProj, ThisWorkbook)
+    Call OutputSheetIoList(vbProj, ThisWorkbook)
+    Call OutputUserFormControlList(vbProj, ThisWorkbook)
+    Call OutputProcessFlowList(vbProj, ThisWorkbook)
+    Call OutputSummarySheet(ThisWorkbook)
+    Call FormatDesignWorkbook(ThisWorkbook)
+    'Call ApplyStableProcessIds(ThisWorkbook)
+    'Call OutputProcedureCodeList(vbProj, ThisWorkbook)
+    Call OutputProcedureCodeList(vbProj, ThisWorkbook)
+    Call AddCodeLinksToDesignSheet(ThisWorkbook)
+    
+    'メイン処理の最後に入れる
+    Call OutputCommentQualityList(vbProj, ThisWorkbook)
+    Call OutputUnusedProcedureCandidates(vbProj, ThisWorkbook)
+    Call OutputConstEnumTypeList(vbProj, ThisWorkbook)
+    Call OutputNamingRuleCheck(vbProj, ThisWorkbook)
+    Call OutputDiffReport(ThisWorkbook)
+    Call ExportDesignWorkbookToCustomHtml(ThisWorkbook)
+End Sub
+
+'==================================================
+' 出力シート作成
+'==================================================
+
+Private Function PrepareDesignSheet(ByVal wb As Workbook) As Worksheet
+
+    Dim ws As Worksheet
+
+    On Error Resume Next
+    Set ws = wb.Worksheets("詳細設計書")
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        Set ws = wb.Worksheets.Add
+        ws.Name = "詳細設計書"
+    Else
+        ws.Cells.Clear
+    End If
+
+    With ws
+        .Range("A1").Value = "処理ID"
+        .Range("B1").Value = "モジュール種別"
+        .Range("C1").Value = "モジュール名"
+        .Range("D1").Value = "プロシージャ種別"
+        .Range("E1").Value = "プロシージャ名"
+        .Range("F1").Value = "開始行"
+        .Range("G1").Value = "終了行"
+        .Range("H1").Value = "引数"
+        .Range("I1").Value = "戻り値"
+        .Range("J1").Value = "概要"
+        .Range("K1").Value = "入力"
+        .Range("L1").Value = "出力"
+        .Range("M1").Value = "使用テーブル"
+        .Range("N1").Value = "更新対象"
+        .Range("O1").Value = "画面項目"
+        .Range("P1").Value = "エラー処理"
+        .Range("Q1").Value = "処理内容"
+        .Range("R1").Value = "呼び出し関数候補"
+
+        .Rows(1).Font.Bold = True
+        .Rows(1).Interior.Color = RGB(220, 230, 241)
+    End With
+
+    Set PrepareDesignSheet = ws
+
+End Function
+
+'==================================================
+' モジュール単位で情報出力
+'==================================================
+
+Private Function OutputComponentInfo( _
+    ByVal ws As Worksheet, _
+    ByVal startRow As Long, _
+    ByVal vbComp As VBIDE.VBComponent, _
+    ByVal codeMod As VBIDE.CodeModule) As Long
+
+    Dim lineNo As Long
+    Dim procName As String
+    Dim procKind As VBIDE.vbext_ProcKind
+    Dim procStart As Long
+    Dim procLines As Long
+    Dim procEnd As Long
+    Dim signature As String
+    Dim row As Long
+
+    Dim specSummary As String
+    Dim specInput As String
+    Dim specOutput As String
+    Dim specTables As String
+    Dim specUpdateTargets As String
+    Dim specScreenItems As String
+    Dim specErrorHandling As String
+
+    row = startRow
+    lineNo = 1
+
+    Do While lineNo <= codeMod.CountOfLines
+
+        procName = GetProcedureName(codeMod, lineNo, procKind)
+
+        If procName <> "" Then
+
+            procStart = codeMod.ProcStartLine(procName, procKind)
+            procLines = codeMod.ProcCountLines(procName, procKind)
+            procEnd = procStart + procLines - 1
+
+            signature = GetProcedureSignature(codeMod, procStart, procEnd)
+
+            specSummary = GetSpecCommentValue(codeMod, procStart, "概要")
+            specInput = GetSpecCommentValue(codeMod, procStart, "入力")
+            specOutput = GetSpecCommentValue(codeMod, procStart, "出力")
+            specTables = GetSpecCommentValue(codeMod, procStart, "使用テーブル")
+            specUpdateTargets = GetSpecCommentValue(codeMod, procStart, "更新対象")
+            specScreenItems = GetSpecCommentValue(codeMod, procStart, "画面項目")
+            specErrorHandling = GetSpecCommentValue(codeMod, procStart, "エラー処理")
+            
+            ws.Cells(row, 1).Value = MakeStableProcessId(vbComp.Name, procName)
+            ws.Cells(row, 2).Value = GetComponentTypeName(vbComp.Type)
+            ws.Cells(row, 3).Value = vbComp.Name
+            ws.Cells(row, 4).Value = GetProcedureKindName(signature)
+            ws.Cells(row, 5).Value = procName
+            ws.Cells(row, 6).Value = procStart
+            ws.Cells(row, 7).Value = procEnd
+            ws.Cells(row, 8).Value = ExtractArguments(signature)
+            ws.Cells(row, 9).Value = ExtractReturnType(signature)
+            
+            ws.Cells(row, 10).Value = PreferSpecValue(specSummary, ExtractSummaryComment(codeMod, procStart))
+            ws.Cells(row, 11).Value = PreferSpecValue(specInput, ExtractInputs(codeMod, procStart, procEnd, signature))
+            ws.Cells(row, 12).Value = PreferSpecValue(specOutput, ExtractOutputs(codeMod, procStart, procEnd, signature))
+            ws.Cells(row, 13).Value = PreferSpecValue(specTables, ExtractTables(codeMod, procStart, procEnd))
+            ws.Cells(row, 14).Value = PreferSpecValue(specUpdateTargets, ExtractUpdateTargets(codeMod, procStart, procEnd))
+            ws.Cells(row, 15).Value = PreferSpecValue(specScreenItems, ExtractScreenItems(codeMod, procStart, procEnd))
+            ws.Cells(row, 16).Value = PreferSpecValue(specErrorHandling, ExtractErrorHandling(codeMod, procStart, procEnd))
+            
+            ws.Cells(row, 17).Value = ExtractProcessSummary(codeMod, procStart, procEnd)
+            ws.Cells(row, 18).Value = ExtractCallCandidates(codeMod, procStart, procEnd)
+
+            row = row + 1
+            lineNo = procEnd + 1
+
+        Else
+            lineNo = lineNo + 1
+        End If
+
+    Loop
+
+    OutputComponentInfo = row
+
+End Function
+
+'==================================================
+' プロシージャ名取得
+'==================================================
+
+Private Function GetProcedureName( _
+    ByVal codeMod As VBIDE.CodeModule, _
+    ByVal lineNo As Long, _
+    ByRef procKind As VBIDE.vbext_ProcKind) As String
+
+    On Error Resume Next
+
+    procKind = vbext_pk_Proc
+    GetProcedureName = codeMod.ProcOfLine(lineNo, procKind)
+
+    On Error GoTo 0
+
+End Function
+
+'==================================================
+' 宣言行取得
+'==================================================
+
+Private Function GetProcedureSignature( _
+    ByVal codeMod As VBIDE.CodeModule, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    Dim i As Long
+    Dim lineText As String
+    Dim sig As String
+
+    For i = procStart To procEnd
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If IsProcedureDeclaration(lineText) Then
+            sig = lineText
+
+            Do While Right(sig, 1) = "_"
+                i = i + 1
+                sig = Left(sig, Len(sig) - 1) & " " & Trim(codeMod.lines(i, 1))
+            Loop
+
+            GetProcedureSignature = sig
+            Exit Function
+        End If
+
+    Next i
+
+End Function
+
+Private Function IsProcedureDeclaration(ByVal lineText As String) As Boolean
+
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsProcedureDeclaration = _
+        t Like "sub *" Or _
+        t Like "function *" Or _
+        t Like "property get *" Or _
+        t Like "property let *" Or _
+        t Like "property set *" Or _
+        t Like "public sub *" Or _
+        t Like "public function *" Or _
+        t Like "private sub *" Or _
+        t Like "private function *" Or _
+        t Like "friend sub *" Or _
+        t Like "friend function *" Or _
+        t Like "public property *" Or _
+        t Like "private property *"
+
+End Function
+
+'==================================================
+' 種別変換
+'==================================================
+
+Private Function GetComponentTypeName(ByVal compType As VBIDE.vbext_ComponentType) As String
+
+    Select Case compType
+        Case vbext_ct_StdModule
+            GetComponentTypeName = "標準モジュール"
+        Case vbext_ct_ClassModule
+            GetComponentTypeName = "クラスモジュール"
+        Case vbext_ct_MSForm
+            GetComponentTypeName = "ユーザーフォーム"
+        Case vbext_ct_Document
+            GetComponentTypeName = "シート/ブックモジュール"
+        Case Else
+            GetComponentTypeName = "その他"
+    End Select
+
+End Function
+
+Private Function GetProcedureKindName(ByVal signature As String) As String
+
+    Dim t As String
+    t = LCase$(signature)
+
+    If InStr(t, "function ") > 0 Then
+        GetProcedureKindName = "Function"
+    ElseIf InStr(t, "sub ") > 0 Then
+        GetProcedureKindName = "Sub"
+    ElseIf InStr(t, "property get ") > 0 Then
+        GetProcedureKindName = "Property Get"
+    ElseIf InStr(t, "property let ") > 0 Then
+        GetProcedureKindName = "Property Let"
+    ElseIf InStr(t, "property set ") > 0 Then
+        GetProcedureKindName = "Property Set"
+    Else
+        GetProcedureKindName = "不明"
+    End If
+
+End Function
+
+'==================================================
+' 引数抽出
+'==================================================
+
+Private Function ExtractArguments(ByVal signature As String) As String
+
+    Dim p1 As Long
+    Dim p2 As Long
+
+    p1 = InStr(signature, "(")
+    p2 = InStrRev(signature, ")")
+
+    If p1 > 0 And p2 > p1 Then
+        ExtractArguments = Mid$(signature, p1 + 1, p2 - p1 - 1)
+    Else
+        ExtractArguments = ""
+    End If
+
+End Function
+
+'==================================================
+' 戻り値抽出
+'==================================================
+
+Private Function ExtractReturnType(ByVal signature As String) As String
+
+    Dim p As Long
+    Dim t As String
+
+    t = Trim(signature)
+    p = InStrRev(LCase$(t), " as ")
+
+    If InStr(LCase$(t), "function ") > 0 And p > 0 Then
+        ExtractReturnType = Mid$(t, p + 4)
+    Else
+        ExtractReturnType = ""
+    End If
+
+End Function
+
+'==================================================
+' 直前コメントを概要として取得
+'==================================================
+
+Private Function ExtractSummaryComment( _
+    ByVal codeMod As VBIDE.CodeModule, _
+    ByVal procStart As Long) As String
+
+    Dim i As Long
+    Dim lineText As String
+    Dim result As String
+
+    For i = procStart - 1 To 1 Step -1
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If lineText = "" Then
+            Exit For
+        End If
+
+        If Left$(lineText, 1) = "'" Then
+            result = Mid$(lineText, 2) & vbLf & result
+        Else
+            Exit For
+        End If
+
+    Next i
+
+    ExtractSummaryComment = Trim(result)
+
+End Function
+
+'==================================================
+' 処理内容の簡易要約
+'==================================================
+
+Private Function ExtractProcessSummary( _
+    ByVal codeMod As VBIDE.CodeModule, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    Dim i As Long
+    Dim lineText As String
+    Dim result As String
+
+    For i = procStart To procEnd
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If lineText <> "" Then
+
+            If Left$(lineText, 1) <> "'" Then
+
+                Select Case True
+                    Case LCase$(lineText) Like "if * then*"
+                        result = result & "条件分岐: " & lineText & vbLf
+
+                    Case LCase$(lineText) Like "for *"
+                        result = result & "繰り返し処理: " & lineText & vbLf
+
+                    Case LCase$(lineText) Like "do *"
+                        result = result & "繰り返し処理: " & lineText & vbLf
+
+                    Case LCase$(lineText) Like "select case *"
+                        result = result & "条件分岐: " & lineText & vbLf
+
+                    Case InStr(LCase$(lineText), "open ") > 0
+                        result = result & "ファイル操作: " & lineText & vbLf
+
+                    Case InStr(LCase$(lineText), "sql") > 0
+                        result = result & "SQL関連処理: " & lineText & vbLf
+                End Select
+
+            End If
+
+        End If
+
+    Next i
+
+    ExtractProcessSummary = Trim(result)
+
+End Function
+
+'==================================================
+' 呼び出し関数候補の簡易抽出
+'==================================================
+
+Private Function ExtractCallCandidates( _
+    ByVal codeMod As VBIDE.CodeModule, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    Dim i As Long
+    Dim lineText As String
+    Dim result As String
+
+    For i = procStart To procEnd
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If lineText <> "" Then
+            If Left$(lineText, 1) <> "'" Then
+
+                If LCase$(Left$(lineText, 5)) = "call " Then
+                    result = result & Mid$(lineText, 6) & vbLf
+                ElseIf InStr(lineText, "(") > 0 And InStr(lineText, "=") = 0 Then
+                    If Not IsProcedureDeclaration(lineText) Then
+                        result = result & lineText & vbLf
+                    End If
+                End If
+
+            End If
+        End If
+
+    Next i
+
+    ExtractCallCandidates = Trim(result)
+
+End Function
+
+Private Function ExtractInputs( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long, _
+    ByVal signature As String) As String
+
+    Dim result As String
+    Dim args As String
+
+    args = ExtractArguments(signature)
+
+    If args <> "" Then
+        result = "引数: " & args & vbLf
+    End If
+
+    result = result & ExtractLinesByKeywords(codeMod, procStart, procEnd, _
+        Array("inputbox", "getopenfilename", "cells(", "range(", ".value", "worksheets(", "sheets("))
+
+    ExtractInputs = Trim(result)
+
+End Function
+
+Private Function ExtractOutputs( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long, _
+    ByVal signature As String) As String
+
+    Dim result As String
+
+    If ExtractReturnType(signature) <> "" Then
+        result = "戻り値: " & ExtractReturnType(signature) & vbLf
+    End If
+
+    result = result & ExtractLinesByKeywords(codeMod, procStart, procEnd, _
+        Array("msgbox", "print #", "debug.print", "saveas", "exportasfixedformat", ".value =", ".copy"))
+
+    ExtractOutputs = Trim(result)
+
+End Function
+
+Private Function ExtractTables( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    Dim i As Long
+    Dim lineText As String
+    Dim sqlText As String
+    Dim result As String
+
+    For i = procStart To procEnd
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If lineText <> "" Then
+            If Left$(lineText, 1) <> "'" Then
+
+                If LooksLikeSqlLine(lineText) Then
+                    sqlText = sqlText & " " & ExtractStringLiteralText(lineText)
+                    sqlText = sqlText & " " & lineText
+                End If
+
+            End If
+        End If
+
+    Next i
+
+    result = ExtractTableNamesFromSql(sqlText)
+
+    ExtractTables = result
+
+End Function
+
+Private Function ExtractUpdateTargets( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    ExtractUpdateTargets = ExtractLinesByKeywords(codeMod, procStart, procEnd, _
+        Array(".value =", ".formula =", ".clear", ".delete", ".insert", ".copy", " update ", " insert into ", " delete from "))
+
+End Function
+
+Private Function ExtractScreenItems( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    ExtractScreenItems = ExtractLinesByKeywords(codeMod, procStart, procEnd, _
+        Array("userform", "textbox", "combobox", "listbox", "checkbox", "optionbutton", "commandbutton", ".caption", ".text"))
+
+End Function
+
+Private Function ExtractErrorHandling( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long) As String
+
+    ExtractErrorHandling = ExtractLinesByKeywords(codeMod, procStart, procEnd, _
+        Array("on error", "err.", "errorhandler", "resume", "raise"))
+
+End Function
+
+Private Function ExtractLinesByKeywords( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal procEnd As Long, _
+    ByVal keywords As Variant) As String
+
+    Dim i As Long
+    Dim j As Long
+    Dim lineText As String
+    Dim lowerLine As String
+    Dim result As String
+
+    For i = procStart To procEnd
+
+        lineText = Trim(codeMod.lines(i, 1))
+        lowerLine = LCase$(lineText)
+
+        If lineText <> "" Then
+            If Left$(lineText, 1) <> "'" Then
+
+                For j = LBound(keywords) To UBound(keywords)
+                    If InStr(lowerLine, LCase$(CStr(keywords(j)))) > 0 Then
+                        result = result & "L" & i & ": " & lineText & vbLf
+                        Exit For
+                    End If
+                Next j
+
+            End If
+        End If
+
+    Next i
+
+    ExtractLinesByKeywords = Trim(result)
+
+End Function
+
+
+Private Function LooksLikeSqlLine(ByVal lineText As String) As Boolean
+
+    Dim t As String
+    t = LCase$(lineText)
+
+    LooksLikeSqlLine = _
+        InStr(t, "select ") > 0 Or _
+        InStr(t, " from ") > 0 Or _
+        InStr(t, " join ") > 0 Or _
+        InStr(t, " update ") > 0 Or _
+        InStr(t, "insert into ") > 0 Or _
+        InStr(t, "delete from ") > 0
+
+End Function
+
+Private Function ExtractStringLiteralText(ByVal lineText As String) As String
+
+    Dim i As Long
+    Dim inString As Boolean
+    Dim ch As String
+    Dim result As String
+
+    For i = 1 To Len(lineText)
+
+        ch = Mid$(lineText, i, 1)
+
+        If ch = """" Then
+            inString = Not inString
+        ElseIf inString Then
+            result = result & ch
+        End If
+
+    Next i
+
+    ExtractStringLiteralText = result
+
+End Function
+
+Private Function ExtractTableNamesFromSql(ByVal sqlText As String) As String
+
+    Dim result As String
+
+    sqlText = NormalizeSqlText(sqlText)
+
+    result = AddTableNamesByPattern(result, sqlText, "\bfrom\s+([a-zA-Z0-9_\.\[\]`]+)")
+    result = AddTableNamesByPattern(result, sqlText, "\bjoin\s+([a-zA-Z0-9_\.\[\]`]+)")
+    result = AddTableNamesByPattern(result, sqlText, "\bupdate\s+([a-zA-Z0-9_\.\[\]`]+)")
+    result = AddTableNamesByPattern(result, sqlText, "\binsert\s+into\s+([a-zA-Z0-9_\.\[\]`]+)")
+    result = AddTableNamesByPattern(result, sqlText, "\bdelete\s+from\s+([a-zA-Z0-9_\.\[\]`]+)")
+
+    ExtractTableNamesFromSql = Trim(result)
+
+End Function
+
+Private Function NormalizeSqlText(ByVal sqlText As String) As String
+
+    sqlText = Replace(sqlText, vbCr, " ")
+    sqlText = Replace(sqlText, vbLf, " ")
+    sqlText = Replace(sqlText, vbTab, " ")
+    sqlText = Replace(sqlText, """", " ")
+    sqlText = Replace(sqlText, "'", " ")
+
+    Do While InStr(sqlText, "  ") > 0
+        sqlText = Replace(sqlText, "  ", " ")
+    Loop
+
+    NormalizeSqlText = " " & LCase$(Trim(sqlText)) & " "
+
+End Function
+
+Private Function AddTableNamesByPattern( _
+    ByVal currentResult As String, _
+    ByVal sqlText As String, _
+    ByVal pattern As String) As String
+
+    Dim reg As Object
+    Dim matches As Object
+    Dim match As Object
+    Dim tableName As String
+    Dim result As String
+
+    result = currentResult
+
+    Set reg = CreateObject("VBScript.RegExp")
+
+    With reg
+        .Global = True
+        .IgnoreCase = True
+        .pattern = pattern
+    End With
+
+    If reg.Test(sqlText) Then
+
+        Set matches = reg.Execute(sqlText)
+
+        For Each match In matches
+
+            tableName = match.SubMatches(0)
+            tableName = CleanTableName(tableName)
+
+            If tableName <> "" Then
+                If Not ContainsLine(result, tableName) Then
+                    result = result & tableName & vbLf
+                End If
+            End If
+
+        Next match
+
+    End If
+
+    AddTableNamesByPattern = result
+
+End Function
+
+Private Function CleanTableName(ByVal tableName As String) As String
+
+    tableName = Trim(tableName)
+
+    tableName = Replace(tableName, "[", "")
+    tableName = Replace(tableName, "]", "")
+    tableName = Replace(tableName, "`", "")
+    tableName = Replace(tableName, ";", "")
+    tableName = Replace(tableName, ",", "")
+
+    If InStr(tableName, ".") > 0 Then
+        ' dbo.TableName のような形式はそのまま残す
+        CleanTableName = tableName
+    Else
+        CleanTableName = tableName
+    End If
+
+End Function
+
+Private Function ContainsLine( _
+    ByVal text As String, _
+    ByVal target As String) As Boolean
+
+    Dim lines As Variant
+    Dim i As Long
+
+    If Trim(text) = "" Then
+        ContainsLine = False
+        Exit Function
+    End If
+
+    lines = Split(text, vbLf)
+
+    For i = LBound(lines) To UBound(lines)
+        If LCase$(Trim(lines(i))) = LCase$(Trim(target)) Then
+            ContainsLine = True
+            Exit Function
+        End If
+    Next i
+
+    ContainsLine = False
+
+End Function
+
+Private Function PreferSpecValue( _
+    ByVal specValue As String, _
+    ByVal autoValue As String) As String
+
+    If Trim(specValue) <> "" Then
+        PreferSpecValue = specValue
+    Else
+        PreferSpecValue = autoValue
+    End If
+
+End Function
+
+Private Function GetSpecCommentValue( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long, _
+    ByVal itemName As String) As String
+
+    Dim comments As Collection
+    Dim lineText As Variant
+    Dim result As String
+
+    Set comments = GetProcedureHeaderComments(codeMod, procStart)
+
+    For Each lineText In comments
+        result = AppendSpecCommentLine(result, CStr(lineText), itemName)
+    Next lineText
+
+    GetSpecCommentValue = Trim(result)
+
+End Function
+
+Private Function GetProcedureHeaderComments( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long) As Collection
+
+    Dim comments As Collection
+    Dim tmp As Collection
+    Dim i As Long
+    Dim lineText As String
+
+    Set comments = New Collection
+    Set tmp = New Collection
+
+    For i = procStart - 1 To 1 Step -1
+
+        lineText = Trim(codeMod.lines(i, 1))
+
+        If lineText = "" Then
+            Exit For
+        End If
+
+        If Left$(lineText, 1) = "'" Then
+            tmp.Add Mid$(lineText, 2)
+        Else
+            Exit For
+        End If
+
+    Next i
+
+    For i = tmp.Count To 1 Step -1
+        comments.Add Trim(CStr(tmp(i)))
+    Next i
+
+    Set GetProcedureHeaderComments = comments
+
+End Function
+
+Private Function AppendSpecCommentLine( _
+    ByVal currentValue As String, _
+    ByVal commentLine As String, _
+    ByVal itemName As String) As String
+
+    Dim p As Long
+    Dim key As String
+    Dim valueText As String
+
+    commentLine = Trim(commentLine)
+
+    p = InStr(commentLine, ":")
+
+    If p = 0 Then
+        p = InStr(commentLine, "：")
+    End If
+
+    If p = 0 Then
+        AppendSpecCommentLine = currentValue
+        Exit Function
+    End If
+
+    key = Trim(Left$(commentLine, p - 1))
+    valueText = Trim(Mid$(commentLine, p + 1))
+
+    If LCase$(key) = LCase$(itemName) Then
+        If Trim(currentValue) <> "" Then
+            AppendSpecCommentLine = currentValue & vbLf & valueText
+        Else
+            AppendSpecCommentLine = valueText
+        End If
+    Else
+        AppendSpecCommentLine = currentValue
+    End If
+
+End Function
+
+Private Function PrepareOutputSheet(ByVal wb As Workbook, ByVal sheetName As String) As Worksheet
+
+    Dim ws As Worksheet
+
+    On Error Resume Next
+    Set ws = wb.Worksheets(sheetName)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        Set ws = wb.Worksheets.Add(After:=wb.Worksheets(wb.Worksheets.Count))
+        ws.Name = sheetName
+    Else
+        ws.Cells.Clear
+    End If
+
+    Set PrepareOutputSheet = ws
+
+End Function
+
+Private Sub OutputVariableList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim procName As String
+    Dim procKind As Long
+
+    Set ws = PrepareOutputSheet(wb, "変数一覧")
+
+    ws.Range("A1:G1").Value = Array("モジュール名", "プロシージャ名", "スコープ", "変数名", "型", "初期値", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+        Set codeMod = vbComp.CodeModule
+
+        For i = 1 To codeMod.CountOfLines
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If IsVariableDeclarationLine(lineText) Then
+                procName = ""
+                On Error Resume Next
+                procName = codeMod.ProcOfLine(i, procKind)
+                On Error GoTo 0
+
+                ws.Cells(row, 1).Value = vbComp.Name
+                ws.Cells(row, 2).Value = procName
+                ws.Cells(row, 3).Value = GetVariableScope(lineText)
+                ws.Cells(row, 4).Value = GetVariableName(lineText)
+                ws.Cells(row, 5).Value = GetVariableType(lineText)
+                ws.Cells(row, 6).Value = GetVariableInitialValue(lineText)
+                ws.Cells(row, 7).Value = i
+                row = row + 1
+            End If
+        Next i
+    Next vbComp
+
+End Sub
+
+Private Function IsVariableDeclarationLine(ByVal lineText As String) As Boolean
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsVariableDeclarationLine = _
+        t Like "dim *" Or _
+        t Like "static *" Or _
+        t Like "private *" Or _
+        t Like "public *" Or _
+        t Like "const *" Or _
+        t Like "private const *" Or _
+        t Like "public const *"
+End Function
+
+Private Function GetVariableScope(ByVal lineText As String) As String
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    If Left$(t, 7) = "private" Then
+        GetVariableScope = "Private"
+    ElseIf Left$(t, 6) = "public" Then
+        GetVariableScope = "Public"
+    ElseIf Left$(t, 6) = "static" Then
+        GetVariableScope = "Static"
+    ElseIf Left$(t, 5) = "const" Or InStr(t, " const ") > 0 Then
+        GetVariableScope = "Const"
+    Else
+        GetVariableScope = "Local"
+    End If
+End Function
+
+Private Function GetVariableName(ByVal lineText As String) As String
+    Dim t As String
+    Dim p As Long
+
+    t = Replace(lineText, "Private ", "", , , vbTextCompare)
+    t = Replace(t, "Public ", "", , , vbTextCompare)
+    t = Replace(t, "Static ", "", , , vbTextCompare)
+    t = Replace(t, "Dim ", "", , , vbTextCompare)
+    t = Replace(t, "Const ", "", , , vbTextCompare)
+
+    p = InStr(1, t, " As ", vbTextCompare)
+    If p > 0 Then t = Left$(t, p - 1)
+
+    p = InStr(t, "=")
+    If p > 0 Then t = Left$(t, p - 1)
+
+    GetVariableName = Trim(t)
+End Function
+
+Private Function GetVariableType(ByVal lineText As String) As String
+    Dim p As Long
+    Dim t As String
+
+    p = InStr(1, lineText, " As ", vbTextCompare)
+
+    If p > 0 Then
+        t = Mid$(lineText, p + 4)
+        If InStr(t, "=") > 0 Then t = Left$(t, InStr(t, "=") - 1)
+        GetVariableType = Trim(t)
+    Else
+        GetVariableType = ""
+    End If
+End Function
+
+Private Function GetVariableInitialValue(ByVal lineText As String) As String
+    Dim p As Long
+
+    p = InStr(lineText, "=")
+
+    If p > 0 Then
+        GetVariableInitialValue = Trim(Mid$(lineText, p + 1))
+    Else
+        GetVariableInitialValue = ""
+    End If
+End Function
+
+Private Sub OutputCallRelationList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim procName As String
+    Dim procKind As Long
+    Dim calledName As String
+
+    Set ws = PrepareOutputSheet(wb, "呼び出し関係")
+
+    ws.Range("A1:E1").Value = Array("呼び出し元モジュール", "呼び出し元プロシージャ", "呼び出し先候補", "コード", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+        Set codeMod = vbComp.CodeModule
+
+        For i = 1 To codeMod.CountOfLines
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If lineText <> "" And Left$(lineText, 1) <> "'" Then
+                calledName = ExtractCallName(lineText)
+
+                If calledName <> "" Then
+                    procName = ""
+                    On Error Resume Next
+                    procName = codeMod.ProcOfLine(i, procKind)
+                    On Error GoTo 0
+
+                    ws.Cells(row, 1).Value = vbComp.Name
+                    ws.Cells(row, 2).Value = procName
+                    ws.Cells(row, 3).Value = calledName
+                    ws.Cells(row, 4).Value = lineText
+                    ws.Cells(row, 5).Value = i
+                    row = row + 1
+                End If
+            End If
+        Next i
+    Next vbComp
+
+End Sub
+
+Private Function ExtractCallName(ByVal lineText As String) As String
+
+    Dim t As String
+    Dim p As Long
+
+    t = Trim(lineText)
+
+    If LCase$(Left$(t, 5)) = "call " Then
+        t = Trim(Mid$(t, 6))
+        p = InStr(t, "(")
+        If p > 0 Then t = Left$(t, p - 1)
+        ExtractCallName = Trim(t)
+        Exit Function
+    End If
+
+    If InStr(t, "(") > 0 And InStr(t, "=") = 0 Then
+        If Not IsProcedureDeclaration(t) Then
+            ExtractCallName = Trim(Left$(t, InStr(t, "(") - 1))
+        End If
+    End If
+
+End Function
+
+Private Sub OutputSheetIoList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim procName As String
+    Dim procKind As Long
+
+    Set ws = PrepareOutputSheet(wb, "シート入出力")
+
+    ws.Range("A1:F1").Value = Array("モジュール名", "プロシージャ名", "入出力区分", "対象候補", "コード", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+        Set codeMod = vbComp.CodeModule
+
+        For i = 1 To codeMod.CountOfLines
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If IsSheetIoLine(lineText) Then
+                procName = ""
+                On Error Resume Next
+                procName = codeMod.ProcOfLine(i, procKind)
+                On Error GoTo 0
+
+                ws.Cells(row, 1).Value = vbComp.Name
+                ws.Cells(row, 2).Value = procName
+                ws.Cells(row, 3).Value = GetSheetIoType(lineText)
+                ws.Cells(row, 4).Value = ExtractSheetTarget(lineText)
+                ws.Cells(row, 5).Value = lineText
+                ws.Cells(row, 6).Value = i
+                row = row + 1
+            End If
+        Next i
+    Next vbComp
+
+End Sub
+
+Private Function IsSheetIoLine(ByVal lineText As String) As Boolean
+    Dim t As String
+    t = LCase$(lineText)
+
+    IsSheetIoLine = _
+        InStr(t, "worksheets(") > 0 Or _
+        InStr(t, "sheets(") > 0 Or _
+        InStr(t, "range(") > 0 Or _
+        InStr(t, "cells(") > 0
+End Function
+
+Private Function GetSheetIoType(ByVal lineText As String) As String
+    If InStr(lineText, "=") > 0 Then
+        If InStr(1, lineText, ".Value", vbTextCompare) > 0 Or InStr(1, lineText, ".Formula", vbTextCompare) > 0 Then
+            GetSheetIoType = "書き込み候補"
+        Else
+            GetSheetIoType = "読み取り/書き込み候補"
+        End If
+    Else
+        GetSheetIoType = "読み取り候補"
+    End If
+End Function
+
+Private Function ExtractSheetTarget(ByVal lineText As String) As String
+    ExtractSheetTarget = lineText
+End Function
+
+Private Sub OutputProcessFlowList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim procName As String
+    Dim procKind As Long
+    Dim indentLevel As Long
+
+    Set ws = PrepareOutputSheet(wb, "処理フロー")
+
+    ws.Range("A1:E1").Value = Array("モジュール名", "プロシージャ名", "階層", "処理内容", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+        Set codeMod = vbComp.CodeModule
+        indentLevel = 0
+
+        For i = 1 To codeMod.CountOfLines
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If IsFlowEndLine(lineText) Then
+                If indentLevel > 0 Then indentLevel = indentLevel - 1
+            End If
+
+            If IsFlowLine(lineText) Then
+                procName = ""
+                On Error Resume Next
+                procName = codeMod.ProcOfLine(i, procKind)
+                On Error GoTo 0
+
+                ws.Cells(row, 1).Value = vbComp.Name
+                ws.Cells(row, 2).Value = procName
+                ws.Cells(row, 3).Value = indentLevel
+                ws.Cells(row, 4).Value = Space(indentLevel * 2) & lineText
+                ws.Cells(row, 5).Value = i
+                row = row + 1
+            End If
+
+            If IsFlowStartLine(lineText) Then
+                indentLevel = indentLevel + 1
+            End If
+        Next i
+    Next vbComp
+
+End Sub
+
+Private Function IsFlowLine(ByVal lineText As String) As Boolean
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsFlowLine = _
+        t Like "if * then*" Or _
+        t Like "else*" Or _
+        t Like "elseif *" Or _
+        t Like "for *" Or _
+        t Like "for each *" Or _
+        t Like "do *" Or _
+        t Like "loop*" Or _
+        t Like "select case *" Or _
+        t Like "case *" Or _
+        t Like "call *" Or _
+        InStr(t, " = ") > 0
+End Function
+
+Private Function IsFlowStartLine(ByVal lineText As String) As Boolean
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsFlowStartLine = _
+        t Like "if * then*" Or _
+        t Like "for *" Or _
+        t Like "for each *" Or _
+        t Like "do *" Or _
+        t Like "select case *"
+End Function
+
+Private Function IsFlowEndLine(ByVal lineText As String) As Boolean
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsFlowEndLine = _
+        t = "end if" Or _
+        t = "next" Or _
+        Left$(t, 4) = "next" Or _
+        Left$(t, 4) = "loop" Or _
+        t = "end select"
+End Function
+
+Private Sub FormatDesignWorkbook(ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim lastCol As Long
+
+    For Each ws In wb.Worksheets
+
+        If ws.Name = "概要" _
+            Or ws.Name = "詳細設計書" _
+            Or ws.Name = "変数一覧" _
+            Or ws.Name = "呼び出し関係" _
+            Or ws.Name = "シート入出力" _
+            Or ws.Name = "画面項目" _
+            Or ws.Name = "処理フロー" _
+            Or ws.Name = "コード全文" _
+            Or ws.Name = "コメント不足" _
+            Or ws.Name = "未使用候補" _
+            Or ws.Name = "定数_Enum_Type一覧" _
+            Or ws.Name = "命名規則チェック" _
+            Or ws.Name = "差分比較" Then
+
+            lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+            lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+            With ws.Range(ws.Cells(1, 1), ws.Cells(lastRow, lastCol))
+                .Borders.LineStyle = xlContinuous
+                .VerticalAlignment = xlTop
+                .WrapText = True
+            End With
+
+            With ws.Rows(1)
+                .Font.Bold = True
+                .Interior.Color = RGB(220, 230, 241)
+                .AutoFilter
+            End With
+
+            ws.Columns.AutoFit
+
+            If ws.Columns(1).ColumnWidth > 25 Then ws.Columns(1).ColumnWidth = 25
+            If lastCol >= 4 Then ws.Columns(4).ColumnWidth = 45
+            If lastCol >= 5 Then ws.Columns(5).ColumnWidth = 60
+
+        End If
+
+    Next ws
+
+End Sub
+
+Private Sub OutputUserFormControlList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim ctrl As Object
+    Dim row As Long
+
+    Set ws = PrepareOutputSheet(wb, "画面項目")
+
+    ws.Range("A1:H1").Value = Array("フォーム名", "コントロール名", "種別", "Caption", "Text", "Value", "Enabled", "Visible")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        If vbComp.Type = 3 Then ' vbext_ct_MSForm
+            For Each ctrl In vbComp.Designer.Controls
+                ws.Cells(row, 1).Value = vbComp.Name
+                ws.Cells(row, 2).Value = ctrl.Name
+                ws.Cells(row, 3).Value = TypeName(ctrl)
+                ws.Cells(row, 4).Value = GetControlProperty(ctrl, "Caption")
+                ws.Cells(row, 5).Value = GetControlProperty(ctrl, "Text")
+                ws.Cells(row, 6).Value = GetControlProperty(ctrl, "Value")
+                ws.Cells(row, 7).Value = GetControlProperty(ctrl, "Enabled")
+                ws.Cells(row, 8).Value = GetControlProperty(ctrl, "Visible")
+                row = row + 1
+            Next ctrl
+        End If
+
+    Next vbComp
+
+End Sub
+
+Private Function GetControlProperty(ByVal ctrl As Object, ByVal propName As String) As String
+
+    On Error Resume Next
+    GetControlProperty = CStr(CallByName(ctrl, propName, VbGet))
+    On Error GoTo 0
+
+End Function
+
+Private Function MakeStableProcessId( _
+    ByVal moduleName As String, _
+    ByVal procName As String) As String
+
+    MakeStableProcessId = CleanIdText(moduleName) & "_" & CleanIdText(procName)
+
+End Function
+
+Private Function CleanIdText(ByVal text As String) As String
+
+    Dim result As String
+    Dim i As Long
+    Dim ch As String
+
+    For i = 1 To Len(text)
+
+        ch = Mid$(text, i, 1)
+
+        If ch Like "[A-Za-z0-9_]" Then
+            result = result & ch
+        Else
+            result = result & "_"
+        End If
+
+    Next i
+
+    CleanIdText = result
+
+End Function
+
+Private Sub OutputProcedureCodeList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim lineNo As Long
+    Dim row As Long
+    Dim procName As String
+    Dim procKind As Long
+    Dim procStart As Long
+    Dim procLines As Long
+    Dim procEnd As Long
+    Dim procCode As String
+    Dim processId As String
+
+    Set ws = PrepareOutputSheet(wb, "コード全文")
+
+    ws.Range("A1:F1").Value = Array("処理ID", "モジュール名", "プロシージャ名", "開始行", "終了行", "コード全文")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+        lineNo = 1
+
+        Do While lineNo <= codeMod.CountOfLines
+
+            procName = ""
+
+            On Error Resume Next
+            procName = codeMod.ProcOfLine(lineNo, procKind)
+            On Error GoTo 0
+
+            If procName <> "" Then
+
+                procStart = codeMod.ProcStartLine(procName, procKind)
+                procLines = codeMod.ProcCountLines(procName, procKind)
+                procEnd = procStart + procLines - 1
+                procCode = codeMod.lines(procStart, procLines)
+                processId = MakeStableProcessId(vbComp.Name, procName)
+
+                ws.Cells(row, 1).Value = processId
+                ws.Cells(row, 2).Value = vbComp.Name
+                ws.Cells(row, 3).Value = procName
+                ws.Cells(row, 4).Value = procStart
+                ws.Cells(row, 5).Value = procEnd
+                ws.Cells(row, 6).Value = procCode
+
+                row = row + 1
+                lineNo = procEnd + 1
+
+            Else
+                lineNo = lineNo + 1
+            End If
+
+        Loop
+
+    Next vbComp
+
+    ws.Columns("A:E").AutoFit
+    ws.Columns("F").ColumnWidth = 120
+    ws.Columns("F").WrapText = True
+
+End Sub
+
+Private Sub AddCodeLinksToDesignSheet(ByVal wb As Workbook)
+
+    Dim designWs As Worksheet
+    Dim codeWs As Worksheet
+    Dim lastRow As Long
+    Dim codeLastRow As Long
+    Dim r As Long
+    Dim foundCell As Range
+    Dim processId As String
+
+    On Error Resume Next
+    Set designWs = wb.Worksheets("詳細設計書")
+    Set codeWs = wb.Worksheets("コード全文")
+    On Error GoTo 0
+
+    If designWs Is Nothing Or codeWs Is Nothing Then Exit Sub
+
+    lastRow = designWs.Cells(designWs.Rows.Count, 1).End(xlUp).row
+    codeLastRow = codeWs.Cells(codeWs.Rows.Count, 1).End(xlUp).row
+
+    For r = 2 To lastRow
+
+        processId = CStr(designWs.Cells(r, 1).Value)
+
+        If processId <> "" Then
+
+            Set foundCell = codeWs.Range("A2:A" & codeLastRow).Find( _
+                What:=processId, _
+                LookAt:=xlWhole, _
+                MatchCase:=False)
+
+            If Not foundCell Is Nothing Then
+
+                designWs.Hyperlinks.Add _
+                    Anchor:=designWs.Cells(r, 1), _
+                    Address:="", _
+                    SubAddress:="'" & codeWs.Name & "'!A" & foundCell.row, _
+                    TextToDisplay:=processId
+
+            End If
+
+        End If
+
+    Next r
+
+End Sub
+
+Private Sub OutputCommentQualityList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim lineNo As Long
+    Dim row As Long
+    Dim procName As String
+    Dim procKind As Long
+    Dim procStart As Long
+    Dim procLines As Long
+    Dim procEnd As Long
+    Dim missingItems As String
+    Dim processId As String
+
+    Set ws = PrepareOutputSheet(wb, "コメント不足")
+
+    ws.Range("A1:F1").Value = Array("処理ID", "モジュール名", "プロシージャ名", "不足項目", "推奨コメント例", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+        lineNo = 1
+
+        Do While lineNo <= codeMod.CountOfLines
+
+            procName = ""
+
+            On Error Resume Next
+            procName = codeMod.ProcOfLine(lineNo, procKind)
+            On Error GoTo 0
+
+            If procName <> "" Then
+
+                procStart = codeMod.ProcStartLine(procName, procKind)
+                procLines = codeMod.ProcCountLines(procName, procKind)
+                procEnd = procStart + procLines - 1
+                processId = MakeStableProcessId(vbComp.Name, procName)
+
+                missingItems = GetMissingSpecItems(codeMod, procStart)
+
+                If missingItems <> "" Then
+                    ws.Cells(row, 1).Value = processId
+                    ws.Cells(row, 2).Value = vbComp.Name
+                    ws.Cells(row, 3).Value = procName
+                    ws.Cells(row, 4).Value = missingItems
+                    ws.Cells(row, 5).Value = BuildRecommendedSpecComment(missingItems)
+                    ws.Cells(row, 6).Value = procStart
+                    row = row + 1
+                End If
+
+                lineNo = procEnd + 1
+
+            Else
+                lineNo = lineNo + 1
+            End If
+
+        Loop
+
+    Next vbComp
+
+End Sub
+
+Private Function GetMissingSpecItems( _
+    ByVal codeMod As Object, _
+    ByVal procStart As Long) As String
+
+    Dim requiredItems As Variant
+    Dim i As Long
+    Dim itemName As String
+    Dim result As String
+
+    requiredItems = Array("概要", "入力", "出力", "エラー処理")
+
+    For i = LBound(requiredItems) To UBound(requiredItems)
+
+        itemName = CStr(requiredItems(i))
+
+        If GetSpecCommentValue(codeMod, procStart, itemName) = "" Then
+            If result <> "" Then result = result & ", "
+            result = result & itemName
+        End If
+
+    Next i
+
+    GetMissingSpecItems = result
+
+End Function
+
+Private Function BuildRecommendedSpecComment(ByVal missingItems As String) As String
+
+    Dim result As String
+
+    If InStr(missingItems, "概要") > 0 Then
+        result = result & "' 概要: " & vbLf
+    End If
+
+    If InStr(missingItems, "入力") > 0 Then
+        result = result & "' 入力: " & vbLf
+    End If
+
+    If InStr(missingItems, "出力") > 0 Then
+        result = result & "' 出力: " & vbLf
+    End If
+
+    If InStr(missingItems, "エラー処理") > 0 Then
+        result = result & "' エラー処理: " & vbLf
+    End If
+
+    BuildRecommendedSpecComment = Trim(result)
+
+End Function
+
+Private Sub OutputUnusedProcedureCandidates(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim lineNo As Long
+    Dim row As Long
+    Dim procName As String
+    Dim procKind As Long
+    Dim procStart As Long
+    Dim procLines As Long
+    Dim procEnd As Long
+    Dim signature As String
+    Dim processId As String
+    Dim calledNames As Object
+
+    Set ws = PrepareOutputSheet(wb, "未使用候補")
+    Set calledNames = CreateObject("Scripting.Dictionary")
+
+    CollectCalledProcedureNames vbProj, calledNames
+
+    ws.Range("A1:F1").Value = Array("処理ID", "モジュール名", "プロシージャ名", "種別", "理由", "開始行")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+        lineNo = 1
+
+        Do While lineNo <= codeMod.CountOfLines
+
+            procName = ""
+
+            On Error Resume Next
+            procName = codeMod.ProcOfLine(lineNo, procKind)
+            On Error GoTo 0
+
+            If procName <> "" Then
+
+                procStart = codeMod.ProcStartLine(procName, procKind)
+                procLines = codeMod.ProcCountLines(procName, procKind)
+                procEnd = procStart + procLines - 1
+                signature = GetProcedureSignature(codeMod, procStart, procEnd)
+                processId = MakeStableProcessId(vbComp.Name, procName)
+
+                If IsUnusedCandidate(signature, procName, calledNames) Then
+                    ws.Cells(row, 1).Value = processId
+                    ws.Cells(row, 2).Value = vbComp.Name
+                    ws.Cells(row, 3).Value = procName
+                    ws.Cells(row, 4).Value = GetProcedureKindName(signature)
+                    ws.Cells(row, 5).Value = "Privateプロシージャで、呼び出し候補が見つかりません"
+                    ws.Cells(row, 6).Value = procStart
+                    row = row + 1
+                End If
+
+                lineNo = procEnd + 1
+
+            Else
+                lineNo = lineNo + 1
+            End If
+
+        Loop
+
+    Next vbComp
+
+End Sub
+
+Private Sub CollectCalledProcedureNames( _
+    ByVal vbProj As Object, _
+    ByVal calledNames As Object)
+
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim lineText As String
+    Dim calledName As String
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+
+        For i = 1 To codeMod.CountOfLines
+
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If lineText <> "" And Left$(lineText, 1) <> "'" Then
+
+                calledName = ExtractCallName(lineText)
+
+                If calledName <> "" Then
+                    calledName = NormalizeProcedureName(calledName)
+
+                    If Not calledNames.Exists(calledName) Then
+                        calledNames.Add calledName, True
+                    End If
+                End If
+
+            End If
+
+        Next i
+
+    Next vbComp
+
+End Sub
+
+Private Function IsUnusedCandidate( _
+    ByVal signature As String, _
+    ByVal procName As String, _
+    ByVal calledNames As Object) As Boolean
+
+    Dim normalizedName As String
+
+    If Not IsPrivateProcedure(signature) Then
+        IsUnusedCandidate = False
+        Exit Function
+    End If
+
+    If IsEventProcedureName(procName) Then
+        IsUnusedCandidate = False
+        Exit Function
+    End If
+
+    normalizedName = NormalizeProcedureName(procName)
+
+    If calledNames.Exists(normalizedName) Then
+        IsUnusedCandidate = False
+    Else
+        IsUnusedCandidate = True
+    End If
+
+End Function
+
+Private Function IsPrivateProcedure(ByVal signature As String) As Boolean
+
+    Dim t As String
+    t = LCase$(Trim(signature))
+
+    IsPrivateProcedure = _
+        Left$(t, 11) = "private sub" Or _
+        Left$(t, 16) = "private function" Or _
+        Left$(t, 16) = "private property"
+
+End Function
+
+Private Function NormalizeProcedureName(ByVal procName As String) As String
+
+    Dim p As Long
+
+    procName = Trim(procName)
+
+    If InStr(procName, ".") > 0 Then
+        procName = Mid$(procName, InStrRev(procName, ".") + 1)
+    End If
+
+    p = InStr(procName, "(")
+    If p > 0 Then procName = Left$(procName, p - 1)
+
+    NormalizeProcedureName = LCase$(Trim(procName))
+
+End Function
+
+Private Function IsEventProcedureName(ByVal procName As String) As Boolean
+
+    Dim t As String
+    t = LCase$(procName)
+
+    IsEventProcedureName = _
+        t = "workbook_open" Or _
+        t = "workbook_beforeclose" Or _
+        t = "workbook_beforesave" Or _
+        t = "workbook_sheetchange" Or _
+        t = "worksheet_change" Or _
+        t = "worksheet_selectionchange" Or _
+        t = "worksheet_activate" Or _
+        t = "worksheet_deactivate" Or _
+        t = "userform_initialize" Or _
+        t = "userform_activate" Or _
+        t = "userform_terminate" Or _
+        t = "class_initialize" Or _
+        t = "class_terminate" Or _
+        Right$(t, 6) = "_click" Or _
+        Right$(t, 7) = "_change" Or _
+        Right$(t, 6) = "_close" Or _
+        Right$(t, 9) = "_keydown" Or _
+        Right$(t, 7) = "_keyup" Or _
+        Right$(t, 10) = "_keypress" Or _
+        Right$(t, 10) = "_dblclick"
+
+End Function
+
+Private Sub OutputConstEnumTypeList(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim blockKind As String
+    Dim blockName As String
+    Dim memberName As String
+    Dim memberType As String
+    Dim memberValue As String
+
+    Set ws = PrepareOutputSheet(wb, "定数_Enum_Type一覧")
+
+    ws.Range("A1:H1").Value = Array("モジュール名", "区分", "ブロック名", "メンバー名", "型", "値", "コード", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+        blockKind = ""
+        blockName = ""
+
+        For i = 1 To codeMod.CountOfLines
+
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If lineText <> "" And Left$(lineText, 1) <> "'" Then
+
+                If IsConstDeclarationLine(lineText) Then
+                    ws.Cells(row, 1).Value = vbComp.Name
+                    ws.Cells(row, 2).Value = "Const"
+                    ws.Cells(row, 3).Value = ""
+                    ws.Cells(row, 4).Value = GetConstName(lineText)
+                    ws.Cells(row, 5).Value = GetVariableType(lineText)
+                    ws.Cells(row, 6).Value = GetVariableInitialValue(lineText)
+                    ws.Cells(row, 7).Value = lineText
+                    ws.Cells(row, 8).Value = i
+                    row = row + 1
+
+                ElseIf IsEnumStartLine(lineText) Then
+                    blockKind = "Enum"
+                    blockName = GetBlockName(lineText, "Enum")
+
+                    ws.Cells(row, 1).Value = vbComp.Name
+                    ws.Cells(row, 2).Value = "Enum"
+                    ws.Cells(row, 3).Value = blockName
+                    ws.Cells(row, 4).Value = ""
+                    ws.Cells(row, 7).Value = lineText
+                    ws.Cells(row, 8).Value = i
+                    row = row + 1
+
+                ElseIf IsTypeStartLine(lineText) Then
+                    blockKind = "Type"
+                    blockName = GetBlockName(lineText, "Type")
+
+                    ws.Cells(row, 1).Value = vbComp.Name
+                    ws.Cells(row, 2).Value = "Type"
+                    ws.Cells(row, 3).Value = blockName
+                    ws.Cells(row, 4).Value = ""
+                    ws.Cells(row, 7).Value = lineText
+                    ws.Cells(row, 8).Value = i
+                    row = row + 1
+
+                ElseIf blockKind = "Enum" Then
+
+                    If LCase$(lineText) = "end enum" Then
+                        blockKind = ""
+                        blockName = ""
+                    Else
+                        memberName = GetEnumMemberName(lineText)
+                        memberValue = GetEnumMemberValue(lineText)
+
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "EnumMember"
+                        ws.Cells(row, 3).Value = blockName
+                        ws.Cells(row, 4).Value = memberName
+                        ws.Cells(row, 6).Value = memberValue
+                        ws.Cells(row, 7).Value = lineText
+                        ws.Cells(row, 8).Value = i
+                        row = row + 1
+                    End If
+
+                ElseIf blockKind = "Type" Then
+
+                    If LCase$(lineText) = "end type" Then
+                        blockKind = ""
+                        blockName = ""
+                    Else
+                        memberName = GetVariableName(lineText)
+                        memberType = GetVariableType(lineText)
+
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "TypeMember"
+                        ws.Cells(row, 3).Value = blockName
+                        ws.Cells(row, 4).Value = memberName
+                        ws.Cells(row, 5).Value = memberType
+                        ws.Cells(row, 7).Value = lineText
+                        ws.Cells(row, 8).Value = i
+                        row = row + 1
+                    End If
+
+                End If
+
+            End If
+
+        Next i
+
+    Next vbComp
+
+End Sub
+
+Private Function IsConstDeclarationLine(ByVal lineText As String) As Boolean
+
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsConstDeclarationLine = _
+        t Like "const *" Or _
+        t Like "private const *" Or _
+        t Like "public const *"
+
+End Function
+
+Private Function IsEnumStartLine(ByVal lineText As String) As Boolean
+
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsEnumStartLine = _
+        t Like "enum *" Or _
+        t Like "private enum *" Or _
+        t Like "public enum *"
+
+End Function
+
+Private Function IsTypeStartLine(ByVal lineText As String) As Boolean
+
+    Dim t As String
+    t = LCase$(Trim(lineText))
+
+    IsTypeStartLine = _
+        t Like "type *" Or _
+        t Like "private type *" Or _
+        t Like "public type *"
+
+End Function
+
+Private Function GetConstName(ByVal lineText As String) As String
+
+    Dim t As String
+    Dim p As Long
+
+    t = Replace(lineText, "Private ", "", , , vbTextCompare)
+    t = Replace(t, "Public ", "", , , vbTextCompare)
+    t = Replace(t, "Const ", "", , , vbTextCompare)
+
+    p = InStr(1, t, " As ", vbTextCompare)
+    If p > 0 Then t = Left$(t, p - 1)
+
+    p = InStr(t, "=")
+    If p > 0 Then t = Left$(t, p - 1)
+
+    GetConstName = Trim(t)
+
+End Function
+
+Private Function GetBlockName( _
+    ByVal lineText As String, _
+    ByVal blockKeyword As String) As String
+
+    Dim t As String
+
+    t = Replace(lineText, "Private ", "", , , vbTextCompare)
+    t = Replace(t, "Public ", "", , , vbTextCompare)
+    t = Replace(t, blockKeyword & " ", "", , , vbTextCompare)
+
+    GetBlockName = Trim(t)
+
+End Function
+
+Private Function GetEnumMemberName(ByVal lineText As String) As String
+
+    Dim p As Long
+
+    p = InStr(lineText, "=")
+
+    If p > 0 Then
+        GetEnumMemberName = Trim(Left$(lineText, p - 1))
+    Else
+        GetEnumMemberName = Trim(lineText)
+    End If
+
+End Function
+
+Private Function GetEnumMemberValue(ByVal lineText As String) As String
+
+    Dim p As Long
+
+    p = InStr(lineText, "=")
+
+    If p > 0 Then
+        GetEnumMemberValue = Trim(Mid$(lineText, p + 1))
+    Else
+        GetEnumMemberValue = ""
+    End If
+
+End Function
+
+Private Sub OutputNamingRuleCheck(ByVal vbProj As Object, ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim vbComp As Object
+    Dim codeMod As Object
+    Dim i As Long
+    Dim row As Long
+    Dim lineText As String
+    Dim procName As String
+    Dim procKind As Long
+    Dim checkedName As String
+    Dim checkedType As String
+    Dim message As String
+
+    Set ws = PrepareOutputSheet(wb, "命名規則チェック")
+
+    ws.Range("A1:F1").Value = Array("モジュール名", "対象区分", "名前", "チェック結果", "コード", "行番号")
+    row = 2
+
+    For Each vbComp In vbProj.VBComponents
+
+        Set codeMod = vbComp.CodeModule
+
+        For i = 1 To codeMod.CountOfLines
+
+            lineText = Trim(codeMod.lines(i, 1))
+
+            If lineText <> "" And Left$(lineText, 1) <> "'" Then
+
+                ' プロシージャ名チェック
+                procName = ""
+                On Error Resume Next
+                procName = codeMod.ProcOfLine(i, procKind)
+                On Error GoTo 0
+
+                If procName <> "" Then
+                    If codeMod.ProcStartLine(procName, procKind) = i Then
+                        message = CheckBasicNameRule(procName)
+
+                        If message <> "" Then
+                            ws.Cells(row, 1).Value = vbComp.Name
+                            ws.Cells(row, 2).Value = "プロシージャ"
+                            ws.Cells(row, 3).Value = procName
+                            ws.Cells(row, 4).Value = message
+                            ws.Cells(row, 5).Value = lineText
+                            ws.Cells(row, 6).Value = i
+                            row = row + 1
+                        End If
+                    End If
+                End If
+
+                ' 変数名チェック
+                If IsVariableDeclarationLine(lineText) Then
+                    checkedName = GetVariableName(lineText)
+                    checkedType = GetVariableType(lineText)
+
+                    message = CheckBasicNameRule(checkedName)
+
+                    If LCase$(checkedType) = "boolean" Then
+                        message = AppendCheckMessage(message, CheckBooleanNameRule(checkedName))
+                    End If
+
+                    If message <> "" Then
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "変数"
+                        ws.Cells(row, 3).Value = checkedName
+                        ws.Cells(row, 4).Value = message
+                        ws.Cells(row, 5).Value = lineText
+                        ws.Cells(row, 6).Value = i
+                        row = row + 1
+                    End If
+                End If
+
+                ' 定数名チェック
+                If IsConstDeclarationLine(lineText) Then
+                    checkedName = GetConstName(lineText)
+                    message = CheckConstNameRule(checkedName)
+
+                    If message <> "" Then
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "定数"
+                        ws.Cells(row, 3).Value = checkedName
+                        ws.Cells(row, 4).Value = message
+                        ws.Cells(row, 5).Value = lineText
+                        ws.Cells(row, 6).Value = i
+                        row = row + 1
+                    End If
+                End If
+
+                ' Enum名チェック
+                If IsEnumStartLine(lineText) Then
+                    checkedName = GetBlockName(lineText, "Enum")
+                    message = CheckBasicNameRule(checkedName)
+
+                    If message <> "" Then
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "Enum"
+                        ws.Cells(row, 3).Value = checkedName
+                        ws.Cells(row, 4).Value = message
+                        ws.Cells(row, 5).Value = lineText
+                        ws.Cells(row, 6).Value = i
+                        row = row + 1
+                    End If
+                End If
+
+                ' Type名チェック
+                If IsTypeStartLine(lineText) Then
+                    checkedName = GetBlockName(lineText, "Type")
+                    message = CheckBasicNameRule(checkedName)
+
+                    If message <> "" Then
+                        ws.Cells(row, 1).Value = vbComp.Name
+                        ws.Cells(row, 2).Value = "Type"
+                        ws.Cells(row, 3).Value = checkedName
+                        ws.Cells(row, 4).Value = message
+                        ws.Cells(row, 5).Value = lineText
+                        ws.Cells(row, 6).Value = i
+                        row = row + 1
+                    End If
+                End If
+
+            End If
+        Next
+    Next
+End Sub
+
+Private Function CheckBasicNameRule(ByVal targetName As String) As String
+
+    Dim result As String
+    Dim firstChar As String
+
+    targetName = Trim(targetName)
+
+    If targetName = "" Then
+        CheckBasicNameRule = "名前が取得できません"
+        Exit Function
+    End If
+
+    firstChar = Left$(targetName, 1)
+
+    If Not firstChar Like "[A-Za-z]" Then
+        result = AppendCheckMessage(result, "先頭が英字ではありません")
+    End If
+
+    If InStr(targetName, " ") > 0 Then
+        result = AppendCheckMessage(result, "名前に空白が含まれています")
+    End If
+
+    If InStr(targetName, "-") > 0 Then
+        result = AppendCheckMessage(result, "名前にハイフンが含まれています")
+    End If
+
+    CheckBasicNameRule = result
+
+End Function
+
+Private Function CheckBooleanNameRule(ByVal targetName As String) As String
+
+    Dim t As String
+    t = LCase$(targetName)
+
+    If Left$(t, 2) = "is" _
+        Or Left$(t, 3) = "has" _
+        Or Left$(t, 3) = "can" _
+        Or Left$(t, 6) = "should" Then
+
+        CheckBooleanNameRule = ""
+    Else
+        CheckBooleanNameRule = "Boolean変数は is/has/can/should で始めることを推奨"
+    End If
+
+End Function
+
+Private Function CheckConstNameRule(ByVal targetName As String) As String
+
+    Dim i As Long
+    Dim ch As String
+    Dim hasLower As Boolean
+
+    targetName = Trim(targetName)
+
+    If targetName = "" Then
+        CheckConstNameRule = "名前が取得できません"
+        Exit Function
+    End If
+
+    For i = 1 To Len(targetName)
+        ch = Mid$(targetName, i, 1)
+
+        If ch Like "[a-z]" Then
+            hasLower = True
+            Exit For
+        End If
+    Next i
+
+    If hasLower Then
+        CheckConstNameRule = "定数名は大文字スネークケースを推奨"
+    ElseIf InStr(targetName, "_") = 0 Then
+        CheckConstNameRule = "定数名は大文字スネークケースを推奨"
+    Else
+        CheckConstNameRule = ""
+    End If
+
+End Function
+
+Private Function AppendCheckMessage( _
+    ByVal currentMessage As String, _
+    ByVal addMessage As String) As String
+
+    If Trim(addMessage) = "" Then
+        AppendCheckMessage = currentMessage
+    ElseIf Trim(currentMessage) = "" Then
+        AppendCheckMessage = addMessage
+    Else
+        AppendCheckMessage = currentMessage & " / " & addMessage
+    End If
+
+End Function
+
+Private Sub BackupPreviousDesignSheet(ByVal wb As Workbook)
+
+    Dim currentWs As Worksheet
+    Dim backupWs As Worksheet
+
+    On Error Resume Next
+    Set currentWs = wb.Worksheets("詳細設計書")
+    Set backupWs = wb.Worksheets("詳細設計書_前回")
+    On Error GoTo 0
+
+    If currentWs Is Nothing Then Exit Sub
+
+    Application.DisplayAlerts = False
+    If Not backupWs Is Nothing Then
+        backupWs.Delete
+    End If
+    Application.DisplayAlerts = True
+
+    currentWs.Copy After:=wb.Worksheets(wb.Worksheets.Count)
+    Set backupWs = wb.Worksheets(wb.Worksheets.Count)
+    backupWs.Name = "詳細設計書_前回"
+
+End Sub
+
+Private Sub OutputDiffReport(ByVal wb As Workbook)
+
+    Dim wsCurrent As Worksheet
+    Dim wsPrev As Worksheet
+    Dim wsDiff As Worksheet
+    Dim currentDict As Object
+    Dim prevDict As Object
+    Dim key As Variant
+    Dim row As Long
+
+    On Error Resume Next
+    Set wsCurrent = wb.Worksheets("詳細設計書")
+    Set wsPrev = wb.Worksheets("詳細設計書_前回")
+    On Error GoTo 0
+
+    Set wsDiff = PrepareOutputSheet(wb, "差分比較")
+
+    wsDiff.Range("A1:F1").Value = Array("差分区分", "処理ID", "前回内容", "今回内容", "比較対象", "備考")
+    row = 2
+
+    If wsCurrent Is Nothing Or wsPrev Is Nothing Then
+        wsDiff.Cells(row, 1).Value = "比較不可"
+        wsDiff.Cells(row, 6).Value = "詳細設計書または詳細設計書_前回が存在しません"
+        Exit Sub
+    End If
+
+    Set currentDict = BuildDesignSheetDictionary(wsCurrent)
+    Set prevDict = BuildDesignSheetDictionary(wsPrev)
+
+    ' 追加・変更
+    For Each key In currentDict.Keys
+        If Not prevDict.Exists(key) Then
+            wsDiff.Cells(row, 1).Value = "追加"
+            wsDiff.Cells(row, 2).Value = key
+            wsDiff.Cells(row, 4).Value = currentDict(key)
+            row = row + 1
+        ElseIf currentDict(key) <> prevDict(key) Then
+            wsDiff.Cells(row, 1).Value = "変更"
+            wsDiff.Cells(row, 2).Value = key
+            wsDiff.Cells(row, 3).Value = prevDict(key)
+            wsDiff.Cells(row, 4).Value = currentDict(key)
+            wsDiff.Cells(row, 5).Value = "詳細設計書行内容"
+            row = row + 1
+        End If
+    Next key
+
+    ' 削除
+    For Each key In prevDict.Keys
+        If Not currentDict.Exists(key) Then
+            wsDiff.Cells(row, 1).Value = "削除"
+            wsDiff.Cells(row, 2).Value = key
+            wsDiff.Cells(row, 3).Value = prevDict(key)
+            row = row + 1
+        End If
+    Next key
+
+End Sub
+
+Private Function BuildDesignSheetDictionary(ByVal ws As Worksheet) As Object
+
+    Dim dict As Object
+    Dim lastRow As Long
+    Dim lastCol As Long
+    Dim r As Long
+    Dim c As Long
+    Dim processId As String
+    Dim rowText As String
+
+    Set dict = CreateObject("Scripting.Dictionary")
+
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    For r = 2 To lastRow
+
+        processId = CStr(ws.Cells(r, 1).Value)
+
+        If processId <> "" Then
+
+            rowText = ""
+
+            For c = 1 To lastCol
+                rowText = rowText & "[" & ws.Cells(1, c).Value & "=" & CStr(ws.Cells(r, c).Value) & "]"
+            Next c
+
+            If Not dict.Exists(processId) Then
+                dict.Add processId, rowText
+            End If
+
+        End If
+
+    Next r
+
+    Set BuildDesignSheetDictionary = dict
+
+End Function
+
+Private Sub ExportDesignWorkbookToHtml(ByVal wb As Workbook)
+
+    Dim htmlPath As String
+    Dim tempPath As String
+    Dim baseName As String
+    Dim exportWb As Workbook
+
+    If wb.Path = "" Then
+        MsgBox "HTML出力するには、先にこのブックを保存してください。", vbExclamation
+        Exit Sub
+    End If
+
+    baseName = Left$(wb.Name, InStrRev(wb.Name, ".") - 1)
+    htmlPath = wb.Path & Application.PathSeparator & baseName & "_設計書.html"
+    tempPath = wb.Path & Application.PathSeparator & baseName & "_設計書出力用.xlsx"
+
+    wb.Worksheets.Copy
+    Set exportWb = ActiveWorkbook
+
+    Application.DisplayAlerts = False
+
+    exportWb.SaveAs _
+        Filename:=htmlPath, _
+        FileFormat:=xlHtml
+
+    exportWb.Close SaveChanges:=False
+
+    Application.DisplayAlerts = True
+
+    MsgBox "HTML設計書を出力しました。" & vbCrLf & htmlPath, vbInformation
+
+End Sub
+
+Private Sub ExportDesignWorkbookToCustomHtml(ByVal wb As Workbook)
+
+    Dim htmlPath As String
+    Dim baseName As String
+    Dim html As String
+
+    If wb.Path = "" Then
+        MsgBox "HTML出力するには、先にこのブックを保存してください。", vbExclamation
+        Exit Sub
+    End If
+
+    baseName = Left$(wb.Name, InStrRev(wb.Name, ".") - 1)
+    htmlPath = wb.Path & Application.PathSeparator & baseName & "_独自設計書.html"
+
+    html = BuildDesignHtml(wb, baseName)
+
+    SaveTextAsUtf8 htmlPath, html
+
+    MsgBox "独自HTML設計書を出力しました。" & vbCrLf & htmlPath, vbInformation
+
+End Sub
+
+Private Sub SaveTextAsUtf8( _
+    ByVal filePath As String, _
+    ByVal text As String)
+
+    Dim stream As Object
+
+    Set stream = CreateObject("ADODB.Stream")
+
+    With stream
+        .Type = 2
+        .Charset = "UTF-8"
+        .Open
+        .WriteText text
+        .SaveToFile filePath, 2
+        .Close
+    End With
+
+End Sub
+
+Private Function BuildDesignHtml(ByVal wb As Workbook, ByVal title As String) As String
+
+    Dim html As String
+    Dim ws As Worksheet
+
+    html = ""
+    html = html & "<!doctype html>" & vbCrLf
+    html = html & "<html lang=""ja"">" & vbCrLf
+    html = html & "<head>" & vbCrLf
+    html = html & "<meta charset=""UTF-8"">" & vbCrLf
+    html = html & "<title>" & HtmlEncode(title) & " 詳細設計書</title>" & vbCrLf
+    html = html & BuildDesignHtmlStyle()
+    html = html & BuildDesignHtmlScript()
+    html = html & "</head>" & vbCrLf
+    html = html & "<body>" & vbCrLf
+
+    html = html & "<aside class=""side"">" & vbCrLf
+    html = html & "<h1>詳細設計書</h1>" & vbCrLf
+    html = html & "<input id=""searchBox"" type=""search"" placeholder=""検索"" onkeyup=""filterRows()"">" & vbCrLf
+    html = html & "<nav>" & vbCrLf
+
+    For Each ws In wb.Worksheets
+        If IsDesignOutputSheet(ws.Name) Then
+            html = html & "<a href=""#" & HtmlId(ws.Name) & """>" & HtmlEncode(ws.Name) & "</a>" & vbCrLf
+        End If
+    Next ws
+
+    html = html & "</nav>" & vbCrLf
+    html = html & "</aside>" & vbCrLf
+
+    html = html & "<main class=""main"">" & vbCrLf
+    html = html & "<div class=""title"">" & vbCrLf
+    html = html & "<div class=""book"">" & HtmlEncode(title) & "</div>" & vbCrLf
+    html = html & "<div class=""date"">出力日時: " & Format(Now, "yyyy/mm/dd hh:nn:ss") & "</div>" & vbCrLf
+    html = html & "</div>" & vbCrLf
+
+    For Each ws In wb.Worksheets
+        If IsDesignOutputSheet(ws.Name) Then
+            html = html & BuildSheetHtml(ws)
+        End If
+    Next ws
+
+    html = html & "</main>" & vbCrLf
+    html = html & "</body>" & vbCrLf
+    html = html & "</html>" & vbCrLf
+
+    BuildDesignHtml = html
+
+End Function
+
+Private Function IsDesignOutputSheet(ByVal sheetName As String) As Boolean
+
+    Select Case sheetName
+        Case "概要", _
+             "詳細設計書", _
+             "変数一覧", _
+             "呼び出し関係", _
+             "シート入出力", _
+             "画面項目", _
+             "処理フロー", _
+             "コード全文", _
+             "コメント不足", _
+             "未使用候補", _
+             "定数_Enum_Type一覧", _
+             "命名規則チェック", _
+             "差分比較"
+
+            IsDesignOutputSheet = True
+
+        Case Else
+            IsDesignOutputSheet = False
+    End Select
+
+End Function
+
+Private Function BuildSheetHtml(ByVal ws As Worksheet) As String
+
+    Dim html As String
+    Dim lastRow As Long
+    Dim lastCol As Long
+    Dim r As Long
+    Dim c As Long
+    Dim cellText As String
+    Dim isCodeColumn As Boolean
+
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+    lastCol = ws.Cells(1, ws.Columns.Count).End(xlToLeft).Column
+
+    html = ""
+    html = html & "<section id=""" & HtmlId(ws.Name) & """ class=""section"">" & vbCrLf
+    html = html & "<h2>" & HtmlEncode(ws.Name) & "</h2>" & vbCrLf
+
+    If lastRow < 1 Or lastCol < 1 Then
+        html = html & "<p class=""empty"">データなし</p>" & vbCrLf
+        html = html & "</section>" & vbCrLf
+        BuildSheetHtml = html
+        Exit Function
+    End If
+
+    html = html & "<div class=""tableWrap"">" & vbCrLf
+    html = html & "<table>" & vbCrLf
+
+    html = html & "<thead><tr>" & vbCrLf
+    For c = 1 To lastCol
+        html = html & "<th>" & HtmlEncode(CStr(ws.Cells(1, c).Value)) & "</th>" & vbCrLf
+    Next c
+    html = html & "</tr></thead>" & vbCrLf
+
+    html = html & "<tbody>" & vbCrLf
+
+    For r = 2 To lastRow
+        html = html & "<tr>" & vbCrLf
+
+        For c = 1 To lastCol
+
+            cellText = CStr(ws.Cells(r, c).Value)
+            isCodeColumn = IsCodeTextColumn(ws, c)
+
+            If isCodeColumn Then
+                html = html & "<td class=""codeCell""><pre>" & HtmlEncode(cellText) & "</pre></td>" & vbCrLf
+            Else
+                html = html & "<td>" & Replace(HtmlEncode(cellText), vbLf, "<br>") & "</td>" & vbCrLf
+            End If
+
+        Next c
+
+        html = html & "</tr>" & vbCrLf
+    Next r
+
+    html = html & "</tbody>" & vbCrLf
+    html = html & "</table>" & vbCrLf
+    html = html & "</div>" & vbCrLf
+    html = html & "</section>" & vbCrLf
+
+    BuildSheetHtml = html
+
+End Function
+
+Private Function IsCodeTextColumn(ByVal ws As Worksheet, ByVal colNo As Long) As Boolean
+
+    Dim headerText As String
+
+    headerText = CStr(ws.Cells(1, colNo).Value)
+
+    IsCodeTextColumn = _
+        headerText = "コード全文" Or _
+        headerText = "コード"
+
+End Function
+
+Private Function HtmlEncode(ByVal text As String) As String
+
+    text = Replace(text, "&", "&amp;")
+    text = Replace(text, "<", "&lt;")
+    text = Replace(text, ">", "&gt;")
+    text = Replace(text, """", "&quot;")
+    text = Replace(text, "'", "&#39;")
+
+    HtmlEncode = text
+
+End Function
+
+Private Function HtmlId(ByVal text As String) As String
+
+    Dim i As Long
+    Dim ch As String
+    Dim result As String
+
+    For i = 1 To Len(text)
+        ch = Mid$(text, i, 1)
+
+        If ch Like "[A-Za-z0-9]" Then
+            result = result & ch
+        Else
+            result = result & "_"
+        End If
+    Next i
+
+    HtmlId = "s_" & result
+
+End Function
+
+Private Function BuildDesignHtmlStyle() As String
+
+    Dim css As String
+
+    css = ""
+    css = css & "<style>" & vbCrLf
+    css = css & "body{margin:0;font-family:Meiryo,'Segoe UI',sans-serif;background:#f6f7f9;color:#20242a;}" & vbCrLf
+    css = css & ".side{position:fixed;left:0;top:0;bottom:0;width:240px;background:#1f2933;color:#fff;padding:18px;box-sizing:border-box;overflow:auto;}" & vbCrLf
+    css = css & ".side h1{font-size:18px;margin:0 0 16px;}" & vbCrLf
+    css = css & ".side input{width:100%;box-sizing:border-box;padding:8px;border:0;border-radius:4px;margin-bottom:14px;}" & vbCrLf
+    css = css & ".side a{display:block;color:#d9e2ec;text-decoration:none;padding:7px 4px;border-radius:4px;font-size:13px;}" & vbCrLf
+    css = css & ".side a:hover{background:#334e68;color:#fff;}" & vbCrLf
+    css = css & ".main{margin-left:240px;padding:24px;}" & vbCrLf
+    css = css & ".title{margin-bottom:22px;}" & vbCrLf
+    css = css & ".book{font-size:24px;font-weight:700;}" & vbCrLf
+    css = css & ".date{font-size:12px;color:#65727f;margin-top:4px;}" & vbCrLf
+    css = css & ".section{margin-bottom:34px;background:#fff;border:1px solid #d8dee6;border-radius:6px;overflow:hidden;}" & vbCrLf
+    css = css & ".section h2{font-size:18px;margin:0;padding:14px 16px;background:#edf2f7;border-bottom:1px solid #d8dee6;}" & vbCrLf
+    css = css & ".tableWrap{overflow:auto;}" & vbCrLf
+    css = css & "table{border-collapse:collapse;width:100%;font-size:12px;}" & vbCrLf
+    css = css & "th,td{border:1px solid #d8dee6;padding:6px 8px;vertical-align:top;white-space:normal;}" & vbCrLf
+    css = css & "th{position:sticky;top:0;background:#d9e8f5;z-index:1;text-align:left;}" & vbCrLf
+    css = css & "tr:nth-child(even){background:#fafbfc;}" & vbCrLf
+    css = css & ".codeCell{min-width:520px;background:#0f1720;color:#e6edf3;}" & vbCrLf
+    css = css & "pre{margin:0;font-family:Consolas,'Courier New',monospace;font-size:12px;white-space:pre-wrap;line-height:1.45;}" & vbCrLf
+    css = css & ".empty{padding:16px;color:#65727f;}" & vbCrLf
+    css = css & ".hidden{display:none;}" & vbCrLf
+    css = css & "</style>" & vbCrLf
+
+    BuildDesignHtmlStyle = css
+
+End Function
+
+Private Function BuildDesignHtmlScript() As String
+
+    Dim js As String
+
+    js = ""
+    js = js & "<script>" & vbCrLf
+    js = js & "function filterRows(){" & vbCrLf
+    js = js & "  var q=document.getElementById('searchBox').value.toLowerCase();" & vbCrLf
+    js = js & "  var rows=document.querySelectorAll('tbody tr');" & vbCrLf
+    js = js & "  rows.forEach(function(row){" & vbCrLf
+    js = js & "    var hit=row.innerText.toLowerCase().indexOf(q)>=0;" & vbCrLf
+    js = js & "    row.className=hit?'':'hidden';" & vbCrLf
+    js = js & "  });" & vbCrLf
+    js = js & "}" & vbCrLf
+    js = js & "</script>" & vbCrLf
+
+    BuildDesignHtmlScript = js
+
+End Function
+
+Private Sub OutputSummarySheet(ByVal wb As Workbook)
+
+    Dim ws As Worksheet
+    Dim row As Long
+
+    Set ws = PrepareOutputSheet(wb, "概要")
+
+    ws.Range("A1").Value = "VBA詳細設計書 概要"
+    ws.Range("A1").Font.Bold = True
+    ws.Range("A1").Font.Size = 16
+
+    ws.Range("A3:C3").Value = Array("項目", "件数", "備考")
+
+    row = 4
+
+    row = AddSummaryRow(ws, row, "プロシージャ数", CountDataRows(wb, "詳細設計書"), "詳細設計書")
+    row = AddSummaryRow(ws, row, "変数数", CountDataRows(wb, "変数一覧"), "変数一覧")
+    row = AddSummaryRow(ws, row, "呼び出し関係数", CountDataRows(wb, "呼び出し関係"), "呼び出し関係")
+    row = AddSummaryRow(ws, row, "シート入出力数", CountDataRows(wb, "シート入出力"), "シート入出力")
+    row = AddSummaryRow(ws, row, "画面項目数", CountDataRows(wb, "画面項目"), "画面項目")
+    row = AddSummaryRow(ws, row, "処理フロー数", CountDataRows(wb, "処理フロー"), "処理フロー")
+    row = AddSummaryRow(ws, row, "コード全文数", CountDataRows(wb, "コード全文"), "コード全文")
+    row = AddSummaryRow(ws, row, "コメント不足数", CountDataRows(wb, "コメント不足"), "コメント不足")
+    row = AddSummaryRow(ws, row, "未使用候補数", CountDataRows(wb, "未使用候補"), "未使用候補")
+    row = AddSummaryRow(ws, row, "定数/Enum/Type数", CountDataRows(wb, "定数_Enum_Type一覧"), "定数_Enum_Type一覧")
+    row = AddSummaryRow(ws, row, "命名規則違反候補数", CountDataRows(wb, "命名規則チェック"), "命名規則チェック")
+    row = AddSummaryRow(ws, row, "差分件数", CountDataRows(wb, "差分比較"), "差分比較")
+
+    ws.Range("A15").Value = "生成日時"
+    ws.Range("B15").Value = Format(Now, "yyyy/mm/dd hh:nn:ss")
+
+    ws.Range("A17").Value = "確認優先度"
+    ws.Range("A18:C18").Value = Array("優先度", "確認対象", "理由")
+
+    ws.Range("A19").Value = "高"
+    ws.Range("B19").Value = "コメント不足"
+    ws.Range("C19").Value = "仕様情報が不足している可能性があります"
+
+    ws.Range("A20").Value = "高"
+    ws.Range("B20").Value = "未使用候補"
+    ws.Range("C20").Value = "不要処理または文字列呼び出しの可能性があります"
+
+    ws.Range("A21").Value = "中"
+    ws.Range("B21").Value = "命名規則チェック"
+    ws.Range("C21").Value = "保守性に影響する可能性があります"
+
+    ws.Range("A22").Value = "中"
+    ws.Range("B22").Value = "差分比較"
+    ws.Range("C22").Value = "前回からの変更確認に使います"
+
+    ws.Columns("A:C").AutoFit
+
+End Sub
+
+Private Function AddSummaryRow( _
+    ByVal ws As Worksheet, _
+    ByVal row As Long, _
+    ByVal itemName As String, _
+    ByVal countValue As Long, _
+    ByVal targetSheetName As String) As Long
+
+    ws.Cells(row, 1).Value = itemName
+    ws.Cells(row, 2).Value = countValue
+    ws.Cells(row, 3).Value = targetSheetName
+
+    AddSummaryRow = row + 1
+
+End Function
+
+Private Function CountDataRows( _
+    ByVal wb As Workbook, _
+    ByVal sheetName As String) As Long
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+
+    On Error Resume Next
+    Set ws = wb.Worksheets(sheetName)
+    On Error GoTo 0
+
+    If ws Is Nothing Then
+        CountDataRows = 0
+        Exit Function
+    End If
+
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+
+    If lastRow <= 1 Then
+        CountDataRows = 0
+    Else
+        CountDataRows = lastRow - 1
+    End If
+
+End Function
+
