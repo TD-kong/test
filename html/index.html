@@ -525,6 +525,15 @@ flowchart LR
       return "#";
     }
 
+    function slugifyHeading(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/<[^>]*>/g, "")
+        .replace(/[^\w\-ぁ-んァ-ヶー一-龠々]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "section";
+    }
+
     function inlineMarkdown(text) {
       let value = escapeHtml(text);
       const code = [];
@@ -536,7 +545,12 @@ flowchart LR
         return `<img src="${escapeHtml(sanitizeUrl(url))}" alt="${escapeHtml(alt)}">`;
       });
       value = value.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-        return `<a href="${escapeHtml(sanitizeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        const safeUrl = sanitizeUrl(url);
+        const isHashLink = safeUrl.startsWith("#");
+        const attrs = isHashLink
+          ? ""
+          : ' target="_blank" rel="noopener noreferrer"';
+        return `<a href="${escapeHtml(safeUrl)}"${attrs}>${label}</a>`;
       });
       value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
       value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
@@ -645,7 +659,8 @@ flowchart LR
           closeParagraph(state, html);
           closeLists(state, html);
           const level = heading[1].length;
-          html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+          const headingId = slugifyHeading(heading[2]);
+          html.push(`<h${level} id="${escapeHtml(headingId)}">${inlineMarkdown(heading[2])}</h${level}>`);
           continue;
         }
 
@@ -853,6 +868,19 @@ flowchart LR
     });
 
     source.addEventListener("input", updatePreview);
+    preview.addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link || !preview.contains(link)) return;
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("#")) return;
+      event.preventDefault();
+      const id = decodeURIComponent(href.slice(1));
+      if (!id) return;
+      const target = preview.querySelector(`#${CSS.escape(id)}`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     source.addEventListener("keydown", (event) => {
       if (event.key === "Tab") {
         event.preventDefault();
