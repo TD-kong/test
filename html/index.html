@@ -424,6 +424,7 @@
           <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain">
         </button>
         <button id="sampleButton" type="button" title="サンプルを読み込む">サンプル</button>
+        <button id="saveButton" type="button" title="編集中のMarkdownを保存">保存</button>
         <button id="copyButton" type="button" title="表示結果のHTMLをコピー">HTMLコピー</button>
         <button id="printButton" type="button" title="プレビューを印刷">印刷</button>
         <button id="themeButton" type="button" title="明るい表示と暗い表示を切り替える">ダーク</button>
@@ -499,11 +500,13 @@ flowchart LR
     const previewMeta = document.getElementById("previewMeta");
     const fileInput = document.getElementById("fileInput");
     const sampleButton = document.getElementById("sampleButton");
+    const saveButton = document.getElementById("saveButton");
     const copyButton = document.getElementById("copyButton");
     const printButton = document.getElementById("printButton");
     const themeButton = document.getElementById("themeButton");
     const app = document.getElementById("app");
     let renderRun = 0;
+    let currentFileName = "untitled.md";
 
     function escapeHtml(value) {
       return value
@@ -771,10 +774,9 @@ flowchart LR
 
     function loadMarkdown(text, name) {
       source.value = text;
+      currentFileName = name || "untitled.md";
       updatePreview();
-      if (name) {
-        sourceMeta.textContent = `${name} / ${text.length.toLocaleString("ja-JP")}文字`;
-      }
+      sourceMeta.textContent = `${currentFileName} / ${text.length.toLocaleString("ja-JP")}文字`;
     }
 
     fileInput.addEventListener("change", async () => {
@@ -785,6 +787,45 @@ flowchart LR
     });
 
     sampleButton.addEventListener("click", () => loadMarkdown(sampleMarkdown, "sample.md"));
+
+    async function saveMarkdown() {
+      const text = source.value;
+      const suggestedName = (currentFileName || "untitled.md").replace(/[^\w\-.぀-ヿ一-鿿]/g, "_");
+
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName,
+            types: [{
+              description: "Markdown",
+              accept: { "text/markdown": [".md", ".markdown"], "text/plain": [".txt"] }
+            }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(text);
+          await writable.close();
+          currentFileName = handle.name || suggestedName;
+          sourceMeta.textContent = `${currentFileName} / ${text.length.toLocaleString("ja-JP")}文字`;
+          saveButton.textContent = "保存済み";
+          setTimeout(() => { saveButton.textContent = "保存"; }, 1400);
+          return;
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+        }
+      }
+
+      const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = suggestedName;
+      link.click();
+      URL.revokeObjectURL(url);
+      saveButton.textContent = "DL保存";
+      setTimeout(() => { saveButton.textContent = "保存"; }, 1400);
+    }
+
+    saveButton.addEventListener("click", saveMarkdown);
     printButton.addEventListener("click", () => window.print());
 
     copyButton.addEventListener("click", async () => {
@@ -847,8 +888,11 @@ flowchart LR
       themeButton.textContent = "ライト";
     }
 
-    source.value = localStorage.getItem("markdown-viewer-content") || sampleMarkdown;
+    const savedContent = localStorage.getItem("markdown-viewer-content");
+    source.value = savedContent || sampleMarkdown;
+    currentFileName = savedContent ? "restored.md" : "sample.md";
     updatePreview();
+    sourceMeta.textContent = `${currentFileName} / ${source.value.length.toLocaleString("ja-JP")}文字`;
   </script>
 </body>
 </html>
