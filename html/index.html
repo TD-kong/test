@@ -744,6 +744,31 @@ flowchart LR
       renderMermaidBlocks(runId);
     }
 
+    function decodeText(buffer, encoding, fatal = false) {
+      return new TextDecoder(encoding, { fatal }).decode(buffer);
+    }
+
+    function readMarkdownFile(file) {
+      return file.arrayBuffer().then((buffer) => {
+        const attempts = [
+          () => decodeText(buffer, "utf-8", true),
+          () => decodeText(buffer, "shift_jis", true),
+          () => decodeText(buffer, "euc-jp", true),
+          () => decodeText(buffer, "iso-2022-jp", true),
+          () => decodeText(buffer, "utf-8")
+        ];
+
+        for (const attempt of attempts) {
+          try {
+            return attempt();
+          } catch (error) {
+            // 次のエンコーディング候補を試す
+          }
+        }
+        return "";
+      });
+    }
+
     function loadMarkdown(text, name) {
       source.value = text;
       updatePreview();
@@ -755,7 +780,7 @@ flowchart LR
     fileInput.addEventListener("change", async () => {
       const file = fileInput.files && fileInput.files[0];
       if (!file) return;
-      loadMarkdown(await file.text(), file.name);
+      loadMarkdown(await readMarkdownFile(file), file.name);
       fileInput.value = "";
     });
 
@@ -810,7 +835,7 @@ flowchart LR
         event.preventDefault();
         if (eventName === "drop") {
           const file = event.dataTransfer.files && event.dataTransfer.files[0];
-          if (file) file.text().then((text) => loadMarkdown(text, file.name));
+          if (file) readMarkdownFile(file).then((text) => loadMarkdown(text, file.name));
         }
         app.classList.remove("drop-active");
       });
