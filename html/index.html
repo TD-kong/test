@@ -525,7 +525,7 @@ flowchart LR
     const app = document.getElementById("app");
     let renderRun = 0;
     let currentFileName = "untitled.md";
-    const plantUmlServerBase = localStorage.getItem("markdown-viewer-plantuml-server") || "http://localhost:8080";
+    const plantUmlServerBase = localStorage.getItem("markdown-viewer-plantuml-server") || "http://localhost:18080";
 
     function escapeHtml(value) {
       return value
@@ -618,7 +618,7 @@ flowchart LR
             if (codeLang.toLowerCase() === "mermaid") {
               html.push(`<div class="mermaid-block"><div class="mermaid" data-source="${escapeHtml(codeText)}">${escapeHtml(codeText)}</div><p class="mermaid-note">Mermaidを描画するには vendor/mermaid.min.js が必要です。</p></div>`);
             } else if (codeLang.toLowerCase() === "plantuml" || codeLang.toLowerCase() === "puml") {
-              html.push(`<div class="plantuml-block"><div class="plantuml" data-source="${escapeHtml(codeText)}"></div><p class="plantuml-note">PlantUMLを描画するには plantuml.jar を picoweb モードで起動してください（例: java -jar plantuml.jar -picoweb）。</p></div>`);
+              html.push(`<div class="plantuml-block"><div class="plantuml" data-source="${escapeHtml(codeText)}"></div><p class="plantuml-note">PlantUMLを描画するには plantuml.jar を picoweb モードで起動してください（例: java -jar plantuml.jar -picoweb 18080）。</p></div>`);
             } else {
               html.push(`<pre><code${codeLang ? ` data-lang="${escapeHtml(codeLang)}"` : ""}>${escapeHtml(codeText)}</code></pre>`);
             }
