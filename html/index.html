@@ -195,6 +195,8 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .meta.server-online { color: #047857; }
+    .meta.server-offline { color: #b91c1c; }
 
     textarea {
       width: 100%;
@@ -445,6 +447,8 @@
         <button id="saveButton" type="button" title="編集中のMarkdownを保存">保存</button>
         <button id="copyButton" type="button" title="表示結果のHTMLをコピー">HTMLコピー</button>
         <button id="printButton" type="button" title="プレビューを印刷">印刷</button>
+        <button id="serverConfigButton" type="button" title="PlantUMLサーバーURLを設定">PlantUML設定</button>
+        <button id="serverStatusButton" type="button" title="PlantUMLサーバーの起動状態を確認">状態確認</button>
         <button id="themeButton" type="button" title="明るい表示と暗い表示を切り替える">ダーク</button>
       </div>
     </header>
@@ -462,6 +466,7 @@
         <div class="pane-head">
           <span class="pane-title">Preview</span>
           <span class="meta" id="previewMeta">待機中</span>
+          <span class="meta" id="serverMeta">PlantUML: 未確認</span>
         </div>
         <div class="preview-shell">
           <article class="preview" id="preview"></article>
@@ -521,7 +526,10 @@ flowchart LR
     const saveButton = document.getElementById("saveButton");
     const copyButton = document.getElementById("copyButton");
     const printButton = document.getElementById("printButton");
+    const serverConfigButton = document.getElementById("serverConfigButton");
+    const serverStatusButton = document.getElementById("serverStatusButton");
     const themeButton = document.getElementById("themeButton");
+    const serverMeta = document.getElementById("serverMeta");
     const app = document.getElementById("app");
     let renderRun = 0;
     let currentFileName = "untitled.md";
@@ -842,6 +850,35 @@ flowchart LR
       }
     }
 
+    async function checkPlantUmlServer(showToast = false) {
+      const url = `${plantUmlServerBase.replace(/\/$/, "")}/`;
+      try {
+        const response = await fetch(url, { method: "GET", mode: "cors" });
+        if (response.ok) {
+          serverMeta.textContent = `PlantUML: 起動中 (${plantUmlServerBase})`;
+          serverMeta.classList.add("server-online");
+          serverMeta.classList.remove("server-offline");
+          if (showToast) alert("PlantUMLサーバーは起動中です。");
+          return true;
+        }
+      } catch (error) {
+        // 失敗時は下でオフライン表示
+      }
+      serverMeta.textContent = `PlantUML: 停止中/未接続 (${plantUmlServerBase})`;
+      serverMeta.classList.add("server-offline");
+      serverMeta.classList.remove("server-online");
+      if (showToast) {
+        alert([
+          "PlantUMLサーバーに接続できませんでした。",
+          "",
+          `起動コマンド例: java -jar plantuml.jar -picoweb 18080`,
+          "停止方法: サーバー起動中のターミナルで Ctrl + C",
+          "Windowsで強制終了する場合: taskkill /PID <PID> /F"
+        ].join("\n"));
+      }
+      return false;
+    }
+
     function updatePreview() {
       const runId = ++renderRun;
       const markdown = source.value;
@@ -953,6 +990,19 @@ flowchart LR
       }
     });
 
+    serverConfigButton.addEventListener("click", () => {
+      const current = localStorage.getItem("markdown-viewer-plantuml-server") || plantUmlServerBase;
+      const next = window.prompt("PlantUMLサーバーURLを入力してください（例: http://localhost:18080）", current);
+      if (!next) return;
+      localStorage.setItem("markdown-viewer-plantuml-server", next.trim());
+      alert("設定を保存しました。再読み込みして反映します。");
+      location.reload();
+    });
+
+    serverStatusButton.addEventListener("click", () => {
+      checkPlantUmlServer(true);
+    });
+
     themeButton.addEventListener("click", () => {
       const next = document.documentElement.dataset.theme === "dark" ? "" : "dark";
       document.documentElement.dataset.theme = next;
@@ -1014,6 +1064,7 @@ flowchart LR
     currentFileName = savedContent ? "restored.md" : "sample.md";
     updatePreview();
     sourceMeta.textContent = `${currentFileName} / ${source.value.length.toLocaleString("ja-JP")}文字`;
+    checkPlantUmlServer(false);
   </script>
 </body>
 </html>
