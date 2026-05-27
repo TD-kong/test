@@ -313,15 +313,33 @@
     }
 
     .mermaid-note,
-    .mermaid-error {
+    .mermaid-error,
+    .plantuml-note,
+    .plantuml-error {
       margin: 10px 0 0;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.6;
     }
 
-    .mermaid-error {
+    .mermaid-error,
+    .plantuml-error {
       color: #b91c1c;
+    }
+
+    .plantuml-block {
+      margin: 1.4em 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      overflow: auto;
+    }
+
+    .plantuml img {
+      max-width: 100%;
+      height: auto;
+      display: block;
     }
 
     .preview table {
@@ -507,6 +525,7 @@ flowchart LR
     const app = document.getElementById("app");
     let renderRun = 0;
     let currentFileName = "untitled.md";
+    const plantUmlServerBase = localStorage.getItem("markdown-viewer-plantuml-server") || "http://localhost:8080";
 
     function escapeHtml(value) {
       return value
@@ -525,6 +544,15 @@ flowchart LR
       return "#";
     }
 
+    function slugifyHeading(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/<[^>]*>/g, "")
+        .replace(/[^\w\-ぁ-んァ-ヶー一-龠々]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "section";
+    }
+
     function inlineMarkdown(text) {
       let value = escapeHtml(text);
       const code = [];
@@ -536,7 +564,12 @@ flowchart LR
         return `<img src="${escapeHtml(sanitizeUrl(url))}" alt="${escapeHtml(alt)}">`;
       });
       value = value.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, url) => {
-        return `<a href="${escapeHtml(sanitizeUrl(url))}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        const safeUrl = sanitizeUrl(url);
+        const isHashLink = safeUrl.startsWith("#");
+        const attrs = isHashLink
+          ? ""
+          : ' target="_blank" rel="noopener noreferrer"';
+        return `<a href="${escapeHtml(safeUrl)}"${attrs}>${label}</a>`;
       });
       value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
       value = value.replace(/__([^_]+)__/g, "<strong>$1</strong>");
@@ -584,6 +617,8 @@ flowchart LR
             const codeText = codeLines.join("\n");
             if (codeLang.toLowerCase() === "mermaid") {
               html.push(`<div class="mermaid-block"><div class="mermaid" data-source="${escapeHtml(codeText)}">${escapeHtml(codeText)}</div><p class="mermaid-note">Mermaidを描画するには vendor/mermaid.min.js が必要です。</p></div>`);
+            } else if (codeLang.toLowerCase() === "plantuml" || codeLang.toLowerCase() === "puml") {
+              html.push(`<div class="plantuml-block"><div class="plantuml" data-source="${escapeHtml(codeText)}"></div><p class="plantuml-note">PlantUMLを描画するには plantuml.jar を picoweb モードで起動してください（例: java -jar plantuml.jar -picoweb）。</p></div>`);
             } else {
               html.push(`<pre><code${codeLang ? ` data-lang="${escapeHtml(codeLang)}"` : ""}>${escapeHtml(codeText)}</code></pre>`);
             }
@@ -645,7 +680,8 @@ flowchart LR
           closeParagraph(state, html);
           closeLists(state, html);
           const level = heading[1].length;
-          html.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+          const headingId = slugifyHeading(heading[2]);
+          html.push(`<h${level} id="${escapeHtml(headingId)}">${inlineMarkdown(heading[2])}</h${level}>`);
           continue;
         }
 
@@ -735,6 +771,77 @@ flowchart LR
       }
     }
 
+    function plantUmlEncode6bit(value) {
+      if (value < 10) return String.fromCharCode(48 + value);
+      value -= 10;
+      if (value < 26) return String.fromCharCode(65 + value);
+      value -= 26;
+      if (value < 26) return String.fromCharCode(97 + value);
+      value -= 26;
+      return value === 0 ? "-" : "_";
+    }
+
+    function plantUmlAppend3Bytes(b1, b2, b3) {
+      const c1 = b1 >> 2;
+      const c2 = ((b1 & 0x3) << 4) | (b2 >> 4);
+      const c3 = ((b2 & 0xf) << 2) | (b3 >> 6);
+      const c4 = b3 & 0x3f;
+      return `${plantUmlEncode6bit(c1 & 0x3f)}${plantUmlEncode6bit(c2 & 0x3f)}${plantUmlEncode6bit(c3 & 0x3f)}${plantUmlEncode6bit(c4 & 0x3f)}`;
+    }
+
+    function plantUmlEncodeBytes(bytes) {
+      let encoded = "";
+      for (let i = 0; i < bytes.length; i += 3) {
+        if (i + 2 === bytes.length) encoded += plantUmlAppend3Bytes(bytes[i], bytes[i + 1], 0);
+        else if (i + 1 === bytes.length) encoded += plantUmlAppend3Bytes(bytes[i], 0, 0);
+        else encoded += plantUmlAppend3Bytes(bytes[i], bytes[i + 1], bytes[i + 2]);
+      }
+      return encoded;
+    }
+
+    async function plantUmlDeflateRaw(text) {
+      const stream = new CompressionStream("deflate-raw");
+      const writer = stream.writable.getWriter();
+      writer.write(new TextEncoder().encode(text));
+      writer.close();
+      const arrayBuffer = await new Response(stream.readable).arrayBuffer();
+      return new Uint8Array(arrayBuffer);
+    }
+
+    async function renderPlantUmlBlocks(runId) {
+      const blocks = Array.from(preview.querySelectorAll(".plantuml"));
+      if (!blocks.length) return;
+      if (typeof CompressionStream === "undefined") {
+        preview.querySelectorAll(".plantuml-note").forEach((note) => {
+          note.className = "plantuml-error";
+          note.textContent = "このブラウザは PlantUML 変換に必要な CompressionStream をサポートしていません。";
+        });
+        return;
+      }
+
+      for (const block of blocks) {
+        if (runId !== renderRun) return;
+        const sourceText = block.dataset.source || "";
+        try {
+          const compressed = await plantUmlDeflateRaw(sourceText);
+          const encoded = plantUmlEncodeBytes(compressed);
+          const img = document.createElement("img");
+          img.alt = "PlantUML diagram";
+          img.src = `${plantUmlServerBase.replace(/\/$/, "")}/svg/${encoded}`;
+          block.innerHTML = "";
+          block.appendChild(img);
+          const note = block.parentElement.querySelector(".plantuml-note");
+          if (note) note.remove();
+        } catch (error) {
+          const note = block.parentElement.querySelector(".plantuml-note");
+          if (note) {
+            note.className = "plantuml-error";
+            note.textContent = `PlantUML描画に失敗しました: ${error.message || error}`;
+          }
+        }
+      }
+    }
+
     function updatePreview() {
       const runId = ++renderRun;
       const markdown = source.value;
@@ -745,6 +852,7 @@ flowchart LR
       previewMeta.textContent = `${elementCount.toLocaleString("ja-JP")}要素${mermaidCount ? ` / Mermaid ${mermaidCount.toLocaleString("ja-JP")}件` : ""}`;
       localStorage.setItem("markdown-viewer-content", markdown);
       renderMermaidBlocks(runId);
+      renderPlantUmlBlocks(runId);
     }
 
     function decodeText(buffer, encoding, fatal = false) {
@@ -853,6 +961,19 @@ flowchart LR
     });
 
     source.addEventListener("input", updatePreview);
+    preview.addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link || !preview.contains(link)) return;
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("#")) return;
+      event.preventDefault();
+      const id = decodeURIComponent(href.slice(1));
+      if (!id) return;
+      const target = preview.querySelector(`#${CSS.escape(id)}`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
     source.addEventListener("keydown", (event) => {
       if (event.key === "Tab") {
         event.preventDefault();
