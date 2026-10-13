@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>簡易スプレッドシート</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        #spreadsheet {
+            display: grid;
+            /* A〜E列の5列 + 行番号用の1列 = 計6列 */
+            grid-template-columns: 50px repeat(5, 100px);
+            gap: 1px;
+            background-color: #ccc; /* 罫線の色 */
+            border: 1px solid #ccc;
+            width: max-content;
+        }
+        .cell {
+            background-color: white;
+            padding: 5px;
+            height: 24px;
+            border: none;
+            outline: none;
+            font-size: 14px;
+            text-align: left;
+            box-sizing: border-box;
+        }
+        .header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+        .cell:focus {
+            box-shadow: inset 0 0 0 2px #107c41; /* Excel風の緑色のフォーカス枠 */
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Webスプレッドシート（簡易版）</h2>
+    <div id="spreadsheet"></div>
+
+    <script>
+        const rows = 10; // 行数
+        const cols = 5;  // 列数 (A〜E)
+        
+        // データを保持する2次元配列 (rows x cols)
+        const data = Array(rows).fill(0).map(() => Array(cols).fill(''));
+
+        const spreadsheet = document.getElementById('spreadsheet');
+
+        function render() {
+            spreadsheet.innerHTML = '';
+
+            // 1. 左上の角（空欄）
+            const corner = document.createElement('div');
+            corner.className = 'header';
+            spreadsheet.appendChild(corner);
+
+            // 2. 列ヘッダー (A, B, C, D, E)
+            for (let c = 0; c < cols; c++) {
+                const header = document.createElement('div');
+                header.className = 'header';
+                header.textContent = String.fromCharCode(65 + c); // 65 = 'A'
+                spreadsheet.appendChild(header);
+            }
+
+            // 3. 行とセル本体の生成
+            for (let r = 0; r < rows; r++) {
+                // 行番号ヘッダー
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'header';
+                rowHeader.textContent = r + 1;
+                spreadsheet.appendChild(rowHeader);
+
+                // 各列のセル
+                for (let c = 0; c < cols; c++) {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'cell';
+                    input.dataset.row = r;
+                    input.dataset.col = c;
+                    
+                    // データの反映
+                    input.value = data[r][c];
+
+                    // 値が変更されたときの処理
+                    input.addEventListener('input', (e) => {
+                        const row = e.target.dataset.row;
+                        const col = e.target.dataset.col;
+                        data[row][col] = e.target.value;
+                    });
+
+                    spreadsheet.appendChild(input);
+                }
+            }
+        }
+
+        render();
+    </script>
+
+</body>
+</html>

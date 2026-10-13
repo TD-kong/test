@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Converted Markdown</title>
+    <!-- 必要に応じてスタイルを追加できます -->
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #333; }
+        code { background: #f4f4f4; padding: 2px 4px; border-radius: 4px; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px 12px; }
+        th { background: #f8f9fa; }
+    </style>
+</head>
+<body>
+<h1>主要AIモデル 詳細一覧表（クラウド＆ローカル・オープンモデル比較）</h1>
+<p>主要な商用クラウドLLMおよび、ご指定いただいたローカル・オープンモデルについて、開発元、最新モデル、リリース日、パラメータ数、提供形態をまとめた一覧表です。</p>
+<h2>1. AIモデル比較詳細表</h2>
+<table>
+<thead>
+<tr>
+<th align="left">モデル名 / シリーズ</th>
+<th align="left">開発元</th>
+<th align="left">最新モデル・バリエーション</th>
+<th align="left">最新リリース日</th>
+<th align="left">パラメータ数</th>
+<th align="left">提供形態 / 運用形態</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>GPT-4.5 / GPT-4o</strong></td>
+<td align="left">OpenAI</td>
+<td align="left">GPT-4.5 / GPT-4o</td>
+<td align="left">2025年2月 (GPT-4.5)<br>2024年5月 (GPT-4o)</td>
+<td align="left">非公開 (推定数千億〜兆規模)</td>
+<td align="left"><strong>クラウドAPI / Web</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>gpt-5.4-mini</strong></td>
+<td align="left">OpenAI</td>
+<td align="left">GPT-5.4 mini</td>
+<td align="left">2026年3月17日</td>
+<td align="left">非公開 (軽量高速モデル)</td>
+<td align="left"><strong>クラウドAPI / Web</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Claude 3.7 / 3.5</strong></td>
+<td align="left">Anthropic</td>
+<td align="left">Claude 3.7 Sonnet / Opus</td>
+<td align="left">2025年2月24日 (3.7 Sonnet)</td>
+<td align="left">非公開 (推定数千億規模)</td>
+<td align="left"><strong>クラウドAPI / Web</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Gemini 2.0 / 1.5</strong></td>
+<td align="left">Google DeepMind</td>
+<td align="left">Gemini 2.0 Pro / Flash</td>
+<td align="left">2025年2月5日 (2.0 Pro)</td>
+<td align="left">非公開 (超大容量コンテキスト)</td>
+<td align="left"><strong>クラウドAPI / Web</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Qwen3.8</strong></td>
+<td align="left">Alibaba</td>
+<td align="left">Qwen3.8-27B / Flash-Next</td>
+<td align="left">2026年8月14日 (27B)<br>2026年8月26日 (Flash)</td>
+<td align="left"><strong>27B</strong> (デンス)<br>※Flashは総125B (アクティブ6B)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Qwen3.5</strong></td>
+<td align="left">Alibaba</td>
+<td align="left">Qwen3.5-9B</td>
+<td align="left">2026年3月2日</td>
+<td align="left"><strong>9.0B</strong></td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Gemma 4</strong></td>
+<td align="left">Google DeepMind</td>
+<td align="left">Gemma 4 12B / E4B</td>
+<td align="left">2026年3月31日 (E4B)<br>2026年6月3日 (12B)</td>
+<td align="left"><strong>実体約4B相当</strong> (E4B)<br><strong>12B</strong> (中量級)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Llama 4</strong></td>
+<td align="left">Meta</td>
+<td align="left">Llama 4 Scout</td>
+<td align="left">2025年4月頃</td>
+<td align="left"><strong>総109B / アクティブ17B</strong> (MoE)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Llama 3.2</strong></td>
+<td align="left">Meta</td>
+<td align="left">Llama 3.2 3B</td>
+<td align="left">2024年9月25日</td>
+<td align="left"><strong>3B</strong> (エッジ向け)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Ministral 3</strong></td>
+<td align="left">Mistral AI</td>
+<td align="left">Ministral 3 8B</td>
+<td align="left">2025年12月2日</td>
+<td align="left"><strong>8B</strong></td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Devstral Small 2</strong></td>
+<td align="left">Mistral AI</td>
+<td align="left">Devstral Small 2 24B</td>
+<td align="left">2025年12月9日</td>
+<td align="left"><strong>24B</strong> (コーディング特化)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>Phi-4-mini</strong></td>
+<td align="left">Microsoft</td>
+<td align="left">Phi-4-mini-instruct</td>
+<td align="left">2025年10月17日</td>
+<td align="left"><strong>約3.8B</strong> (SLM)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+<tr>
+<td align="left"><strong>gpt-oss</strong></td>
+<td align="left">OpenAI</td>
+<td align="left">gpt-oss-20b / 120b</td>
+<td align="left">2025年8月5日</td>
+<td align="left"><strong>約21B</strong> (アクティブ3.6B)<br><strong>約117B</strong> (アクティブ5.1B)</td>
+<td align="left"><strong>オープンウェイト / ローカル可</strong></td>
+</tr>
+</tbody></table>
+<hr>
+<h2>2. クラウドモデルとローカル/オープンモデルの相違点</h2>
+<table>
+<thead>
+<tr>
+<th align="left">項目</th>
+<th align="left">クラウド特化モデル（GPT-4.5, Claude 3.7, Gemini 2.0等）</th>
+<th align="left">ローカル・オープンモデル（Llama 4, Qwen3.8, Gemma 4等）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><strong>パラメータ公開</strong></td>
+<td align="left"><strong>非公開</strong>（企業の内部API・サーバーでのみ稼働）</td>
+<td align="left"><strong>公開</strong>（重みファイルをダウンロード可能）</td>
+</tr>
+<tr>
+<td align="left"><strong>性能・知識量</strong></td>
+<td align="left">トレードオフなしの<strong>最高水準</strong>の論理推論・知識ベース</td>
+<td align="left">端末スペック制限内で動作する<strong>軽量〜中量級</strong>が主流</td>
+</tr>
+<tr>
+<td align="left"><strong>データプライバシー</strong></td>
+<td align="left">外部送信が必要（ビジネス向け契約で保護は可能）</td>
+<td align="left">端末完結。<strong>完全オフライン</strong>運用が可能</td>
+</tr>
+<tr>
+<td align="left"><strong>ランニングコスト</strong></td>
+<td align="left">トークン数に応じた従量課金 / 月額固定サブスク</td>
+<td align="left">利用料は無料（PC等の初期ハードウェア費のみ）</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>💡 まとめ・活用のポイント</h2>
+<ol>
+<li><strong>用途の使い分け</strong><ul>
+<li><strong>超高度な推論・長文解釈・リサーチ</strong>：<code>Claude 3.7</code> や <code>GPT-4.5</code>、<code>Gemini 2.0</code> などの商用クラウドAPIを活用するのが最も効率的です。</li>
+<li><strong>機密コードの補完・社内ローカルRAG・開発評価</strong>：<code>Devstral Small 2 (24B)</code> や <code>Qwen3.8 (27B)</code>、<code>gpt-oss</code> などのローカルで十分な性能を発揮する20〜30Bクラスが適しています。</li>
+<li><strong>スマホ・エッジデバイス・高速レスポンス</strong>：<code>Gemma 4 E4B</code> や <code>Llama 3.2 3B</code>、<code>Phi-4-mini</code> などの超軽量モデル（3B〜4B級）が活躍します。</li>
+</ul>
+</li>
+</ol>
+
+</body>
+</html>

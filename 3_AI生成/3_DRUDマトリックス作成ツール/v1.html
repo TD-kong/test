@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRUDマトリックス管理</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #2c3e50;
+            border-bottom: 2px solid #eaeaea;
+            padding-bottom: 10px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            flex-grow: 1;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.btn-danger {
+            background-color: #e74c3c;
+        }
+        button.btn-danger:hover {
+            background-color: #c0392b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #dfe6e9;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #f8f9fa;
+            color: #2c3e50;
+        }
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            background-color: #fcfcfc;
+        }
+        input[type="checkbox"] {
+            transform: scale(1.2);
+            cursor: pointer;
+        }
+        .actions-cell {
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>CRUDマトリックス管理ツール</h1>
+
+    <!-- 行（機能・モジュール）追加フォーム -->
+    <div class="controls">
+        <input type="text" id="featureInput" placeholder="新しい機能・モジュール名を入力 (例: 顧客管理)">
+        <button id="addFeatureBtn">機能を追加</button>
+    </div>
+
+    <!-- CRUDマトリックス表 -->
+    <table id="crudTable">
+        <thead>
+            <tr>
+                <th>機能 / ロール</th>
+                <th>C (Create)</th>
+                <th>R (Read)</th>
+                <th>U (Update)</th>
+                <th>D (Delete)</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- JavaScriptで動的に生成されます -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // 初期データ（機能名と各権限のON/OFF状態）
+    let crudData = [
+        { id: 1, name: 'ユーザー管理', C: true, R: true, U: true, D: false },
+        { id: 2, name: '商品カタログ', C: false, R: true, U: false, D: false },
+        { id: 3, name: '受注処理', C: true, R: true, U: true, D: true }
+    ];
+
+    const tableBody = document.getElementById('tableBody');
+    const featureInput = document.getElementById('featureInput');
+    const addFeatureBtn = document.getElementById('addFeatureBtn');
+
+    // マトリックスを描画する関数 (Read)
+    function renderTable() {
+        tableBody.innerHTML = '';
+        
+        crudData.forEach((item, index) => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td>${escapeHTML(item.name)}</td>
+                <td><input type="checkbox" ${item.C ? 'checked' : ''} onchange="updateCell(${index}, 'C', this.checked)"></td>
+                <td><input type="checkbox" ${item.R ? 'checked' : ''} onchange="updateCell(${index}, 'R', this.checked)"></td>
+                <td><input type="checkbox" ${item.U ? 'checked' : ''} onchange="updateCell(${index}, 'U', this.checked)"></td>
+                <td><input type="checkbox" ${item.D ? 'checked' : ''} onchange="updateCell(${index}, 'D', this.checked)"></td>
+                <td class="actions-cell">
+                    <button class="btn-danger" onclick="deleteFeature(${index})">削除</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 新しい機能を追加する関数 (Create)
+    function addFeature() {
+        const name = featureInput.value.trim();
+        if (!name) {
+            alert('機能名を入力してください。');
+            return;
+        }
+
+        crudData.push({
+            id: Date.now(),
+            name: name,
+            C: false,
+            R: false,
+            U: false,
+            D: false
+        });
+
+        featureInput.value = '';
+        renderTable();
+    }
+
+    // チェックボックスの状態を更新する関数 (Update)
+    function updateCell(index, field, value) {
+        crudData[index][field] = value;
+        console.log('Updated:', crudData); // データの変更を確認用
+    }
+
+    // 機能を削除する関数 (Delete)
+    function deleteFeature(index) {
+        if (confirm(`「${crudData[index].name}」を削除してもよろしいですか？`)) {
+            crudData.splice(index, 1);
+            renderTable();
+        }
+    }
+
+    // XSS対策用の簡易エスケープ関数
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        );
+    }
+
+    // イベントリスナーの登録
+    addFeatureBtn.addEventListener('click', addFeature);
+    featureInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addFeature();
+    });
+
+    // 初期描画
+    renderTable();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON ビジュアライザー</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #ced4da;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --error-color: #dc3545;
+            --success-color: #28a745;
+            --code-bg: #f1f3f5;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .file-input-wrapper {
+            margin-bottom: 15px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .btn-group {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: var(--error-color);
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: var(--success-color);
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        /* ビューア部分 */
+        .viewer-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .view-content {
+            display: none;
+        }
+
+        .view-content.active {
+            display: block;
+        }
+
+        /* ツリービューのスタイル */
+        .tree-view {
+            font-family: monospace;
+            background-color: var(--code-bg);
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        ul.tree, ul.tree ul {
+            list-style: none;
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .tree-node {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .tree-node::before {
+            content: "▼ ";
+            font-size: 10px;
+        }
+
+        .tree-node.collapsed::before {
+            content: "▶ ";
+        }
+
+        .tree-node.collapsed + ul {
+            display: none;
+        }
+
+        .key { color: #881391; font-weight: bold; }
+        .string { color: #22863a; }
+        .number { color: #005cc5; }
+        .boolean { color: #d73a49; }
+        .null { color: #6f42c1; }
+
+        /* テーブルビューのスタイル */
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>JSON ビジュアライザー</h1>
+
+    <!-- 入力パネル -->
+    <div class="panel">
+        <div class="file-input-wrapper">
+            <label for="jsonFile">JSON ファイルを選択: </label>
+            <input type="file" id="jsonFile" accept=".json">
+        </div>
+        <div>
+            <label for="jsonText">または JSON テキストを直接入力:</label>
+            <textarea id="jsonText" placeholder='{"name": "サンプル", "version": 1.0, "items": [1, 2, 3]}'></textarea>
+        </div>
+        <div class="btn-group">
+            <button id="visualizeBtn">可視化する</button>
+        </div>
+        <div id="statusMessage" class="message"></div>
+    </div>
+
+    <!-- 出力パネル -->
+    <div class="panel" id="outputPanel" style="display: none;">
+        <div class="viewer-tabs">
+            <button class="tab-btn active" data-target="treeView">ツリービュー</button>
+            <button class="tab-btn" data-target="tableView">テーブルビュー</button>
+        </div>
+
+        <!-- ツリー表示 -->
+        <div id="treeView" class="view-content active">
+            <div class="tree-view" id="treeContainer"></div>
+        </div>
+
+        <!-- テーブル表示 -->
+        <div id="tableView" class="view-content">
+            <div class="table-container" id="tableContainer">
+                <p>配列データが含まれている場合にテーブル表示が有効になります。</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const jsonFileInput = document.getElementById('jsonFile');
+    const jsonTextInput = document.getElementById('jsonText');
+    const visualizeBtn = document.getElementById('visualizeBtn');
+    const statusMessage = document.getElementById('statusMessage');
+    const outputPanel = document.getElementById('outputPanel');
+    const treeContainer = document.getElementById('treeContainer');
+    const tableContainer = document.getElementById('tableContainer');
+
+    // タブ切り替えの処理
+    document.querySelectorAll('.viewer-tabs .tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.viewer-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-content').forEach(c => c.classList.remove('active'));
+            
+            e.target.classList.add('active');
+            const targetId = e.target.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+
+    // ファイル選択時にテキストエリアに読み込む
+    jsonFileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            jsonTextInput.value = e.target.result;
+            showMessage('ファイルを読み込みました。', 'success');
+        };
+        reader.onerror = () => {
+            showMessage('ファイルの読み込みに失敗しました。', 'error');
+        };
+        reader.readAsText(file);
+    });
+
+    // 可視化ボタンクリック時の処理
+    visualizeBtn.addEventListener('click', () => {
+        const text = jsonTextInput.value.trim();
+        if (!text) {
+            showMessage('JSON ファイルを選択するか、テキストを入力してください。', 'error');
+            return;
+        }
+
+        try {
+            const jsonData = JSON.parse(text);
+            showMessage('JSON のパースに成功しました。', 'success');
+            outputPanel.style.display = 'block';
+
+            // 各ビューを生成
+            renderTreeView(jsonData);
+            renderTableView(jsonData);
+        } catch (error) {
+            showMessage('JSON の構文エラー: ' + error.message, 'error');
+            outputPanel.style.display = 'none';
+        }
+    });
+
+    function showMessage(text, type) {
+        statusMessage.textContent = text;
+        statusMessage.className = 'message ' + type;
+    }
+
+    // --- ツリービューの生成ロジック ---
+    function renderTreeView(data) {
+        treeContainer.innerHTML = '';
+        const ul = document.createElement('ul');
+        ul.className = 'tree';
+        ul.appendChild(createTreeNode('root', data));
+        treeContainer.appendChild(ul);
+    }
+
+    function createTreeNode(key, value) {
+        const li = document.createElement('li');
+        const type = typeof value;
+
+        if (value !== null && (type === 'object' || Array.isArray(value))) {
+            const isArray = Array.isArray(value);
+            const count = isArray ? value.length : Object.keys(value).length;
+            
+            const span = document.createElement('span');
+            span.className = 'tree-node';
+            span.innerHTML = `<span class="key">"${key}"</span>: ${isArray ? `Array(${count})` : `Object(${count})`}`;
+            
+            span.addEventListener('click', (e) => {
+                e.stopPropagation();
+                span.classList.toggle('collapsed');
+            });
+            
+            li.appendChild(span);
+
+            const ul = document.createElement('ul');
+            for (const subKey in value) {
+                ul.appendChild(createTreeNode(subKey, value[subKey]));
+            }
+            li.appendChild(ul);
+        } else {
+            const formattedValue = formatValueSpan(value);
+            li.innerHTML = `<span class="key">"${key}"</span>: ${formattedValue}`;
+        }
+
+        return li;
+    }
+
+    function formatValueSpan(value) {
+        const type = typeof value;
+        if (value === null) return '<span class="null">null</span>';
+        if (type === 'string') return `<span class="string">"${escapeHtml(value)}"</span>`;
+        if (type === 'number') return `<span class="number">${value}</span>`;
+        if (type === 'boolean') return `<span class="boolean">${value}</span>`;
+        return `<span>${escapeHtml(value)}</span>`;
+    }
+
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/--/g, '&#45;&#45;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    // --- テーブルビューの生成ロジック ---
+    function renderTableView(data) {
+        tableContainer.innerHTML = '';
+
+        // オブジェクトの中に配列がある場合や、データ自体が配列の場合を考慮
+        let targetArray = null;
+        if (Array.isArray(data)) {
+            targetArray = data;
+        } else if (typeof data === 'object' && data !== null) {
+            // オブジェクトのプロパティの中で最初に見つかった配列を採用
+            for (const key in data) {
+                if (Array.isArray(data[key])) {
+                    targetArray = data[key];
+                    break;
+                }
+            }
+        }
+
+        if (!targetArray || targetArray.length === 0) {
+            tableContainer.innerHTML = '<p>表形式で表示できる配列データ（オブジェクトの配列など）が見つかりませんでした。</p>';
+            return;
+        }
+
+        // テーブルの作成
+        const table = document.createElement('table');
+        const thead = document.createElement('thead');
+        const tbody = document.createElement('tbody');
+
+        // カラム（キー）の収集
+        const keys = new Set();
+        targetArray.forEach(item => {
+            if (typeof item === 'object' && item !== null) {
+                Object.keys(item).forEach(k => keys.add(k));
+            }
+        });
+
+        const keyArray = Array.from(keys);
+
+        if (keyArray.length === 0) {
+            tableContainer.innerHTML = '<p>テーブル化できるプリミティブ以外のプロパティがありません。</p>';
+            return;
+        }
+
+        // ヘッダー行
+        const headerRow = document.createElement('tr');
+        keyArray.forEach(key => {
+            const th = document.createElement('th');
+            th.textContent = key;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // ボディ行
+        targetArray.forEach(item => {
+            const row = document.createElement('tr');
+            keyArray.forEach(key => {
+                const td = document.createElement('td');
+                const val = (item && typeof item === 'object') ? item[key] : undefined;
+                td.textContent = (val !== undefined && val !== null) ? (typeof val === 'object' ? JSON.stringify(val) : val) : '';
+                row.appendChild(td);
+            });
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+
+        tableContainer.appendChild(table);
+    }
+</script>
+
+</body>
+</html>

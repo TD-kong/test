@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oracle tnsnames.ora Generator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        oracle: {
+                            50: '#fdf2f2',
+                            100: '#fbe8e8',
+                            500: '#ea1d24',
+                            600: '#c5121a',
+                            700: '#a30f15',
+                            800: '#861217',
+                            900: '#70151a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'Fira Code', monospace; }
+        /* Custom scrollbar for code preview */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        .dark ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200 flex flex-col">
+
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-oracle-600 flex items-center justify-center text-white font-bold shadow-lg shadow-oracle-600/30">
+                    <i class="fa-solid fa-database text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">TNS Builder Pro</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Oracle <code class="text-oracle-600 dark:text-oracle-500 font-semibold">tnsnames.ora</code> generator & parser</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="openImportModal()" class="inline-flex items-center px-3.5 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition shadow-sm">
+                    <i class="fa-solid fa-file-import mr-2 text-oracle-600"></i> Import / Parse
+                </button>
+                <button onclick="toggleDarkMode()" class="p-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition text-slate-600 dark:text-slate-300" title="Toggle Dark/Light Mode">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-hidden">
+        
+        <!-- Left Column: Form & Entries List (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-6 overflow-y-auto pr-1">
+            
+            <!-- Quick Add / Edit Card -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="form-title" class="text-base font-semibold flex items-center">
+                        <i class="fa-solid fa-circle-plus text-oracle-600 mr-2"></i> Add Connection Entry
+                    </h2>
+                    <button type="button" id="cancel-edit-btn" onclick="resetForm()" class="hidden text-xs text-slate-500 hover:text-oracle-600 underline">Cancel Edit</button>
+                </div>
+
+                <form id="tns-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="edit-index" value="-1">
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Connection Name (TNS Name) *</label>
+                            <input type="text" id="tns_name" required placeholder="e.g., PROD_DB" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Hostname / IP Address *</label>
+                            <input type="text" id="hostname" required placeholder="e.g., dbserver.example.com" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 font-mono text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Port *</label>
+                            <input type="number" id="port" required value="1521" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 font-mono text-sm">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <label id="identifier-label" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Service Name *</label>
+                                <div class="flex items-center space-x-2 text-xs">
+                                    <span id="label-service" class="font-semibold text-oracle-600 cursor-pointer" onclick="setIdentifierType('service')">Service Name</span>
+                                    <span class="text-slate-400">/</span>
+                                    <span id="label-sid" class="text-slate-500 cursor-pointer" onclick="setIdentifierType('sid')">SID</span>
+                                </div>
+                            </div>
+                            <input type="hidden" id="identifier_type" value="SERVICE_NAME">
+                            <input type="text" id="identifier_value" required placeholder="e.g., ORCL or pdb1" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 font-mono text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Advanced Settings Toggle -->
+                    <div>
+                        <button type="button" onclick="toggleAdvanced()" class="text-xs font-semibold text-oracle-600 dark:text-oracle-500 flex items-center hover:underline">
+                            <i id="advanced-chevron" class="fa-solid fa-chevron-right mr-1.5 transition-transform"></i> Advanced Options (Protocol, Server Type, Failover)
+                        </button>
+                    </div>
+
+                    <!-- Advanced Panel -->
+                    <div id="advanced-panel" class="hidden space-y-4 pt-2 border-t border-slate-200 dark:border-slate-800">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Protocol</label>
+                                <select id="protocol" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 text-sm">
+                                    <option value="TCP">TCP</option>
+                                    <option value="TCPS">TCPS (SSL/TLS)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Server Type</label>
+                                <select id="server_type" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 text-sm">
+                                    <option value="">Default (None)</option>
+                                    <option value="DEDICATED">Dedicated</option>
+                                    <option value="SHARED">Shared</option>
+                                    <option value="POOLED">Pooled</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Load Balancing (FAILOVER / LOAD_BALANCE)</label>
+                                <select id="load_balance" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 text-sm">
+                                    <option value="OFF">Standard / None</option>
+                                    <option value="ON">Load Balanced (ON)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Comments (Header note)</label>
+                                <input type="text" id="entry_comment" placeholder="e.g. Production Database Server" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 text-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-2">
+                        <button type="submit" id="submit-btn" class="px-6 py-2.5 bg-oracle-600 hover:bg-oracle-700 text-white font-semibold rounded-xl transition shadow-md shadow-oracle-600/20 text-sm flex items-center">
+                            <i class="fa-solid fa-plus mr-2"></i> Add Entry
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Entries List Card -->
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex-1 flex flex-col">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-semibold flex items-center">
+                        <i class="fa-solid fa-list-check text-oracle-600 mr-2"></i> Configured Entries (<span id="entry-count">0</span>)
+                    </h2>
+                    <button onclick="clearAllEntries()" class="text-xs text-red-600 hover:text-red-700 dark:text-red-400 font-medium">Clear All</button>
+                </div>
+
+                <div id="entries-container" class="space-y-3 overflow-y-auto max-h-[360px] pr-1">
+                    <!-- Dynamic entries populated here -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Column: Real-time Preview & Actions (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+                <div class="flex items-center space-x-2">
+                    <span class="w-3 h-3 rounded-full bg-oracle-500 animate-pulse"></span>
+                    <h2 class="font-semibold text-sm">tnsnames.ora Preview</h2>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="copyToClipboard()" id="copy-btn" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-medium transition flex items-center">
+                        <i class="fa-regular fa-copy mr-1.5"></i> <span id="copy-text">Copy</span>
+                    </button>
+                    <button onclick="downloadFile()" class="px-3 py-1.5 bg-oracle-600 hover:bg-oracle-700 text-white rounded-lg text-xs font-medium transition flex items-center shadow-sm">
+                        <i class="fa-solid fa-download mr-1.5"></i> Download
+                    </button>
+                </div>
+            </div>
+
+            <!-- Code Preview Box -->
+            <div class="flex-1 p-4 bg-slate-950 text-slate-200 font-mono text-xs overflow-auto relative">
+                <pre id="preview-code" class="leading-relaxed"></pre>
+            </div>
+
+            <!-- Footer hint -->
+            <div class="px-6 py-3 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                <span>Default path: <code class="text-oracle-600 dark:text-oracle-400">$ORACLE_HOME/network/admin/tnsnames.ora</code></span>
+                <span id="char-count">0 lines</span>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="import-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold flex items-center">
+                    <i class="fa-solid fa-file-import text-oracle-600 mr-2"></i> Import & Parse existing tnsnames.ora
+                </h3>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Paste your existing <code class="text-oracle-600">tnsnames.ora</code> configuration below. The parser will automatically extract database connections and add them to your workspace.</p>
+            
+            <textarea id="import-textarea" rows="10" placeholder="# Paste tnsnames.ora content here...
+PROD =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = db.example.com)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVICE_NAME = orcl.example.com)
+    )
+  )" class="w-full p-3 font-mono text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-oracle-500 resize-none mb-4"></textarea>
+            
+            <div class="flex items-center justify-end space-x-3">
+                <button onclick="closeImportModal()" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                <button onclick="parseAndImport()" class="px-5 py-2 rounded-xl bg-oracle-600 hover:bg-oracle-700 text-white text-xs font-semibold shadow-md shadow-oracle-600/20 transition">Parse & Import</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State Management
+        let entries = [
+            {
+                tns_name: 'ORCL_PROD',
+                hostname: 'oracle-prod.company.local',
+                port: '1521',
+                identifier_type: 'SERVICE_NAME',
+                identifier_value: 'ORCL',
+                protocol: 'TCP',
+                server_type: '',
+                load_balance: 'OFF',
+                comment: 'Primary Production Database'
+            },
+            {
+                tns_name: 'ORCL_DEV',
+                hostname: 'oracle-dev.company.local',
+                port: '1521',
+                identifier_type: 'SERVICE_NAME',
+                identifier_value: 'DEVDB',
+                protocol: 'TCP',
+                server_type: '',
+                load_balance: 'OFF',
+                comment: 'Development Sandbox'
+            }
+        ];
+
+        // On window load initialization
+        window.onload = function() {
+            renderEntries();
+            updatePreview();
+        };
+
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = 'fa-solid fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                icon.className = 'fa-solid fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Check local storage theme
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('theme-icon').className = 'fa-solid fa-sun';
+        }
+
+        // Advanced Panel Toggle
+        function toggleAdvanced() {
+            const panel = document.getElementById('advanced-panel');
+            const chevron = document.getElementById('advanced-chevron');
+            panel.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-90');
+        }
+
+        // Identifier Type Toggle (Service Name vs SID)
+        function setIdentifierType(type) {
+            const typeInput = document.getElementById('identifier_type');
+            const labelService = document.getElementById('label-service');
+            const labelSid = document.getElementById('label-sid');
+            const identifierLabel = document.getElementById('identifier-label');
+            const identifierInput = document.getElementById('identifier_value');
+
+            typeInput.value = type === 'service' ? 'SERVICE_NAME' : 'SID';
+            if (type === 'service') {
+                labelService.className = 'font-semibold text-oracle-600 cursor-pointer';
+                labelSid.className = 'text-slate-500 cursor-pointer';
+                identifierLabel.textContent = 'Service Name *';
+                identifierInput.placeholder = 'e.g., ORCL or pdb1';
+            } else {
+                labelSid.className = 'font-semibold text-oracle-600 cursor-pointer';
+                labelService.className = 'text-slate-500 cursor-pointer';
+                identifierLabel.textContent = 'SID *';
+                identifierInput.placeholder = 'e.g., orcl';
+            }
+        }
+
+        // Handle Form Submit (Add or Update)
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('edit-index').value);
+
+            const entry = {
+                tns_name: document.getElementById('tns_name').value.trim().toUpperCase(),
+                hostname: document.getElementById('hostname').value.trim(),
+                port: document.getElementById('port').value.trim(),
+                identifier_type: document.getElementById('identifier_type').value,
+                identifier_value: document.getElementById('identifier_value').value.trim(),
+                protocol: document.getElementById('protocol').value,
+                server_type: document.getElementById('server_type').value,
+                load_balance: document.getElementById('load_balance').value,
+                comment: document.getElementById('entry_comment').value.trim()
+            };
+
+            if (editIndex >= 0) {
+                entries[editIndex] = entry;
+            } else {
+                entries.push(entry);
+            }
+
+            resetForm();
+            renderEntries();
+            updatePreview();
+        }
+
+        // Reset Form
+        function resetForm() {
+            document.getElementById('tns-form').reset();
+            document.getElementById('edit-index').value = '-1';
+            document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-circle-plus text-oracle-600 mr-2"></i> Add Connection Entry';
+            document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-plus mr-2"></i> Add Entry';
+            document.getElementById('cancel-edit-btn').classList.add('hidden');
+            document.getElementById('port').value = '1521';
+            setIdentifierType('service');
+        }
+
+        // Edit Entry
+        function editEntry(index) {
+            const entry = entries[index];
+            document.getElementById('edit-index').value = index;
+            document.getElementById('tns_name').value = entry.tns_name;
+            document.getElementById('hostname').value = entry.hostname;
+            document.getElementById('port').value = entry.port;
+            
+            setIdentifierType(entry.identifier_type === 'SERVICE_NAME' ? 'service' : 'sid');
+            document.getElementById('identifier_value').value = entry.identifier_value;
+            
+            document.getElementById('protocol').value = entry.protocol || 'TCP';
+            document.getElementById('server_type').value = entry.server_type || '';
+            document.getElementById('load_balance').value = entry.load_balance || 'OFF';
+            document.getElementById('entry_comment').value = entry.comment || '';
+
+            document.getElementById('form-title').innerHTML = '<i class="fa-solid fa-pen-to-square text-oracle-600 mr-2"></i> Edit Connection Entry';
+            document.getElementById('submit-btn').innerHTML = '<i class="fa-solid fa-check mr-2"></i> Update Entry';
+            document.getElementById('cancel-edit-btn').classList.remove('hidden');
+
+            // Scroll to form on mobile/tablet
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Delete Entry
+        function deleteEntry(index) {
+            entries.splice(index, 1);
+            renderEntries();
+            updatePreview();
+        }
+
+        // Clear All Entries
+        function clearAllEntries() {
+            if (confirm('Are you sure you want to clear all connection entries?')) {
+                entries = [];
+                resetForm();
+                renderEntries();
+                updatePreview();
+            }
+        }
+
+        // Render Entries List HTML
+        function renderEntries() {
+            const container = document.getElementById('entries-container');
+            document.getElementById('entry-count').textContent = entries.length;
+
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-400 dark:text-slate-600">
+                        <i class="fa-solid fa-inbox text-3xl mb-2"></i>
+                        <p class="text-xs">No connection entries added yet. Use the form above to add one.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            entries.forEach((entry, index) => {
+                html += `
+                    <div class="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between group hover:border-oracle-500/50 transition">
+                        <div class="min-w-0 pr-3">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-sm text-slate-900 dark:text-slate-100 font-mono">${escapeHtml(entry.tns_name)}</span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-oracle-100 dark:bg-oracle-900/40 text-oracle-700 dark:text-oracle-400 font-mono">${escapeHtml(entry.identifier_type)}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-mono truncate mt-0.5">
+                                ${escapeHtml(entry.hostname)}:${escapeHtml(entry.port)} / ${escapeHtml(entry.identifier_value)}
+                            </p>
+                            ${entry.comment ? `<p class="text-[11px] text-slate-400 dark:text-slate-500 italic mt-1">${escapeHtml(entry.comment)}</p>` : ''}
+                        </div>
+                        <div class="flex items-center space-x-1.5 shrink-0">
+                            <button onclick="editEntry(${index})" class="p-2 text-slate-400 hover:text-oracle-600 dark:hover:text-oracle-400 transition rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700" title="Edit">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="deleteEntry(${index})" class="p-2 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700" title="Delete">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Generate TNSNames string
+        function generateTnsString() {
+            if (entries.length === 0) return '# No entries configured in tnsnames.ora\n';
+
+            let output = `# tnsnames.ora generated by TNS Builder Pro\n# Timestamp: ${new Date().toISOString()}\n\n`;
+
+            entries.forEach(entry => {
+                if (entry.comment) {
+                    output += `# ${entry.comment}\n`;
+                }
+                output += `${entry.tns_name} =\n`;
+                output += `  (DESCRIPTION =\n`;
+                if (entry.load_balance === 'ON') {
+                    output += `    (LOAD_BALANCE = ON)\n`;
+                    output += `    (FAILOVER = ON)\n`;
+                }
+                output += `    (ADDRESS = (PROTOCOL = ${entry.protocol || 'TCP'})(HOST = ${entry.hostname})(PORT = ${entry.port}))\n`;
+                output += `    (CONNECT_DATA =\n`;
+                output += `      (${entry.identifier_type} = ${entry.identifier_value})\n`;
+                if (entry.server_type) {
+                    output += `      (SERVER = ${entry.server_type})\n`;
+                }
+                output += `    )\n`;
+                output += `  )\n\n`;
+            });
+
+            return output.trim();
+        }
+
+        // Update Real-time Preview
+        function updatePreview() {
+            const tnsText = generateTnsString();
+            document.getElementById('preview-code').textContent = tnsText;
+            const lineCount = tnsText.split('\n').length;
+            document.getElementById('char-count').textContent = `${lineCount} lines`;
+        }
+
+        // Copy to Clipboard with Animation
+        function copyToClipboard() {
+            const tnsText = generateTnsString();
+            const textarea = document.createElement('textarea');
+            textarea.value = tnsText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                const btnText = document.getElementById('copy-text');
+                const btnIcon = document.querySelector('#copy-btn i');
+                btnText.textContent = 'Copied!';
+                btnIcon.className = 'fa-solid fa-check mr-1.5 text-emerald-500';
+                setTimeout(() => {
+                    btnText.textContent = 'Copy';
+                    btnIcon.className = 'fa-regular fa-copy mr-1.5';
+                }, 2000);
+            } catch (err) {
+                alert('Failed to copy to clipboard.');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Download as tnsnames.ora file
+        function downloadFile() {
+            const tnsText = generateTnsString();
+            const blob = new Blob([tnsText], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tnsnames.ora';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Modal Controls
+        function openImportModal() {
+            document.getElementById('import-modal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-modal').classList.add('hidden');
+            document.getElementById('import-textarea').value = '';
+        }
+
+        // Simple Robust tnsnames.ora Parser
+        function parseAndImport() {
+            const rawText = document.getElementById('import-textarea').value;
+            if (!rawText.trim()) {
+                alert('Please enter valid tnsnames.ora content.');
+                return;
+            }
+
+            try {
+                // Basic regex parser for tnsnames.ora structures
+                // Looks for: TNS_NAME = (DESCRIPTION = ... (HOST = ...) (PORT = ...) (SERVICE_NAME / SID = ...))
+                const cleaned = rawText.replace(/[\r\n]+/g, ' ');
+                const entryRegex = /([A-Za-z0-9_.-]+)\s*=\s*\((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*\)/g;
+                
+                let match;
+                let parsedCount = 0;
+
+                // Alternative line-based parser fallback or block matcher
+                // Let's do a reliable tokenizer / regex extractor
+                const blocks = rawText.split(/\n(?=[A-Za-z0-9_.-]+\s*=)/);
+
+                blocks.forEach(block => {
+                    const nameMatch = block.match(/^([A-Za-z0-9_.-]+)\s*=/);
+                    if (!nameMatch) return;
+                    const tnsName = nameMatch[1].trim();
+
+                    const hostMatch = block.match(/HOST\s*=\s*([^)\s]+)/i);
+                    const portMatch = block.match(/PORT\s*=\s*([0-9]+)/i);
+                    const serviceMatch = block.match(/SERVICE_NAME\s*=\s*([^)\s]+)/i);
+                    const sidMatch = block.match(/SID\s*=\s*([^)\s]+)/i);
+                    const protoMatch = block.match(/PROTOCOL\s*=\s*([^)\s]+)/i);
+                    const serverMatch = block.match(/SERVER\s*=\s*([^)\s]+)/i);
+
+                    if (hostMatch) {
+                        const newEntry = {
+                            tns_name: tnsName,
+                            hostname: hostMatch[1].replace(/["']/g, ''),
+                            port: portMatch ? portMatch[1] : '1521',
+                            identifier_type: serviceMatch ? 'SERVICE_NAME' : (sidMatch ? 'SID' : 'SERVICE_NAME'),
+                            identifier_value: serviceMatch ? serviceMatch[1].replace(/["']/g, '') : (sidMatch ? sidMatch[1].replace(/["']/g, '') : 'ORCL'),
+                            protocol: protoMatch ? protoMatch[1].toUpperCase() : 'TCP',
+                            server_type: serverMatch ? serverMatch[1].toUpperCase() : '',
+                            load_balance: block.includes('LOAD_BALANCE = ON') ? 'ON' : 'OFF',
+                            comment: ''
+                        };
+
+                        // Check if comment exists right before block
+                        const lines = block.split('\n');
+                        for (let line of lines) {
+                            if (line.trim().startsWith('#') && !line.includes('tnsnames.ora')) {
+                                newEntry.comment = line.trim().replace(/^#\s*/, '');
+                                break;
+                            }
+                        }
+
+                        entries.push(newEntry);
+                        parsedCount++;
+                    }
+                });
+
+                if (parsedCount > 0) {
+                    renderEntries();
+                    updatePreview();
+                    closeImportModal();
+                } else {
+                    alert('Could not automatically parse valid entries. Please check the format.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error parsing tnsnames.ora text.');
+            }
+        }
+
+        // HTML Escape helper
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(>g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

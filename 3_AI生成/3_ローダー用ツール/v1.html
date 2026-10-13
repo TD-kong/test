@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Oracle SQL*Loader ツール</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; }
+        textarea { height: 200px; font-family: monospace; background: #272822; color: #f8f8f2; }
+        button { background: #007BFF; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Oracle SQL*Loader コントロールファイル生成ツール</h2>
+    
+    <div class="form-group">
+        <label for="tableName">対象テーブル名:</label>
+        <input type="text" id="tableName" value="EMP_DATA">
+    </div>
+
+    <div class="form-group">
+        <label for="csvFile">CSVファイル（ヘッダー行あり）を選択:</label>
+        <input type="file" id="csvFile" accept=".csv">
+    </div>
+
+    <div class="form-group">
+        <button onclick="generateControlFile()">コントロールファイルを生成</button>
+    </div>
+
+    <div class="form-group">
+        <label for="outputCtl">生成されたコントロールファイル (.ctl):</label>
+        <textarea id="outputCtl" readonly></textarea>
+    </div>
+
+    <div class="form-group">
+        <button onclick="downloadFile()">ファイルをダウンロード</button>
+    </div>
+</div>
+
+<script>
+let csvHeaders = [];
+
+// CSVファイルが選択されたらヘッダーを解析する
+document.getElementById('csvFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const text = event.target.result;
+        const lines = text.split(/\r\n|\n/);
+        if (lines.length > 0) {
+            // 1行目をヘッダーとして取得（カンマ区切り前提）
+            csvHeaders = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, ''));
+            alert(`CSVを読み込みました。カラム数: ${csvHeaders.length}`);
+        }
+    };
+    reader.readAsText(file);
+});
+
+// コントロールファイルの生成
+function generateControlFile() {
+    const tableName = document.getElementById('tableName').value || 'MY_TABLE';
+    
+    if (csvHeaders.length === 0) {
+        alert('先にCSVファイルを選択してください。');
+        return;
+    }
+
+    let ctlContent = `LOAD DATA\n`;
+    ctlContent += `INFILE 'data.csv'\n`;
+    ctlContent += `APPEND\n`;
+    ctlContent += `INTO TABLE ${tableName}\n`;
+    ctlContent += `FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'\n`;
+    ctlContent += `TRAILING NULLCOLS\n`;
+    ctlContent += `(\n`;
+
+    const columns = csvHeaders.map((header, index) => {
+        // デフォルトですべてCHARとして定義（必要に応じて型推論を入れると便利）
+        return `    ${header} CHAR`;
+    });
+
+    ctlContent += columns.join(',\n');
+    ctlContent += `\n)\n`;
+
+    document.getElementById('outputCtl').value = ctlContent;
+}
+
+// ファイルダウンロード機能
+function downloadFile() {
+    const content = document.getElementById('outputCtl').value;
+    if (!content) {
+        alert('ダウンロードする内容がありません。');
+        return;
+    }
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'loader.ctl';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>

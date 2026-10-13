@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Oracle DDL ジェネレーター</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f9f9f9; color: #333; }
+        h1 { font-size: 1.5rem; }
+        .container { display: flex; gap: 20px; }
+        .pane { flex: 1; display: flex; flexDirection: column; }
+        textarea { width: 100%; height: 400px; font-family: monospace; font-size: 14px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { margin-top: 10px; padding: 10px 20px; font-size: 1rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #eee; padding: 10px; border-radius: 4px; overflow-x: auto; height: 400px; margin: 0; font-family: monospace; font-size: 14px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <h1>Oracle DDL ジェネレーター (JSON to Oracle)</h1>
+    
+    <div class="container">
+        <!-- 入力エリア -->
+        <div class="pane">
+            <label for="jsonInput">入力 JSON:</label>
+            <textarea id="jsonInput">{
+  "tableName": "EMPLOYEES",
+  "tableComment": "従業員マスタ",
+  "columns": [
+    {
+      "name": "EMP_ID",
+      "type": "NUMBER",
+      "size": "6",
+      "notNull": true,
+      "primaryKey": true,
+      "comment": "従業員ID"
+    },
+    {
+      "name": "EMP_NAME",
+      "type": "VARCHAR2",
+      "size": "50",
+      "notNull": true,
+      "comment": "従業員名"
+    },
+    {
+      "name": "HIRE_DATE",
+      "type": "DATE",
+      "defaultValue": "SYSDATE",
+      "comment": "入社日"
+    },
+    {
+      "name": "SALARY",
+      "type": "NUMBER",
+      "size": "10,2",
+      "comment": "給与"
+    }
+  ]
+}</textarea>
+            <button onclick="generateDDL()">DDL生成</button>
+        </div>
+
+        <!-- 出力エリア -->
+        <div class="pane">
+            <label for="ddlOutput">生成されたOracle DDL:</label>
+            <pre id="ddlOutput">ここにDDLが表示されます...</pre>
+        </div>
+    </div>
+
+<script>
+function generateDDL() {
+    const jsonText = document.getElementById('jsonInput').value;
+    let data;
+    
+    try {
+        data = JSON.parse(jsonText);
+    } catch (e) {
+        alert('JSONのパースに失敗しました: ' + e.message);
+        return;
+    }
+
+    const tableName = data.tableName;
+    const columns = data.columns || [];
+    const tableComment = data.tableComment;
+
+    let ddlLines = [];
+    let commentsLines = [];
+    let pkColumns = [];
+
+    // テーブル作成文の開始
+    ddlLines.push(`CREATE TABLE ${tableName} (`);
+
+    let columnDefs = [];
+    columns.forEach(col => {
+        let def = `    ${col.name.padEnd(15)} ${col.type}`;
+        
+        // サイズ・精度の指定 (例: VARCHAR2(50), NUMBER(10,2))
+        if (col.size) {
+            def += `(${col.size})`;
+        }
+
+        // デフォルト値
+        if (col.defaultValue) {
+            def += ` DEFAULT ${col.defaultValue}`;
+        }
+
+        // NOT NULL制約
+        if (col.notNull) {
+            def += ` NOT NULL`;
+        }
+
+        columnDefs.push(def);
+
+        // 主キー候補の収集
+        if (col.primaryKey) {
+            pkColumns.push(col.name);
+        }
+
+        // カラムコメントの収集
+        if (col.comment) {
+            commentsLines.push(`COMMENT ON COLUMN ${tableName}.${col.name} IS '${col.comment}';`);
+        }
+    });
+
+    // 主キー制約の追加
+    if (pkColumns.length > 0) {
+        columnDefs.push(`    CONSTRAINT pk_${tableName.toLowerCase()} PRIMARY KEY (${pkColumns.join(', ')})`);
+    }
+
+    ddlLines.push(columnDefs.join(',\n'));
+    ddlLines.push(`);\n`);
+
+    // テーブルコメントの追加
+    if (tableComment) {
+        commentsLines.unshift(`COMMENT ON TABLE ${tableName} IS '${tableComment}';`);
+    }
+
+    // すべて結合
+    const finalDDL = ddlLines.join('\n') + (commentsLines.length > 0 ? '\n' + commentsLines.join('\n') : '');
+    
+    document.getElementById('ddlOutput').textContent = finalDDL;
+}
+
+// 初期ロード時にも一度実行
+generateDDL();
+</script>
+
+</body>
+</html>

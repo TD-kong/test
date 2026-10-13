@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルWBSツール</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 24px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        /* フォームのデザイン */
+        .form-section {
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 9px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* テーブルのデザイン */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        /* 進捗ステータスの色分け */
+        .status-not-started { color: #e67e22; font-weight: bold; }
+        .status-in-progress { color: #3498db; font-weight: bold; }
+        .status-completed { color: #2ecc71; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>WBS (Work Breakdown Structure) ツール</h1>
+
+    <!-- タスク追加フォーム -->
+    <div class="form-section">
+        <div class="form-group">
+            <label for="category">大項目</label>
+            <input type="text" id="category" placeholder="例: 設計">
+        </div>
+        <div class="form-group">
+            <label for="subCategory">中項目</label>
+            <input type="text" id="subCategory" placeholder="例: 画面設計">
+        </div>
+        <div class="form-group">
+            <label for="taskName">タスク名</label>
+            <input type="text" id="taskName" placeholder="例: ワイヤーフレーム作成">
+        </div>
+        <div class="form-group">
+            <label for="assignee">担当者</label>
+            <input type="text" id="assignee" placeholder="例: 山田">
+        </div>
+        <div class="form-group">
+            <label for="startDate">開始日</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="form-group">
+            <label for="endDate">期限</label>
+            <input type="date" id="endDate">
+        </div>
+        <div class="form-group">
+            <label for="status">進捗状況</label>
+            <select id="status">
+                <option value="未着手">未着手</option>
+                <option value="進行中">進行中</option>
+                <option value="完了">完了</option>
+            </select>
+        </div>
+        <button id="addBtn">タスク追加</button>
+    </div>
+
+    <!-- WBS一覧テーブル -->
+    <table id="wbsTable">
+        <thead>
+            <tr>
+                <th>大項目</th>
+                <th>中項目</th>
+                <th>タスク名</th>
+                <th>担当者</th>
+                <th>開始日</th>
+                <th>期限</th>
+                <th>進捗</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody id="wbsBody">
+            <!-- JavaScriptで動的に挿入されます -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    // DOM要素の取得
+    const categoryInput = document.getElementById('category');
+    const subCategoryInput = document.getElementById('subCategory');
+    const taskNameInput = document.getElementById('taskName');
+    const assigneeInput = document.getElementById('assignee');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const statusSelect = document.getElementById('status');
+    const addBtn = document.getElementById('addBtn');
+    const wbsBody = document.getElementById('wbsBody');
+
+    // ローカルストレージからタスクを読み込む（なければ空配列）
+    let tasks = JSON.parse(localStorage.getItem('wbs_tasks')) || [];
+
+    // 初期描画
+    renderTasks();
+
+    // タスク追加ボタンのイベントリスナー
+    addBtn.addEventListener('click', () => {
+        const category = categoryInput.value.trim();
+        const subCategory = subCategoryInput.value.trim();
+        const taskName = taskNameInput.value.trim();
+        const assignee = assigneeInput.value.trim();
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const status = statusSelect.value;
+
+        if (!taskName) {
+            alert('タスク名は必須です。');
+            return;
+        }
+
+        // 新しいタスクオブジェクト
+        const newTask = {
+            id: Date.now(), // 一意のIDとしてタイムスタンプを使用
+            category,
+            subCategory,
+            taskName,
+            assignee,
+            startDate,
+            endDate,
+            status
+        };
+
+        tasks.push(newTask);
+        saveAndRender();
+        clearForm();
+    });
+
+    // タスク削除関数
+    function deleteTask(id) {
+        tasks = tasks.filter(task => task.id !== id);
+        saveAndRender();
+    }
+
+    // データの保存と再描画を行う関数
+    function saveAndRender() {
+        localStorage.setItem('wbs_tasks', JSON.stringify(tasks));
+        renderTasks();
+    }
+
+    // フォームをクリアする関数
+    function clearForm() {
+        categoryInput.value = '';
+        subCategoryInput.value = '';
+        taskNameInput.value = '';
+        assigneeInput.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        statusSelect.value = '未着手';
+    }
+
+    // テーブルを描画する関数
+    function renderTasks() {
+        wbsBody.innerHTML = '';
+
+        if (tasks.length === 0) {
+            wbsBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#777;">タスクが登録されていません</td></tr>`;
+            return;
+        }
+
+        tasks.forEach(task => {
+            const tr = document.createElement('tr');
+
+            // 進捗に応じたCSSクラスを付与
+            let statusClass = '';
+            if (task.status === '未着手') statusClass = 'status-not-started';
+            else if (task.status === '進行中') statusClass = 'status-in-progress';
+            else if (task.status === '完了') statusClass = 'status-completed';
+
+            tr.innerHTML = `
+                <td>${escapeHTML(task.category)}</td>
+                <td>${escapeHTML(task.subCategory)}</td>
+                <td>${escapeHTML(task.taskName)}</td>
+                <td>${escapeHTML(task.assignee)}</td>
+                <td>${escapeHTML(task.startDate)}</td>
+                <td>${escapeHTML(task.endDate)}</td>
+                <td class="${statusClass}">${escapeHTML(task.status)}</td>
+                <td><button class="delete-btn" onclick="deleteTask(${task.id})">削除</button></td>
+            `;
+            wbsBody.appendChild(tr);
+        });
+    }
+
+    // XSS対策の簡易エスケープ関数
+    function escapeHTML(str) {
+        return str ? str.replace(/[&<>'"]/g, 
+            tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+        ) : '';
+    }
+</script>
+
+</body>
+</html>

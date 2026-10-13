@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エビデンス作成ツール</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-color: #1e293b;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 0.9rem;
+        }
+
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+        }
+
+        /* プレビュー・出力エリア */
+        #preview-area {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .evidence-item {
+            border: 1px dashed var(--border-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+
+        .evidence-item img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid var(--border-color);
+            margin-top: 10px;
+        }
+
+        pre {
+            background: #1e293b;
+            color: #f8fafc;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .flex-row > div {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>エビデンス作成ツール</h1>
+
+    <!-- 入力フォーム -->
+    <div class="card">
+        <h2>エビデンス項目の追加</h2>
+        <div class="form-group">
+            <label for="title">項目タイトル (例: Step 1. ログイン確認)</label>
+            <input type="text" id="title" placeholder="タイトルを入力">
+        </div>
+
+        <div class="flex-row">
+            <div class="form-group">
+                <label for="imageFile">画面キャプチャ画像</label>
+                <input type="file" id="imageFile" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label for="dataType">ログ / DBダンプ</label>
+                <select id="dataType">
+                    <option value="log">実行ログ</option>
+                    <option value="db">DBダンプ / SQL</option>
+                    <option value="none">なし</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="dataContent">ログまたはSQL/ダンプ内容（テキスト）</label>
+            <textarea id="dataContent" rows="4" placeholder="ここにログやDBのデータを貼り付け..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="comment">補足説明・備考</label>
+            <textarea id="comment" rows="2" placeholder="特記事項があれば入力..."></textarea>
+        </div>
+
+        <button class="btn" onclick="addEvidence()">リストに追加する</button>
+    </div>
+
+    <!-- プレビュー＆エクスポート -->
+    <div class="card">
+        <h2>エビデンス プレビュー</h2>
+        <div id="preview-container">
+            <p style="color: #64748b; text-align: center;">まだ項目が追加されていません。</p>
+        </div>
+        <div style="margin-top: 15px;">
+            <button class="btn" onclick="exportHTML()">HTML形式で出力・コピー</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let evidenceList = [];
+
+    function addEvidence() {
+        const title = document.getElementById('title').value;
+        const imageFile = document.getElementById('imageFile').files[0];
+        const dataType = document.getElementById('dataType').value;
+        const dataContent = document.getElementById('dataContent').value;
+        const comment = document.getElementById('comment').value;
+
+        if (!title) {
+            alert('タイトルを入力してください。');
+            return;
+        }
+
+        // 画像ファイルをDataURLに変換して保持
+        if (imageFile) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                saveItem(title, e.target.result, dataType, dataContent, comment);
+            };
+            reader.readAsDataURL(imageFile);
+        } else {
+            saveItem(title, null, dataType, dataContent, comment);
+        }
+    }
+
+    function saveItem(title, imageSrc, dataType, dataContent, comment) {
+        evidenceList.push({
+            title,
+            imageSrc,
+            dataType,
+            dataContent,
+            comment
+        });
+
+        // フォームリセット
+        document.getElementById('title').value = '';
+        document.getElementById('imageFile').value = '';
+        document.getElementById('dataContent').value = '';
+        document.getElementById('comment').value = '';
+
+        renderPreview();
+    }
+
+    function removeItem(index) {
+        evidenceList.splice(index, 1);
+        renderPreview();
+    }
+
+    function renderPreview() {
+        const container = document.getElementById('preview-container');
+        if (evidenceList.length === 0) {
+            container.innerHTML = '<p style="color: #64748b; text-align: center;">まだ項目が追加されていません。</p>';
+            return;
+        }
+
+        let html = '';
+        evidenceList.forEach((item, index) => {
+            html += `
+                <div class="evidence-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1rem;">${index + 1}. ${escapeHtml(item.title)}</h3>
+                        <button class="btn btn-danger" onclick="removeItem(${index})">削除</button>
+                    </div>
+            `;
+
+            if (item.comment) {
+                html += `<p style="margin: 5px 0 10px 0; font-size: 0.9rem;">${escapeHtml(item.comment)}</p>`;
+            }
+
+            if (item.imageSrc) {
+                html += `<div><img src="${item.imageSrc}" alt="キャプチャ"></div>`;
+            }
+
+            if (item.dataType !== 'none' && item.dataContent) {
+                const label = item.dataType === 'log' ? '【実行ログ】' : '【DBダンプ / SQL】';
+                html += `
+                    <div style="margin-top: 10px;">
+                        <span style="font-size: 0.8rem; font-weight: bold; color: #475569;">${label}</span>
+                        <pre><code>${escapeHtml(item.dataContent)}</code></pre>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/[&'`<>]/g, function(match) {
+            return {
+                '&': '&amp;',
+                "'": '&#x27;',
+                '`': '&#x60;',
+                '<': '&lt;',
+                '>': '&gt;',
+            }[match];
+        });
+    }
+
+    function exportHTML() {
+        if (evidenceList.length === 0) {
+            alert('出力するエビデンスがありません。');
+            return;
+        }
+
+        const previewContent = document.getElementById('preview-container').innerHTML;
+        const fullHTML = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>テストエビデンス結果</title>
+<style>
+body { font-family: sans-serif; padding: 20px; color: #1e293b; }
+.evidence-item { border: 1px solid #cbd5e1; padding: 15px; margin-bottom: 20px; border-radius: 6px; background: #fff; }
+.evidence-item img { max-width: 100%; border: 1px solid #e2e8f0; margin-top: 10px; }
+pre { background: #1e293b; color: #f8fafc; padding: 10px; border-radius: 4px; overflow-x: auto; }
+button { display: none; } /* 削除ボタン等を非表示 */
+</style>
+</head>
+<body>
+<h1>テストエビデンス レポート</h1>
+${previewContent}
+</body>
+</html>`;
+
+        const blob = new Blob([fullHTML], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'evidence_report.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>汎用パラメータ送信ツール</title>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --primary-hover: #004fb3;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --border-color: #ccc;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #222;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        textarea {
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .row {
+            display: flex;
+            gap: 16px;
+        }
+
+        .row .form-group {
+            flex: 1;
+        }
+
+        /* パラメータ動的追加テーブル用 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        th, td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f9f9f9;
+            font-size: 0.85rem;
+        }
+
+        td input[type="text"] {
+            border: none;
+            padding: 4px;
+            width: 100%;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            padding: 6px 10px;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            background-color: #bd2130;
+        }
+
+        .response-area {
+            margin-top: 24px;
+            border-top: 2px solid #eee;
+            padding-top: 16px;
+        }
+
+        pre {
+            background: #1e1e1e;
+            color: #dcdcdc;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.9rem;
+            min-height: 100px;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>汎用パラメータ送信ツール</h1>
+
+    <form id="sendForm">
+        <!-- 送信先URL -->
+        <div class="form-group">
+            <label for="url">送信先 URL:</label>
+            <input type="text" id="url" name="url" placeholder="https://example.com/api" required>
+        </div>
+
+        <!-- メソッドとデータ形式 -->
+        <div class="row">
+            <div class="form-group">
+                <label for="method">HTTPメソッド:</label>
+                <select id="method" name="method">
+                    <option value="GET">GET</option>
+                    <option value="POST" selected>POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </div>
+            <div class="form-group" id="contentTypeGroup">
+                <label for="contentType">データ形式 (Content-Type):</label>
+                <select id="contentType" name="contentType">
+                    <option value="form">application/x-www-form-urlencoded (フォーム)</option>
+                    <option value="json">application/json (JSON)</option>
+                    <option value="multipart">multipart/form-data (ファイル等)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- パラメータ入力部（キーバリュー） -->
+        <div class="form-group">
+            <label>送信パラメータ:</label>
+            <table id="paramTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">キー (Key)</th>
+                        <th style="width: 45%;">値 (Value)</th>
+                        <th style="width: 15%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="paramBody">
+                    <!-- 初期行 -->
+                    <tr>
+                        <td><input type="text" class="param-key" placeholder="例: name"></td>
+                        <td><input type="text" class="param-value" placeholder="例: 太郎"></td>
+                        <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">削除</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" class="btn btn-secondary" onclick="addRow()">行を追加</button>
+        </div>
+
+        <!-- 送信ボタン -->
+        <button type="submit" class="btn">送信する</button>
+    </form>
+
+    <!-- レスポンス表示エリア -->
+    <div class="response-area">
+        <label>レスポンス結果:</label>
+        <pre id="responseOutput">ここに結果が表示されます...</pre>
+    </div>
+</div>
+
+<script>
+    // パラメータ行を追加
+    function addRow(key = '', value = '') {
+        const tbody = document.getElementById('paramBody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="param-key" value="${key}" placeholder="キー"></td>
+            <td><input type="text" class="param-value" value="${value}" placeholder="値"></td>
+            <td><button type="button" class="btn btn-danger" onclick="removeRow(this)">削除</button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    // パラメータ行を削除
+    function removeRow(btn) {
+        const tbody = document.getElementById('paramBody');
+        if (tbody.rows.length > 1) {
+            btn.closest('tr').remove();
+        } else {
+            // 最後の1行は中身をクリアするだけにする
+            btn.closest('tr').querySelector('.param-key').value = '';
+            btn.closest('tr').querySelector('.param-value').value = '';
+        }
+    }
+
+    // フォーム送信処理
+    document.getElementById('sendForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const urlInput = document.getElementById('url').value.trim();
+        const method = document.getElementById('method').value;
+        const contentType = document.getElementById('contentType').value;
+        const responseOutput = document.getElementById('responseOutput');
+
+        responseOutput.textContent = '送信中...';
+
+        // パラメータの収集
+        const keys = document.querySelectorAll('.param-key');
+        const values = document.querySelectorAll('.param-value');
+        
+        const params = {};
+        const formData = new FormData();
+
+        keys.forEach((keyInput, index) => {
+            const key = keyInput.value.trim();
+            const value = values[index].value;
+            if (key !== '') {
+                params[key] = value;
+                formData.append(key, value);
+            }
+        });
+
+        let targetUrl = urlInput;
+        const options = {
+            method: method,
+            headers: {}
+        };
+
+        try {
+            if (method === 'GET') {
+                // GETの場合はURLにクエリパラメータを付与
+                const urlObj = new URL(urlInput);
+                Object.keys(params).forEach(key => urlObj.searchParams.append(key, params[key]));
+                targetUrl = urlObj.toString();
+            } else {
+                // POST/PUT/DELETEの場合
+                if (contentType === 'json') {
+                    options.headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(params);
+                } else if (contentType === 'form') {
+                    options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                    options.body = new URLSearchParams(params).toString();
+                } else if (contentType === 'multipart') {
+                    // multipartの場合、ブラウザが自動でboundaryを設定するためContent-Typeは手動設定しない
+                    options.body = formData;
+                }
+            }
+
+            // fetch実行
+            const response = await fetch(targetUrl, options);
+            
+            // ステータスとヘッダー情報の取得
+            let resultText = `Status: ${response.status} ${response.statusText}\n`;
+            resultText += `URL: ${targetUrl}\n`;
+            resultText += `----------------------------------------\n`;
+
+            // レスポンスのデータ型を判定して表示
+            const responseContentType = response.headers.get('content-type') || '';
+            if (responseContentType.includes('application/json')) {
+                const json = await response.json();
+                resultText += JSON.stringify(json, null, 2);
+            } else {
+                const text = await response.text();
+                resultText += text;
+            }
+
+            responseOutput.textContent = resultText;
+
+        } catch (error) {
+            responseOutput.textContent = `エラーが発生しました:\n${error.message}\n\n※CORS（クロスドメイン）制限によりブラウザから直接アクセスできないAPIの可能性があります。`;
+        }
+    });
+</script>
+
+</body>
+</html>

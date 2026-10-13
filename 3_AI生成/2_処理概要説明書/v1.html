@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>処理概要説明書</title>
+    <style>
+        /* 全体レイアウト */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 左ペイン：フロー図エリア */
+        .flow-pane {
+            width: 45%;
+            background-color: #ffffff;
+            border-right: 1px solid #ddd;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .flow-title {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 20px;
+            align-self: flex-start;
+        }
+
+        /* フローノードのスタイル */
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .flow-node {
+            width: 100%;
+            padding: 15px;
+            background-color: #ffffff;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .flow-node:hover {
+            background-color: #ebf5fb;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .flow-node.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .flow-node .node-title {
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .flow-node .node-subtitle {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        .flow-node.active .node-subtitle {
+            color: #ecf0f1;
+        }
+
+        /* 矢印 */
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: #7f8c8d;
+            margin: 10px 0;
+        }
+
+        /* 右ペイン：説明エリア */
+        .desc-pane {
+            width: 55%;
+            background-color: #fdfefe;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .desc-content h2 {
+            font-size: 1.4rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .desc-section {
+            margin-bottom: 20px;
+        }
+
+        .desc-section h3 {
+            font-size: 0.95rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+        }
+
+        .desc-section p, .desc-section ul {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #444;
+        }
+
+        .desc-section ul {
+            padding-left: 20px;
+        }
+
+        .placeholder-text {
+            color: #95a5a6;
+            text-align: center;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        処理概要説明書：ユーザー登録・認証フロー
+    </header>
+
+    <div class="container">
+        <!-- 左ペイン：フロー図 -->
+        div class="flow-pane">
+            <div class="flow-title">処理フロー</div>
+            <div class="flow-container">
+                <!-- ノード1 -->
+                <div class="flow-node active" data-target="step1">
+                    <div class="node-title">01. データ入力</div>
+                    <div class="node-subtitle">ユーザー情報の入力</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+
+                <!-- ノード2 -->
+                <div class="flow-node" data-target="step2">
+                    <div class="node-title">02. 入力値検証</div>
+                    <div class="node-subtitle">バリデーションチェック</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+
+                <!-- ノード3 -->
+                <div class="flow-node" data-target="step3">
+                    <div class="node-title">03. データ保存</div>
+                    <div class="node-subtitle">データベースへの登録</div>
+                </div>
+                <div class="flow-arrow">↓</div>
+
+                <!-- ノード4 -->
+                <div class="flow-node" data-target="step4">
+                    <div class="node-title">04. 完了通知</div>
+                    <div class="node-subtitle">完了メールの送信</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右ペイン：項目説明 -->
+        <div class="desc-pane">
+            <div id="desc-container" class="desc-content">
+                <!-- 動的に詳細が切り替わります -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 各ステップの詳細データ
+        const detailsData = {
+            step1: {
+                title: "01. データ入力",
+                overview: "ユーザーが画面から必要な情報（氏名、メールアドレス、パスワードなど）を入力し、送信ボタンを押下するフェーズです。",
+                specs: [
+                    "対象画面: ユーザー登録フォーム（signup.html）",
+                    "主要項目: メールアドレス（必須）、パスワード（必須）、氏名（任意）",
+                    "アクション: 「登録する」ボタンクリックにより次ステップへPOST送信"
+                ],
+                notes: "パスワードはセキュリティ要件に基づき、8文字以上かつ英数字混合である必要があります。"
+            },
+            step2: {
+                title: "02. 入力値検証",
+                overview: "フロントエンドおよびバックエンド側で、入力されたデータが正しい形式であるか、また既存データと重複していないかを検証します。",
+                specs: [
+                    "バリデーションルール: メールアドレスのフォーマットチェック、パスワードの文字数・文字種チェック",
+                    "重複チェック: データベースに同一のメールアドレスが既に登録されていないか検索",
+                    "エラー時挙動: 不備がある場合はエラーメッセージを付与して入力画面に差し戻し"
+                ],
+                notes: "セキュリティ対策として、SQLインジェクションやクロスサイトスクリプティング（XSS）のサニタイジングを同時に行います。"
+            },
+            step3: {
+                title: "03. データ保存",
+                overview: "検証を通過した安全なデータを、本番データベースへ永続化する処理を行います。",
+                specs: [
+                    "使用テーブル: users テーブル",
+                    "暗号化処理: パスワードは平文ではなく、ハッシュ化アルゴリズム（例: bcrypt）を用いてハッシュ化してから保存",
+                    "トランザクション: 処理が途中で失敗した場合はロールバックを実行"
+                ],
+                notes: "DB接続エラー等の予期せぬ例外が発生した場合は、共通エラーログに出力し、ユーザーには適切なエラー画面を表示します。"
+            },
+            step4: {
+                title: "04. 完了通知",
+                overview: "データベースへの登録完了をトリガーに、ユーザーに対して登録完了メールを非同期で送信します。",
+                specs: [
+                    "送信元: noreply@example.com",
+                    "メールテンプレート: 登録完了お礼メッセージ、ログイン画面への誘導リンク",
+                    "処理方式: キューサーバーを介した非同期送信（UXの低下を防ぐため）"
+                ],
+                notes: "メール送信に失敗した場合でも、ユーザー登録自体はロールバックせず、再送キューに積む設計としています。"
+            }
+        };
+
+        // DOM要素の取得
+        const nodes = document.querySelectorAll('.flow-node');
+        const descContainer = document.getElementById('desc-container');
+
+        // 詳細を表示する関数
+        function renderDescription(stepKey) {
+            const data = detailsData[stepKey];
+            if (!data) return;
+
+            descContainer.innerHTML = `
+                <h2>${data.title}</h2>
+                <div class="desc-section">
+                    <h3>概要</h3>
+                    <p>${data.overview}</p>
+                </div>
+                <div class="desc-section">
+                    <h3>仕様・詳細</h3>
+                    <ul>
+                        ${data.specs.map(spec => `<li>${spec}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="desc-section">
+                    <h3>備考・特記事項</h3>
+                    <p>${data.notes}</p>
+                </div>
+            `;
+        }
+
+        // 初期表示として最初のステップ（step1）を描画
+        renderDescription('step1');
+
+        // ノードをクリックしたときのイベント設定
+        nodes.forEach(node => {
+            node.addEventListener('click', () => {
+                // アクティブクラスの切り替え
+                nodes.forEach(n => n.classList.remove('active'));
+                node.classList.add('active');
+
+                // 対応する詳細データを描画
+                const targetKey = node.getAttribute('data-target');
+                renderDescription(targetKey);
+            });
+        });
+    </script>
+</body>
+</html>

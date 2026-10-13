@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux コマンド作成・検索ツール</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        /* タブ切り替え */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            background-color: #e2e8f0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* 共通カードデザイン */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        /* 検索ツール用スタイル */
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+
+        .command-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .command-item:last-child {
+            border-bottom: none;
+        }
+
+        .cmd-code {
+            font-family: Consolas, Monaco, monospace;
+            background-color: #2d3748;
+            color: #63b3ed;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .cmd-desc {
+            font-size: 14px;
+            color: #555;
+            margin-top: 4px;
+        }
+
+        /* コマンドビルダー用スタイル */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .checkbox-label {
+            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        /* 出力エリア */
+        .output-box {
+            background-color: #1a202c;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background-color: #48bb78;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            margin-left: 10px;
+            transition: 0.2s;
+        }
+
+        .copy-btn:hover {
+            background-color: #38a169;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🐧 Linux コマンドツール</h1>
+
+    <!-- タブボタン -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('search')">コマンド検索</button>
+        <button class="tab-btn active" onclick="switchTab('builder')" style="display:none">ビルダー</button> <!-- わかりやすく分けるため下で定義 -->
+    </div>
+    <!-- 修正版タブボタン -->
+    <div class="tabs">
+        <button class="tab-btn active" id="btn-search" onclick="switchTab('search')">コマンド検索・一覧</button>
+        <button class="tab-btn" id="btn-builder" onclick="switchTab('builder')">コマンドビルダー</button>
+    </div>
+
+    <!-- タブ1: コマンド検索 -->
+    <div id="tab-search" class="tab-content active">
+        <div class="card">
+            <input type="text" id="searchInput" class="search-box" placeholder="キーワードで検索 (例: ファイル検索, 圧縮, 権限...)" onkeyup="filterCommands()">
+            <div id="commandList">
+                <!-- JavaScriptで動的生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- タブ2: コマンドビルダー -->
+    <div id="tab-builder" class="tab-content">
+        <div class="card">
+            <h3>コマンド自動生成</h3>
+            <div class="form-group">
+                <label for="baseCommand">ベースコマンドを選択:</label>
+                <select id="baseCommand" onchange="updateBuilder()">
+                    <option value="ls">ls (ファイル一覧表示)</option>
+                    <option value="tar">tar (アーカイブ作成・展開)</option>
+                    <option value="grep">grep (文字列検索)</option>
+                    <option value="find">find (ファイル検索)</option>
+                    <option value="chmod">chmod (権限変更)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>オプションを選択:</label>
+                <div id="optionsContainer" class="checkbox-group">
+                    <!-- JavaScriptで動的生成 -->
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="targetArg">対象（ファイル名やパスなど）:</label>
+                <input type="text" id="targetArg" placeholder="例: /var/log/syslog または *.txt" oninput="updateBuilder()">
+            </div>
+
+            <div class="form-group">
+                <label>生成されたコマンド:</label>
+                <div class="output-box">
+                    <span id="generatedCommand">ls</span>
+                    <button class="copy-btn" onclick="copyCommand()">コピー</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- データ定義 ---
+    const commandsData = [
+        { cmd: "ls -la", desc: "隠しファイルを含めて詳細な権限やサイズを一覧表示する", category: "ファイル" },
+        { cmd: "cd [ディレクトリ]", desc: "作業ディレクトリを移動する", category: "移動" },
+        { cmd: "pwd", desc: "現在の作業ディレクトリのフルパスを表示する", category: "確認" },
+        { cmd: "cp -r [元] [先]", desc: "ディレクトリごとファイルをコピーする", category: "ファイル" },
+        { cmd: "mv [元] [先]", desc: "ファイルやディレクトリの移動、または名前の変更を行う", category: "ファイル" },
+        { cmd: "rm -rf [パス]", desc: "ディレクトリと中身を強制的にすべて削除する（注意）", category: "ファイル" },
+        { cmd: "mkdir -p [パス]", desc: "存在しない親ディレクトリも含めて階層的に作成する", category: "ファイル" },
+        { cmd: "grep -rn '[文字]' [パス]", desc: "指定したディレクトリ内から特定の文字列を再帰的に検索する", category: "検索" },
+        { cmd: "find [パス] -name '[名前]'", desc: "条件に一致するファイルを検索する", category: "検索" },
+        { cmd: "tar -czvf [出力.tar.gz] [対象]", desc: "tar.gz形式の圧縮ファイルを作成する", category: "圧縮" },
+        { cmd: "tar -xzvf [圧縮.tar.gz]", desc: "tar.gz形式の圧縮ファイルを展開する", category: "圧縮" },
+        { cmd: "chmod 755 [ファイル]", desc: "ファイルのアクセス権限を変更する", category: "権限" },
+        { cmd: "ps aux", desc: "現在実行中のすべてのプロセスを表示する", category: "システム" },
+        { cmd: "top / htop", desc: "リアルタイムでシステムのCPUやメモリ使用量を確認する", category: "システム" },
+        { cmd: "df -h", desc: "ディスクの空き容量を人間が読みやすい形式で確認する", category: "システム" },
+        { cmd: "du -sh [パス]", desc: "指定したファイルやフォルダの容量を確認する", category: "システム" }
+    ];
+
+    // ビルダー用のオプション定義
+    const builderData = {
+        ls: {
+            options: [
+                { flag: "-l", label: "詳細表示 (l)" },
+                { flag: "-a", label: "隠しファイル表示 (a)" },
+                { flag: "-h", label: "容量を人間が見やすい単位で (h)" },
+                { flag: "-R", label: "再帰的に表示 (R)" }
+            ]
+        },
+        tar: {
+            options: [
+                { flag: "-c", label: "アーカイブ作成 (c)" },
+                { flag: "-x", label: "アーカイブ展開 (x)" },
+                { flag: "-z", label: "Gzip圧縮/展開 (z)" },
+                { flag: "-v", label: "詳細表示 (v)" },
+                { flag: "-f", label: "ファイル名指定 (f)", default: true }
+            ]
+        },
+        grep: {
+            options: [
+                { flag: "-r", label: "再帰的に検索 (r)" },
+                { flag: "-n", label: "行番号を表示 (n)" },
+                { flag: "-i", label: "大文字小文字を区別しない (i)" },
+                { flag: "-v", label: "一致しない行を抽出 (v)" }
+            ]
+        },
+        find: {
+            options: [
+                { flag: "-name", label: "名前で検索 (-name)", default: true },
+                { flag: "-type f", label: "ファイルのみ対象 (-type f)" },
+                { flag: "-type d", label: "ディレクトリのみ対象 (-type d)" }
+            ]
+        },
+        chmod: {
+            options: [
+                { flag: "-R", label: "配下を再帰的に変更 (-R)" }
+            ]
+        }
+    };
+
+    // --- タブ切り替え機能 ---
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+        document.getElementById('tab-' + tabName).classList.add('active');
+        document.getElementById('btn-' + tabName).classList.add('active');
+    }
+
+    // --- 検索機能の初期化と実装 ---
+    function renderCommandList(items) {
+        const listContainer = document.getElementById('commandList');
+        listContainer.innerHTML = '';
+
+        if (items.length === 0) {
+            listContainer.innerHTML = '<p style="text-align:center; color:#888;">該当するコマンドが見つかりません。</p>';
+            return;
+        }
+
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'command-item';
+            div.innerHTML = `
+                <div>
+                    <span class="cmd-code">${item.cmd}</span>
+                    <div class="cmd-desc">${item.desc}</div>
+                </div>
+                <button class="copy-btn" onclick="navigator.clipboard.writeText('${item.cmd}'); alert('コピーしました: ${item.cmd}')">コピー</button>
+            `;
+            listContainer.appendChild(div);
+        });
+    }
+
+    function filterCommands() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const filtered = commandsData.filter(item => 
+            item.cmd.toLowerCase().includes(query) || 
+            item.desc.toLowerCase().includes(query) || 
+            item.category.toLowerCase().includes(query)
+        );
+        renderCommandList(filtered);
+    }
+
+    // --- ビルダー機能の実装 ---
+    function updateBuilder() {
+        const baseCmd = document.getElementById('baseCommand').value;
+        const optionsContainer = document.getElementById('optionsContainer');
+        optionsContainer.innerHTML = '';
+
+        // オプションのチェックボックスを生成
+        if (builderData[baseCmd]) {
+            builderData[baseCmd].options.forEach((opt, index) => {
+                const checked = opt.default ? 'checked' : '';
+                const label = document.createElement('label');
+                label.className = 'checkbox-label';
+                label.innerHTML = `<input type="checkbox" value="${opt.flag}" ${checked} onchange="updateBuilderOutput()"> ${opt.label}`;
+                optionsContainer.appendChild(label);
+            });
+        }
+
+        updateBuilderOutput();
+    }
+
+    function updateBuilderOutput() {
+        const baseCmd = document.getElementById('baseCommand').value;
+        const checkboxes = document.querySelectorAll('#optionsContainer input[type="checkbox"]');
+        const targetArg = document.getElementById('targetArg').value.trim();
+
+        let flags = [];
+        checkboxes.forEach(cb => {
+            if (cb.checked) {
+                flags.push(cb.value);
+            }
+        });
+
+        let commandParts = [baseCmd];
+        if (flags.length > 0) {
+            // 例: tar の場合は -cvf のように結合するかスペースで分けるか
+            // ここではシンプルにスペース区切りで構築
+            commandParts.push(flags.join(' '));
+        }
+        if (targetArg) {
+            commandParts.push(targetArg);
+        }
+
+        document.getElementById('generatedCommand').textContent = commandParts.join(' ');
+    }
+
+    function copyCommand() {
+        const cmdText = document.getElementById('generatedCommand').textContent;
+        navigator.clipboard.writeText(cmdText).then(() => {
+            alert('コマンドをクリップボードにコピーしました！');
+        });
+    }
+
+    // 初期化実行
+    window.onload = function() {
+        renderCommandList(commandsData);
+        updateBuilder();
+    };
+</script>
+
+</body>
+</html>

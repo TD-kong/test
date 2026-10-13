@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Oracle DDL ジェネレーター (GUIエディタ版)</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f6f9; color: #333; }
+        h1 { font-size: 1.4rem; margin-bottom: 10px; }
+        .main-layout { display: flex; gap: 20px; }
+        .left-pane { flex: 1.2; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .right-pane { flex: 1; display: flex; flex-direction: column; gap: 15px; }
+        .output-box { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9rem; }
+        input[type="text"], select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        
+        table.column-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        table.column-table th, table.column-table td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+        table.column-table th { background: #f1f3f5; }
+        table.column-table input[type="text"] { width: 100%; padding: 4px; box-sizing: border-box; }
+        
+        button { padding: 8px 14px; font-size: 0.9rem; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #a71d2a; }
+        button.secondary { background: #6c757d; }
+        button.secondary:hover { background: #5a6268; }
+
+        pre { background: #212529; color: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; height: 220px; margin: 0; font-family: monospace; font-size: 13px; }
+        .actions { margin-top: 10px; display: flex; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Oracle DDL ジェネレーター (GUIエディタ)</h1>
+    
+    <div class="main-layout">
+        <!-- 左側：GUI入力エリア -->
+        <div class="left-pane">
+            <div class="form-group">
+                <label for="tableName">テーブル名</label>
+                <input type="text" id="tableName" value="EMPLOYEES" oninput="updateAll()">
+            </div>
+            
+            <div class="form-group">
+                <label for="tableComment">テーブルコメント</label>
+                <input type="text" id="tableComment" value="従業員マスタ" oninput="updateAll()">
+            </div>
+
+            <hr style="border:0; border-top:1px solid #eee; margin: 20px 0;">
+
+            <label>カラム定義</label>
+            <table class="column-table" id="columnTable">
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">カラム名</th>
+                        <th style="width: 18%;">型</th>
+                        <th style="width: 15%;">サイズ/精度</th>
+                        <th style="width: 8%;">NN</th>
+                        <th style="width: 8%;">PK</th>
+                        <th style="width: 15%;">デフォルト</th>
+                        <th style="width: 25%;">コメント</th>
+                        <th style="width: 8%;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="columnTableBody">
+                    <!-- JavaScriptで動的に行を挿入 -->
+                </tbody>
+            </table>
+            <button onclick="addColumn()" style="margin-top: 10px;" class="secondary">＋ カラムを追加</button>
+        </div>
+
+        <!-- 右側：出力エリア（JSON & DDL） -->
+        <div class="right-pane">
+            <div class="output-box">
+                <label>生成された Oracle DDL:</label>
+                <pre id="ddlOutput"></pre>
+                <div class="actions">
+                    <button onclick="copyText('ddlOutput')">DDLをコピー</button>
+                </div>
+            </div>
+
+            <div class="output-box">
+                <label>連動JSONデータ (バックアップ・復元用):</label>
+                <pre id="jsonOutput" style="height: 120px; background: #f8f9fa; color: #333; border: 1px solid #ccc;"></pre>
+                <div class="actions">
+                    <button onclick="copyText('jsonOutput')" class="secondary">JSONをコピー</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 初期データ
+let tableData = {
+    tableName: "EMPLOYEES",
+    tableComment: "従業員マスタ",
+    columns: [
+        { name: "EMP_ID", type: "NUMBER", size: "6", notNull: true, primaryKey: true, defaultValue: "", comment: "従業員ID" },
+        { name: "EMP_NAME", type: "VARCHAR2", size: "50", notNull: true, primaryKey: false, defaultValue: "", comment: "従業員名" },
+        { name: "HIRE_DATE", type: "DATE", size: "", notNull: false, primaryKey: false, defaultValue: "SYSDATE", comment: "入社日" },
+        { name: "SALARY", type: "NUMBER", size: "10,2", notNull: false, primaryKey: false, defaultValue: "", comment: "給与" }
+    ]
+};
+
+// 画面の初期描画
+function renderTable() {
+    const tbody = document.getElementById('columnTableBody');
+    tbody.innerHTML = '';
+
+    tableData.columns.forEach((col, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" value="${col.name}" onchange="updateColumnData(${index}, 'name', this.value)"></td>
+            <td>
+                <select onchange="updateColumnData(${index}, 'type', this.value)">
+                    <option value="VARCHAR2" ${col.type === 'VARCHAR2' ? 'selected' : ''}>VARCHAR2</option>
+                    <option value="CHAR" ${col.type === 'CHAR' ? 'selected' : ''}>CHAR</option>
+                    <option value="NUMBER" ${col.type === 'NUMBER' ? 'selected' : ''}>NUMBER</option>
+                    <option value="DATE" ${col.type === 'DATE' ? 'selected' : ''}>DATE</option>
+                    <option value="TIMESTAMP" ${col.type === 'TIMESTAMP' ? 'selected' : ''}>TIMESTAMP</option>
+                    <option value="CLOB" ${col.type === 'CLOB' ? 'selected' : ''}>CLOB</option>
+                    <option value="BLOB" ${col.type === 'BLOB' ? 'selected' : ''}>BLOB</option>
+                </select>
+            </td>
+            <td><input type="text" value="${col.size || ''}" placeholder="例: 50 または 10,2" onchange="updateColumnData(${index}, 'size', this.value)"></td>
+            <td style="text-align: center;"><input type="checkbox" ${col.notNull ? 'checked' : ''} onchange="updateColumnData(${index}, 'notNull', this.checked)"></td>
+            <td style="text-align: center;"><input type="checkbox" ${col.primaryKey ? 'checked' : ''} onchange="updateColumnData(${index}, 'primaryKey', this.checked)"></td>
+            <td><input type="text" value="${col.defaultValue || ''}" placeholder="例: SYSDATE" onchange="updateColumnData(${index}, 'defaultValue', this.value)"></td>
+            <td><input type="text" value="${col.comment || ''}" onchange="updateColumnData(${index}, 'comment', this.value)"></td>
+            <td style="text-align: center;"><button class="danger" style="padding: 4px 8px;" onclick="removeColumn(${index})">削除</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// カラムデータの更新
+function updateColumnData(index, field, value) {
+    tableData.columns[index][field] = value;
+    updateAll();
+}
+
+// カラムの追加
+function addColumn() {
+    tableData.columns.push({ name: "", type: "VARCHAR2", size: "", notNull: false, primaryKey: false, defaultValue: "", comment: "" });
+    renderTable();
+    updateAll();
+}
+
+// カラムの削除
+function removeColumn(index) {
+    tableData.columns.splice(index, 1);
+    renderTable();
+    updateAll();
+}
+
+// 全体（DDLとJSON）の更新処理
+function updateAll() {
+    tableData.tableName = document.getElementById('tableName').value.trim() || "NEW_TABLE";
+    tableData.tableComment = document.getElementById('tableComment').value.trim();
+
+    // 1. JSON出力の更新
+    document.getElementById('jsonOutput').textContent = JSON.stringify(tableData, null, 2);
+
+    // 2. Oracle DDL生成
+    generateOracleDDL();
+}
+
+// Oracle DDLの組み立て
+function generateOracleDDL() {
+    const tableName = tableData.tableName;
+    const columns = tableData.columns;
+    const tableComment = tableData.tableComment;
+
+    let ddlLines = [];
+    let commentsLines = [];
+    let pkColumns = [];
+
+    ddlLines.push(`CREATE TABLE ${tableName} (`);
+
+    let columnDefs = [];
+    columns.forEach(col => {
+        if (!col.name) return; // 名前が空の行はスキップ
+        
+        let def = `    ${col.name.padEnd(18)} ${col.type}`;
+        
+        if (col.size) {
+            def += `(${col.size})`;
+        }
+
+        if (col.defaultValue) {
+            def += ` DEFAULT ${col.defaultValue}`;
+        }
+
+        if (col.notNull) {
+            def += ` NOT NULL`;
+        }
+
+        columnDefs.push(def);
+
+        if (col.primaryKey) {
+            pkColumns.push(col.name);
+        }
+
+        if (col.comment) {
+            commentsLines.push(`COMMENT ON COLUMN ${tableName}.${col.name} IS '${col.comment}';`);
+        }
+    });
+
+    if (pkColumns.length > 0) {
+        columnDefs.push(`    CONSTRAINT pk_${tableName.toLowerCase()} PRIMARY KEY (${pkColumns.join(', ')})`);
+    }
+
+    ddlLines.push(columnDefs.join(',\n'));
+    ddlLines.push(`);\n`);
+
+    if (tableComment) {
+        commentsLines.unshift(`COMMENT ON TABLE ${tableName} IS '${tableComment}';`);
+    }
+
+    const finalDDL = ddlLines.join('\n') + (commentsLines.length > 0 ? '\n' + commentsLines.join('\n') : '');
+    document.getElementById('ddlOutput').textContent = finalDDL;
+}
+
+// クリップボードコピー
+function copyText(elementId) {
+    const text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('クリップボードにコピーしました！');
+    });
+}
+
+// 初期化実行
+renderTable();
+updateAll();
+</script>
+
+</body>
+</html>

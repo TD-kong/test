@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡易暗号化・復号化ツール</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #4a90e2;
+            --primary-hover: #357abd;
+            --border-color: #cccccc;
+            --error-color: #d9534f;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        textarea, input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+
+        textarea {
+            height: 120px;
+        }
+
+        input[type="password"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(74, 144, 226, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: #ffffff;
+            background-color: var(--primary-color);
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.decrypt-btn {
+            background-color: #5cb85c;
+        }
+        button.decrypt-btn:hover {
+            background-color: #4cae4c;
+        }
+
+        #message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        #message.success {
+            background-color: #d4edda;
+            color: #155724;
+            display: block;
+        }
+
+        #message.error {
+            background-color: #f8d7da;
+            color: var(--error-color);
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>暗号化・復号化ツール</h1>
+        
+        <div class="form-group">
+            <label for="inputText">テキスト入力（平文 または 暗号文）:</label>
+            <textarea id="inputText" placeholder="ここにテキストを入力してください..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="password">パスワード（暗号化・復号化共通）:</label>
+            <input type="password" id="password" placeholder="パスワードを入力">
+        </div>
+
+        <div class="button-group">
+            <button onclick="handleEncrypt()">暗号化する</button>
+            <button class="decrypt-btn" onclick="handleDecrypt()">復号化する</button>
+        </div>
+
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // メッセージ表示用関数
+        function showMessage(text, isError = false) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = isError ? 'error' : 'success';
+        }
+
+        // 文字列を ArrayBuffer に変換
+        function str2ab(str) {
+            return new TextEncoder().encode(str);
+        }
+
+        // ArrayBuffer を文字列に変換
+        function ab2str(buffer) {
+            return new TextDecoder().decode(buffer);
+        }
+
+        // ArrayBuffer を Base64 文字列に変換
+        function bufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        // Base64 文字列を ArrayBuffer に変換
+        function base64ToBuffer(base64) {
+            const binary = window.atob(base64);
+            const len = binary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        // パスワードから暗号鍵を生成する関数 (PBKDF2)
+        async function getKey(password, salt) {
+            const enc = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey(
+                "raw",
+                enc.encode(password),
+                { name: "PBKDF2" },
+                false,
+                ["deriveKey"]
+            );
+            return await window.crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: salt,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        // 暗号化処理
+        async function handleEncrypt() {
+            const plainText = document.getElementById('inputText').value;
+            const password = document.getElementById('password').value;
+
+            if (!plainText || !password) {
+                showMessage("テキストとパスワードの両方を入力してください。", true);
+                return;
+            }
+
+            try {
+                // ソルト(16バイト)とIV(12バイト)をランダムに生成
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+
+                const key = await getKey(password, salt);
+                const encryptedContent = await window.crypto.subtle.encrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    str2ab(plainText)
+                );
+
+                // ソルト、IV、暗号化データを結合してBase64化する
+                // 構造: [ソルト(16バイト)] + [IV(12バイト)] + [暗号文]
+                const combined = new Uint8Array(salt.byteLength + iv.byteLength + encryptedContent.byteLength);
+                combined.set(salt, 0);
+                combined.set(iv, salt.byteLength);
+                combined.set(new Uint8Array(encryptedContent), salt.byteLength + iv.byteLength);
+
+                const base64Result = bufferToBase64(combined.buffer);
+                document.getElementById('inputText').value = base64Result;
+                showMessage("正常に暗号化しました。");
+            } catch (err) {
+                console.error(err);
+                showMessage("暗号化に失敗しました。", true);
+            }
+        }
+
+        // 復号化処理
+        async function handleDecrypt() {
+            const base64Text = document.getElementById('inputText').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!base64Text || !password) {
+                showMessage("暗号文とパスワードの両方を入力してください。", true);
+                return;
+            }
+
+            try {
+                const combined = base64ToBuffer(base64Text);
+
+                if (combined.byteLength < 28) {
+                    throw new Error("無効な暗号データです。");
+                }
+
+                // 結合されたデータからソルト、IV、暗号文を切り出し
+                const salt = combined.slice(0, 16);
+                const iv = combined.slice(16, 28);
+                const encryptedContent = combined.slice(28);
+
+                const key = await getKey(password, salt);
+                const decryptedContent = await window.crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv },
+                    key,
+                    encryptedContent
+                );
+
+                const plainText = ab2str(decryptedContent);
+                document.getElementById('inputText').value = plainText;
+                showMessage("正常に復号化しました。");
+            } catch (err) {
+                console.error(err);
+                showMessage("復号化に失敗しました。パスワードが間違っているか、データが破損しています。", true);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文字コード解析ツール</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --border-color: #cccccc;
+            --code-bg: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            resize: vertical;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        input[type="file"] {
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: var(--code-bg);
+        }
+
+        .result-box {
+            background-color: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .flex-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .flex-group > div {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>文字コード解析ツール</h1>
+
+    <!-- 1. テキスト直接入力による文字単位の解析 -->
+    <div class="card">
+        <h2>1. テキストの文字単位解析 (Unicode / UTF-8 バイト)</h2>
+        <textarea id="textInput" placeholder="ここに文字を入力してください (例: あいうえお, ABC, 🍣)...">あいうえお ABC</textarea>
+        
+        <div style="margin-top: 15px;">
+            <table id="charTable">
+                <thead>
+                    <tr>
+                        <th>文字</th>
+                        <th>Unicode (16進数)</th>
+                        <th>UTF-8 バイト列 (16進数)</th>
+                    </tr>
+                </thead>
+                <tbody id="charTableBody">
+                    <!-- 動的に挿入 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 2. ファイルの文字コード判定・マルチエンコーディング表示 -->
+    <div class="card">
+        <h2>2. ファイルの文字コード解析 & 変換</h2>
+        <p>テキストファイル（.txt, .csv, .html など）をアップロードすると、主要な文字コード（UTF-8, Shift_JIS, EUC-JP）でのデコード結果を確認できます。</p>
+        <input type="file" id="fileInput">
+        
+        <div style="margin-top: 15px;" class="flex-group">
+            <div>
+                <strong>UTF-8 での解釈:</strong>
+                <div id="resultUtf8" class="result-box">（ファイル未選択）</div>
+            </div>
+            <div>
+                <strong>Shift_JIS での解釈:</strong>
+                <div id="resultSjis" class="result-box">（ファイル未選択）</div>
+            </div>
+        </div>
+        <div style="margin-top: 15px;" class="flex-group">
+            <div>
+                <strong>EUC-JP での解釈:</strong>
+                <div id="resultEuc" class="result-box">（ファイル未選択）</div>
+            </div>
+            <div>
+                <strong>ISO-2022-JP (JIS) での解釈:</strong>
+                <div id="resultJis" class="result-box">（ファイル未選択）</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- 1. テキスト入力の解析処理 ---
+    const textInput = document.getElementById('textInput');
+    const charTableBody = document.getElementById('charTableBody');
+
+    function analyzeText() {
+        const text = textInput.value;
+        charTableBody.innerHTML = '';
+
+        // JavaScriptの文字列はUTF-16ベースなので、サロゲートペアを考慮して文字単位でループ
+        const chars = Array.from(text);
+
+        chars.forEach(char => {
+            const tr = document.createElement('tr');
+
+            // 1. 文字
+            const tdChar = document.createElement('td');
+            tdChar.textContent = char === ' ' ? '[半角スペース]' : (char === '\n' ? '[改行]' : char);
+            tr.appendChild(tdChar);
+
+            // 2. Unicode コードポイント
+            const codePoint = char.codePointAt(0);
+            const tdUnicode = document.createElement('td');
+            tdUnicode.textContent = `U+${codePoint.toString(16).toUpperCase().padStart(4, '0')}`;
+            tr.appendChild(tdUnicode);
+
+            // 3. UTF-8 バイト列
+            const utf8Bytes = new TextEncoder().encode(char);
+            const tdUtf8 = document.createElement('td');
+            tdUtf8.textContent = Array.from(utf8Bytes)
+                .map(b => '0x' + b.toString(16).toUpperCase().padStart(2, '0'))
+                .join(' ');
+            tr.appendChild(tdUtf8);
+
+            charTableBody.appendChild(tr);
+        });
+    }
+
+    textInput.addEventListener('input', analyzeText);
+    // 初期実行
+    analyzeText();
+
+
+    // --- 2. ファイルの文字コード解析処理 ---
+    const fileInput = document.getElementById('fileInput');
+    const resultUtf8 = document.getElementById('resultUtf8');
+    const resultSjis = document.getElementById('resultSjis');
+    const resultEuc = document.getElementById('resultEuc');
+    const resultJis = document.getElementById('resultJis');
+
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+
+        reader.onload = function (e) {
+            const buffer = e.target.result;
+
+            // 各種エンコーディングでデコードを試みる
+            decodeAndShow(buffer, 'utf-8', resultUtf8);
+            decodeAndShow(buffer, 'shift_jis', resultSjis);
+            decodeAndShow(buffer, 'euc-jp', resultEuc);
+            decodeAndShow(buffer, 'iso-2022-jp', resultJis);
+        };
+    });
+
+    function decodeAndShow(buffer, encoding, element) {
+        try {
+            const decoder = new TextDecoder(encoding, { fatal: false });
+            const text = decoder.decode(buffer);
+            element.textContent = text;
+        } catch (err) {
+            element.textContent = `[デコードエラー (${encoding})]: ${err.message}`;
+        }
+    }
+</script>
+
+</body>
+</html>

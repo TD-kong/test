@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JP1定義簡易出力ツール</title>
+    <style>
+        :root {
+            --primary-color: #0056b3;
+            --bg-color: #f4f6f9;
+            --border-color: #ccc;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 24px;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        textarea {
+            resize: vertical;
+            height: 80px;
+        }
+        .btn-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #004085;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        .output-section {
+            margin-top: 30px;
+            border-top: 2px dashed var(--border-color);
+            padding-top: 20px;
+        }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>JP1/AJS3 定義出力ツール</h1>
+    
+    <div class="form-group">
+        <label for="unitType">ユニット種別</label>
+        <select id="unitType">
+            <option value="g">ジョブネット (g)</option>
+            <option value="j">通常ジョブ (j)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="unitName">ユニット名 (識別子)</label>
+        <input type="text" id="unitName" placeholder="例: JOB_SAMPLE01">
+    </div>
+
+    <div class="form-group">
+        <label for="comment">コメント</label>
+        <input type="text" id="comment" placeholder="例: 日次バッチ処理定義">
+    </div>
+
+    <div class="form-group" id="commandGroup">
+        <label for="command">実行コマンド (ジョブの場合)</label>
+        <textarea id="command" placeholder="例: /usr/bin/python3 /opt/bat/sample.py"></textarea>
+    </div>
+
+    <div class="btn-container">
+        <button id="generateBtn">定義を生成</button>
+        <button id="downloadBtn" class="secondary">テキストファイルをダウンロード</button>
+    </div>
+
+    <div class="output-section">
+        <label>生成された定義プレビュー (ajsprint風出力イメージ)</label>
+        <pre id="outputArea">ここに定義が出力されます...</pre>
+    </div>
+</div>
+
+<script>
+    document.getElementById('generateBtn').addEventListener('click', () => {
+        const unitType = document.getElementById('unitType').value;
+        const unitName = document.getElementById('unitName').value.trim();
+        const comment = document.getElementById('comment').value.trim();
+        const command = document.getElementById('command').value.trim();
+
+        if (!unitName) {
+            alert('ユニット名を入力してください。');
+            return;
+        }
+
+        // JP1のajsdef形式を模したテキストを構築
+        let definition = "";
+        definition += `unit=${unitName},jp1cl=,type=${unitType}\n`;
+        if (comment) {
+            definition += `    cm="${comment}"\n`;
+        }
+        if (unitType === 'j' && command) {
+            definition += `    exec="${command}"\n`;
+        }
+        definition += `end\n`;
+
+        // 画面に表示
+        document.getElementById('outputArea').textContent = definition;
+    });
+
+    document.getElementById('downloadBtn').addEventListener('click', () => {
+        const outputText = document.getElementById('outputArea').textContent;
+        const unitName = document.getElementById('unitName').value.trim() || 'jp1_definition';
+
+        if (!outputText || outputText === 'ここに定義が出力されます...') {
+            alert('先に定義を生成してください。');
+            return;
+        }
+
+        // Blobを使ってテキストファイルとしてダウンロードさせる
+        const blob = new Blob([outputText], { type: 'text/plain;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${unitName}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+</script>
+
+</body>
+</html>

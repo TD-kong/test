@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レビュー指摘票</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --border-color: #bdc3c7;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 24px;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 10px;
+        }
+
+        .toolbar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-add {
+            background-color: var(--secondary-color);
+            color: #fff;
+        }
+        .btn-add:hover { background-color: #2980b9; }
+
+        .btn-save {
+            background-color: var(--success-color);
+            color: #fff;
+        }
+        .btn-save:hover { background-color: #27ae60; }
+
+        .btn-clear {
+            background-color: #95a5a6;
+            color: #fff;
+        }
+        .btn-clear:hover { background-color: #7f8c8d; }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1100px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: #fff;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        /* 列幅の調整 */
+        .col-no { width: 50px; text-align: center; }
+        .col-page { width: 90px; }
+        .col-category { width: 110px; }
+        .col-type { width: 100px; }
+        .col-content { min-width: 200px; }
+        .col-person { width: 100px; }
+        .col-status { width: 110px; }
+        .col-reply { min-width: 200px; }
+        .col-action { width: 60px; text-align: center; }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 6px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 40px;
+        }
+
+        input[type="text"]:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+
+        .btn-del {
+            background-color: var(--danger-color);
+            color: white;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .btn-del:hover { background-color: #c0392b; }
+
+        .message {
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--success-color);
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>レビュー指摘票</h1>
+    
+    <div class="toolbar">
+        <button class="btn-add" onclick="addRow()">＋ 指摘を追加</button>
+        <button class="btn-save" onclick="saveData()">💾 データを保存</button>
+        <button class="btn-clear" onclick="clearData()">🗑️ データをクリア</button>
+        <span id="msg" class="message"></span>
+    </div>
+
+    <div class="table-responsive">
+        <table id="reviewTable">
+            <thead>
+                <tr>
+                    <th class="col-no">No.</th>
+                    <th class="col-page">箇所/ページ</th>
+                    <th class="col-category">分類</th>
+                    <th class="col-type">指摘種別</th>
+                    <th class="col-content">指摘内容</th>
+                    <th class="col-person">指摘者</th>
+                    <th class="col-status">ステータス</th>
+                    <th class="col-reply">対応方針・回答</th>
+                    <th class="col-person">対応者</th>
+                    <th class="col-action">操作</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- JavaScriptで動的に行が挿入されます -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ページの読み込み時にデータを復元
+    window.onload = function() {
+        loadData();
+        if(document.getElementById('tableBody').rows.length === 0) {
+            addRow(); // 空なら初期行を1つ追加
+        }
+    };
+
+    // 行を追加する関数
+    function addRow(data = {}) {
+        const tbody = document.getElementById('tableBody');
+        const rowCount = tbody.rows.length + 1;
+        const row = tbody.insertRow();
+
+        row.innerHTML = `
+            <td class="col-no row-num" style="text-align:center;">${rowCount}</td>
+            <td><input type="text" class="inp-page" value="${data.page || ''}" placeholder="例: P.3 または 3章"></td>
+            <td>
+                <select class="inp-category">
+                    <option value="仕様" ${data.category === '仕様' ? 'selected' : ''}>仕様</option>
+                    <option value="設計" ${data.category === '設計' ? 'selected' : ''}>設計</option>
+                    <option value="実装/コード" ${data.category === '実装/コード' ? 'selected' : ''}>実装/コード</option>
+                    <option value="ドキュメント" ${data.category === 'ドキュメント' ? 'selected' : ''}>ドキュメント</option>
+                    <option value="その他" ${data.category === 'その他' ? 'selected' : ''}>その他</option>
+                </select>
+            </td>
+            <td>
+                <select class="inp-type">
+                    <option value="誤り" ${data.type === '誤り' ? 'selected' : ''}>誤り</option>
+                    <option value="改善" ${data.type === '改善' ? 'selected' : ''}>改善</option>
+                    <option value="質問" ${data.type === '質問' ? 'selected' : ''}>質問</option>
+                    <option value="提案" ${data.type === '提案' ? 'selected' : ''}>提案</option>
+                </select>
+            </td>
+            <td><textarea class="inp-content" placeholder="指摘内容を入力">${data.content || ''}</textarea></td>
+            <td><input type="text" class="inp-reviewer" value="${data.reviewer || ''}" placeholder="名前"></td>
+            <td>
+                <select class="inp-status" onchange="updateStatusColor(this)">
+                    <option value="未対応" ${data.status === '未対応' ? 'selected' : ''}>未対応</option>
+                    <option value="対応中" ${data.status === '対応中' ? 'selected' : ''}>対応中</option>
+                    <option value="確認中" ${data.status === '確認中' ? 'selected' : ''}>確認中</option>
+                    <option value="完了" ${data.status === '完了' ? 'selected' : ''}>完了</option>
+                </select>
+            </td>
+            <td><textarea class="inp-reply" placeholder="対応内容を入力">${data.reply || ''}</textarea></td>
+            <td><input type="text" class="inp-assignee" value="${data.assignee || ''}" placeholder="名前"></td>
+            <td class="col-action"><button class="btn-del" onclick="deleteRow(this)">削除</button></td>
+        `;
+        
+        // ステータスの色を初期化
+        updateStatusColor(row.querySelector('.inp-status'));
+    }
+
+    // 行を削除する関数
+    function deleteRow(btn) {
+        const row = btn.closest('tr');
+        row.remove();
+        updateRowNumbers();
+        saveData(); // 削除時にも自動保存
+    }
+
+    // 行番号（No.）を振り直す
+    function updateRowNumbers() {
+        const rows = document.querySelectorAll('#tableBody tr');
+        rows.forEach((row, index) => {
+            row.querySelector('.row-num').innerText = index + 1;
+        });
+    }
+
+    // ステータスに応じて背景色を少し変える演出（オプション）
+    function updateStatusColor(select) {
+        const val = select.value;
+        if(val === '完了') {
+            select.style.backgroundColor = '#d4edda';
+        } else if(val === '対応中') {
+            select.style.backgroundColor = '#fff3cd';
+        } else {
+            select.style.backgroundColor = '#fff';
+        }
+    }
+
+    // データをローカルストレージに保存
+    function saveData() {
+        const rows = document.querySelectorAll('#tableBody tr');
+        const dataList = [];
+
+        rows.forEach(row => {
+            const data = {
+                page: row.querySelector('.inp-page').value,
+                category: row.querySelector('.inp-category').value,
+                type: row.querySelector('.inp-type').value,
+                content: row.querySelector('.inp-content').value,
+                reviewer: row.querySelector('.inp-reviewer').value,
+                status: row.querySelector('.inp-status').value,
+                reply: row.querySelector('.inp-reply').value,
+                assignee: row.querySelector('.inp-assignee').value
+            };
+            dataList.push(data);
+        });
+
+        localStorage.setItem('reviewSheetData', JSON.stringify(dataList));
+        
+        // 保存完了メッセージの表示
+        const msg = document.getElementById('msg');
+        msg.innerText = "保存しました！";
+        setTimeout(() => {
+            msg.innerText = "";
+        }, 2000);
+    }
+
+    // データをローカルストレージから読み込み
+    function loadData() {
+        const savedData = localStorage.getItem('reviewSheetData');
+        if (savedData) {
+            const dataList = JSON.parse(savedData);
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = ''; // 一度クリア
+            dataList.forEach(data => addRow(data));
+        }
+    }
+
+    // データをクリア
+    function clearData() {
+        if(confirm("入力したデータをすべてクリアしますか？")) {
+            localStorage.removeItem('reviewSheetData');
+            document.getElementById('tableBody').innerHTML = '';
+            addRow();
+            const msg = document.getElementById('msg');
+            msg.innerText = "クリアしました";
+            setTimeout(() => { msg.innerText = ""; }, 2000);
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML / CSS / JavaScript チートシート</title>
+    <style>
+        /* === CSS: スタイル定義 === */
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --primary-color: #007bff;
+            --html-color: #e34f26;
+            --css-color: #1572b6;
+            --js-color: #f7df1e;
+            --code-bg: #f8f9fa;
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        header p {
+            color: #666;
+        }
+
+        /* 検索バー */
+        .search-container {
+            max-width: 600px;
+            margin: 0 auto 30px auto;
+            display: flex;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 30px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            border-color: var(--primary-color);
+        }
+
+        /* タブナビゲーション */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .tab-btn {
+            padding: 10px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            background-color: #e2e8f0;
+            color: #4a5568;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            color: #fff;
+        }
+
+        .tab-btn[data-target="html"].active { background-color: var(--html-color); }
+        .tab-btn[data-target="css"].active { background-color: var(--css-color); }
+        .tab-btn[data-target="js"].active { background-color: #bfa100; color: #fff; } /* 視認性のため少し調整 */
+        .tab-btn[data-target="all"].active { background-color: #2d3748; }
+
+        /* セクション・カードレイアウト */
+        .section-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .category {
+            margin-bottom: 40px;
+            display: none; /* 初期状態はJSで制御 */
+        }
+
+        .category.active-category {
+            display: block;
+        }
+
+        .category h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-color);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .card.html-card { border-left-color: var(--html-color); }
+        .card.css-card { border-left-color: var(--css-color); }
+        .card.js-card { border-left-color: var(--js-color); }
+
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: #1a202c;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+        }
+
+        .card pre {
+            background-color: var(--code-bg);
+            padding: 10px;
+            border-radius: 4px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            color: #d63384;
+        }
+
+        /* フッター */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Web Development Cheatsheet</h1>
+        <p>HTML / CSS / JavaScript の基礎知識をサクッと確認</p>
+    </header>
+
+    <!-- 検索バー -->
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="キーワードで検索 (例: div, flex, function...)">
+    </div>
+
+    <!-- タブ切り替えボタン -->
+    <div class="tabs">
+        <button class="tab-btn active" data-target="all">すべて</button>
+        <button class="tab-btn" data-target="html">HTML</button>
+        <button class="tab-btn" data-target="css">CSS</button>
+        <button class="tab-btn" data-target="js">JavaScript</button>
+    </div>
+
+    <!-- コンテンツエリア -->
+    <div class="section-container">
+
+        <!-- HTML セクション -->
+        <div id="html" class="category active-category">
+            <h2>HTML (HyperText Markup Language)</h2>
+            <div class="cards-grid">
+                <div class="card html-card" data-keywords="html 基礎 テンプレート ボイラープレート">
+                    <h3>基本構造</h3>
+                    <p>HTMLドキュメントの基本テンプレート</p>
+                    <pre>&lt;!DOCTYPE html&gt;
+&lt;html lang="ja"&gt;
+&lt;head&gt;
+  &lt;meta charset="UTF-8"&gt;
+  &lt;title&gt;Title&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+                </div>
+                <div class="card html-card" data-keywords="html 見出し タイトル h1">
+                    <h3>見出しタグ</h3>
+                    <p>h1からh6まで、情報の重要度に応じて使用します。</p>
+                    <pre>&lt;h1&gt;最上位見出し&lt;/h1&gt;
+&lt;h2&gt;中見出し&lt;/h2&gt;</pre>
+                </div>
+                <div class="card html-card" data-keywords="html リンク アンカー a href">
+                    <h3>リンク (Anchor)</h3>
+                    <p>別のページやファイルへのリンクを作成します。</p>
+                    <pre>&lt;a href="https://example.com" target="_blank"&gt;リンク名&lt;/a&gt;</pre>
+                </div>
+                <div class="card html-card" data-keywords="html 画像 img src alt">
+                    <h3>画像表示</h3>
+                    <p>画像を表示します。alt属性は必須級です。</p>
+                    <pre>&lt;img src="image.jpg" alt="説明文"&gt;</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSS セクション -->
+        <div id="css" class="category active-category">
+            <h2>CSS (Cascading Style Sheets)</h2>
+            <div class="cards-grid">
+                <div class="card css-card" data-keywords="css セレクタ クラス id">
+                    <h3>基本セレクタ</h3>
+                    <p>要素、クラス、IDを指定してスタイルを適用します。</p>
+                    <pre>/* 要素 */ p { color: red; }
+/* クラス */ .class { ... }
+/* ID */ #id { ... }</pre>
+                </div>
+                <div class="card css-card" data-keywords="css flexbox レイアウト 並び替え">
+                    <h3>Flexboxレイアウト</h3>
+                    <p>柔軟な要素の整列・配置を行います。</p>
+                    <pre>.container {
+  display: flex;
+  justify-content: center; /* 左右中央 */
+  align-items: center;     /* 上下中央 */
+}</pre>
+                </div>
+                <div class="card css-card" data-keywords="css grid グリッド レイアウト">
+                    <h3>Gridレイアウト</h3>
+                    <p>行と列の二次元グリッドを定義します。</p>
+                    <pre>.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}</pre>
+                </div>
+                <div class="card css-card" data-keywords="css メディアクエリレスポンシブ screen">
+                    <h3>メディアクエリ</h3>
+                    <p>画面サイズに応じたデザイン（レスポンシブ）の切り替え。</p>
+                    <pre>@media (max-width: 768px) {
+  body { font-size: 14px; }
+}</pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- JavaScript セクション -->
+        <div id="js" class="category active-category">
+            <h2>JavaScript</h2>
+            <div class="cards-grid">
+                <div class="card js-card" data-keywords="javascript 変数 const let">
+                    <h3>変数宣言</h3>
+                    <p>データの保存には基本的に const や let を使います。</p>
+                    <pre>const name = "Taro"; // 再代入不可
+let count = 0;       // 再代入可能</pre>
+                </div>
+                <div class="card js-card" data-keywords="javascript 関数 function アロー関数">
+                    <h3>関数 (アロー関数)</h3>
+                    <p>処理をまとめるモダンな書き方。</p>
+                    <pre>const add = (a, b) => {
+  return a + b;
+};
+// 省略形
+const multiply = (a, b) => a * b;</pre>
+                </div>
+                <div class="card js-card" data-keywords="javascript dom 取得 querySelector">
+                    <h3>DOM操作</h3>
+                    <p>HTMLの要素を取得・操作します。</p>
+                    <pre>const btn = document.querySelector('#myBtn');
+btn.addEventListener('click', () => {
+  alert('Clicked!');
+});</pre>
+                </div>
+                <div class="card js-card" data-keywords="javascript 条件分岐 if switch">
+                    <h3>条件分岐・ループ</h3>
+                    <p>条件による処理の分岐と繰り返し処理。</p>
+                    <pre>if (score >= 80) {
+  console.log("Good!");
+}
+// 配列のループ
+const arr = [1, 2, 3];
+arr.forEach(num => console.log(num));</pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Web Cheatsheet All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        /* === JavaScript: インタラクティブ機能（タブ切り替え・リアルタイム検索） === */
+
+        // 1. タブ切り替え機能
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const categories = document.querySelectorAll('.category');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // ボタンのアクティブ状態を切り替え
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const target = button.getAttribute('data-target');
+
+                // カテゴリの表示/非表示を切り替え
+                categories.forEach(category => {
+                    if (target === 'all' || category.id === target) {
+                        category.classList.add('active-category');
+                    } else {
+                        category.classList.remove('active-category');
+                    }
+                });
+            });
+        });
+
+        // 2. リアルタイム検索機能
+        const searchInput = document.getElementById('searchInput');
+        const cards = document.querySelectorAll('.card');
+
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+
+            cards.forEach(card => {
+                const keywords = card.getAttribute('data-keywords') || '';
+                const textContent = card.textContent.toLowerCase();
+
+                // キーワードまたはカード内のテキストにヒットするか判定
+                if (keywords.includes(query) || textContent.includes(query) || query === '') {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // 検索時はすべてのカテゴリを表示状態にして探しやすくする
+            if (query !== '') {
+                categories.forEach(cat => cat.classList.add('active-category'));
+            } else {
+                // 検索窓が空のときは現在のタブ状態に戻す
+                const activeTab = document.querySelector('.tab-btn.active').getAttribute('data-target');
+                categories.forEach(category => {
+                    if (activeTab === 'all' || category.id === activeTab) {
+                        category.classList.add('active-category');
+                    } else {
+                        category.classList.remove('active-category');
+                    }
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>

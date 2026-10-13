@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outlook テンプレートマネージャー</title>
+    <style>
+        :root {
+            --primary-color: #0078d4;
+            --primary-hover: #106ebe;
+            --bg-color: #f3f2f1;
+            --card-bg: #ffffff;
+            --text-color: #323130;
+            --border-color: #edebe9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        header {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.2rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #8a8886;
+            border-radius: 2px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 150px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+            border-radius: 2px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button.secondary {
+            background-color: #f3f2f1;
+            color: var(--text-color);
+            border: 1px solid #8a8886;
+        }
+
+        button.secondary:hover {
+            background-color: #edebe9;
+        }
+
+        button.danger {
+            background-color: #a80000;
+        }
+        button.danger:hover {
+            background-color: #880000;
+        }
+
+        .template-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .template-item {
+            background-color: #faf9f8;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .template-item h3 {
+            margin: 0 0 10px 0;
+            font-size: 1.1rem;
+        }
+
+        .template-meta {
+            font-size: 0.85rem;
+            color: #605e5c;
+            margin-bottom: 8px;
+        }
+
+        .template-body {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            white-space: pre-wrap;
+            font-size: 0.9rem;
+            max-height: 100px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Outlook テンプレートマネージャー</h1>
+            <p>メールテンプレートを作成・保存し、ワンクリックでOutlookを起動またはコピーできます。</p>
+        </header>
+
+        <!-- 登録・編集フォーム -->
+        <div class="card">
+            <h2 id="form-title">新規テンプレート作成</h2>
+            <form id="template-form">
+                <input type="hidden" id="template-id">
+                <div class="form-group">
+                    <label for="title">テンプレート名（管理用）</label>
+                    <input type="text" id="title" required placeholder="例：社内会議の案内">
+                </div>
+                <div class="form-group">
+                    <label for="to">宛先 (To)</label>
+                    <input type="text" id="to" placeholder="example@domain.com">
+                </div>
+                <div class="form-group">
+                    <label for="cc">CC</label>
+                    <input type="text" id="cc" placeholder="cc@domain.com">
+                </div>
+                <div class="form-group">
+                    <label for="subject">メール件名</label>
+                    <input type="text" id="subject" required placeholder="【ご案内】次回の定例会議について">
+                </div>
+                <div class="form-group">
+                    <label for="body">メール本文</label>
+                    <textarea id="body" required placeholder="お疲れ様です。次回の定例会議についてご連絡いたします。"></textarea>
+                </div>
+                <div class="button-group">
+                    <button type="submit" id="save-btn">保存する</button>
+                    <button type="button" id="cancel-btn" class="secondary" style="display: none;">キャンセル</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- テンプレート一覧 -->
+        <div class="card">
+            <h2>保存済みテンプレート一覧</h2>
+            <div class="search-box">
+                <input type="text" id="search" placeholder="テンプレートを検索...">
+            </div>
+            <div id="template-list" class="template-list">
+                <!-- JavaScriptでここにテンプレートが挿入されます -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ローカルストレージからデータを取得、なければ初期データ
+        let templates = JSON.parse(localStorage.getItem('outlook_templates')) || [
+            {
+                id: '1',
+                title: '【サンプル】お礼メール',
+                to: '',
+                cc: '',
+                subject: '本日はお時間をいただきありがとうございました',
+                body: '〇〇様\n\nお疲れ様です。〇〇です。\n本日はお忙しい中、お時間をいただき誠にありがとうございました。\n\n引き続きよろしくお願いいたします。'
+            }
+        ];
+
+        const form = document.getElementById('template-form');
+        const formTitle = document.getElementById('form-title');
+        const templateIdInput = document.getElementById('template-id');
+        const titleInput = document.getElementById('title');
+        const toInput = document.getElementById('to');
+        const ccInput = document.getElementById('cc');
+        const subjectInput = document.getElementById('subject');
+        const bodyInput = document.getElementById('body');
+        const saveBtn = document.getElementById('save-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const searchInput = document.getElementById('search');
+        const templateList = document.getElementById('template-list');
+
+        // 画面描画関数
+        function renderTemplates(filter = '') {
+            templateList.innerHTML = '';
+            
+            const filtered = templates.filter(t => 
+                t.title.toLowerCase().includes(filter.toLowerCase()) ||
+                t.subject.toLowerCase().includes(filter.toLowerCase()) ||
+                t.body.toLowerCase().includes(filter.toLowerCase())
+            );
+
+            if (filtered.length === 0) {
+                templateList.innerHTML = '<p style="color: #605e5c;">テンプレートが見つかりません。</p>';
+                return;
+            }
+
+            filtered.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'template-item';
+                item.innerHTML = `
+                    <h3>${escapeHTML(t.title)}</h3>
+                    <div class="template-meta">
+                        ${t.to ? `<strong>To:</strong> ${escapeHTML(t.to)}<br>` : ''}
+                        ${t.cc ? `<strong>CC:</strong> ${escapeHTML(t.cc)}<br>` : ''}
+                        <strong>件名:</strong> ${escapeHTML(t.subject)}
+                    </div>
+                    <div class="template-body">${escapeHTML(t.body)}</div>
+                    <div class="button-group">
+                        <button onclick="openOutlook('${t.id}')">Outlookで開く</button>
+                        <button class="secondary" onclick="copyToClipboard('${t.id}')">本文をコピー</button>
+                        <button class="secondary" onclick="editTemplate('${t.id}')">編集</button>
+                        <button class="danger" onclick="deleteTemplate('${t.id}')">削除</button>
+                    </div>
+                `;
+                templateList.appendChild(item);
+            });
+        }
+
+        // フォーム送信（保存・更新）
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = templateIdInput.value;
+            
+            const newTemplate = {
+                id: id ? id : Date.now().toString(),
+                title: titleInput.value,
+                to: toInput.value,
+                cc: ccInput.value,
+                subject: subjectInput.value,
+                body: bodyInput.value
+            };
+
+            if (id) {
+                // 更新
+                templates = templates.map(t => t.id === id ? newTemplate : t);
+            } else {
+                // 新規追加
+                templates.push(newTemplate);
+            }
+
+            saveToStorage();
+            resetForm();
+            renderTemplates(searchInput.value);
+        });
+
+        // 編集モードにする
+        window.editTemplate = function(id) {
+            const t = templates.find(item => item.id === id);
+            if (!t) return;
+
+            templateIdInput.value = t.id;
+            titleInput.value = t.title;
+            toInput.value = t.to;
+            ccInput.value = t.cc;
+            subjectInput.value = t.subject;
+            bodyInput.value = t.body;
+
+            formTitle.textContent = 'テンプレートを編集';
+            saveBtn.textContent = '更新する';
+            cancelBtn.style.display = 'inline-block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // 削除
+        window.deleteTemplate = function(id) {
+            if (confirm('このテンプレートを削除してもよろしいですか？')) {
+                templates = templates.filter(t => t.id !== id);
+                saveToStorage();
+                renderTemplates(searchInput.value);
+            }
+        };
+
+        // キャンセルボタン
+        cancelBtn.addEventListener('click', () => {
+            resetForm();
+        });
+
+        // フォームリセット
+        function resetForm() {
+            form.reset();
+            templateIdInput.value = '';
+            formTitle.textContent = '新規テンプレート作成';
+            saveBtn.textContent = '保存する';
+            cancelBtn.style.display = 'none';
+        }
+
+        // ローカルストレージに保存
+        function saveToStorage() {
+            localStorage.setItem('outlook_templates', JSON.stringify(templates));
+        }
+
+        // 検索機能
+        searchInput.addEventListener('input', (e) => {
+            renderTemplates(e.target.value);
+        });
+
+        // Outlookで開く (mailtoスキームを利用)
+        window.openOutlook = function(id) {
+            const t = templates.find(item => item.id === id);
+            if (!t) return;
+
+            const mailtoUrl = `mailto:${encodeURIComponent(t.to)}?cc=${encodeURIComponent(t.cc)}&subject=${encodeURIComponent(t.subject)}&body=${encodeURIComponent(t.body)}`;
+            window.location.href = mailtoUrl;
+        };
+
+        // 本文をクリップボードにコピー
+        window.copyToClipboard = function(id) {
+            const t = templates.find(item => item.id === id);
+            if (!t) return;
+
+            navigator.clipboard.writeText(t.body).then(() => {
+                alert('本文をクリップボードにコピーしました！');
+            }).catch(err => {
+                alert('コピーに失敗しました: ' + err);
+            });
+        };
+
+        // XSS対策の簡易エスケープ
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        // 初期描画
+        renderTemplates();
+    </script>
+</body>
+</html>

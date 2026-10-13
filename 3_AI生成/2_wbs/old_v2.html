@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拡張WBSツール（ガント・編集・CSV対応）</title>
+    <!-- ガントチャート描画用ライブラリ: Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 日付計算用アダプター -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 24px;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h2 {
+            font-size: 18px;
+            color: var(--primary-color);
+            margin-top: 30px;
+        }
+
+        /* アクションボタン（CSVなど） */
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-secondary {
+            background-color: #27ae60;
+        }
+        .btn-secondary:hover {
+            background-color: #219653;
+        }
+
+        /* フォームのデザイン */
+        .form-section {
+            background: #f1f3f5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 9px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* テーブルのデザイン */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fcfcfc;
+        }
+
+        tr.editable-row {
+            cursor: pointer;
+        }
+        tr.editable-row:hover {
+            background-color: #ebf5fb;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* 進捗ステータスの色分け */
+        .status-not-started { color: #e67e22; font-weight: bold; }
+        .status-in-progress { color: #3498db; font-weight: bold; }
+        .status-completed { color: #2ecc71; font-weight: bold; }
+
+        /* ガントチャートエリア */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-top: 20px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>
+        <span>拡張WBSツール</span>
+        <div class="actions-bar">
+            <button class="btn-secondary" id="exportCsvBtn">CSVエクスポート</button>
+            <button class="btn-secondary" id="importCsvBtn" style="background-color: #e67e22;">CSVインポート</button>
+            <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+        </div>
+    </h1>
+
+    <!-- タスク追加・編集フォーム -->
+    <div class="form-section">
+        <input type="hidden" id="editIndex" value="">
+        <div class="form-group">
+            <label for="category">大項目</label>
+            <input type="text" id="category" placeholder="例: 設計">
+        </div>
+        <div class="form-group">
+            <label for="subCategory">中項目</label>
+            <input type="text" id="subCategory" placeholder="例: 画面設計">
+        </div>
+        <div class="form-group">
+            <label for="taskName">タスク名 *</label>
+            <input type="text" id="taskName" placeholder="例: ワイヤーフレーム作成">
+        </div>
+        <div class="form-group">
+            <label for="assignee">担当者</label>
+            <input type="text" id="assignee" placeholder="例: 山田">
+        </div>
+        <div class="form-group">
+            <label for="startDate">開始日</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="form-group">
+            <label for="endDate">期限</label>
+            <input type="date" id="endDate">
+        </div>
+        <div class="form-group">
+            <label for="status">進捗状況</label>
+            <select id="status">
+                <option value="未着手">未着手</option>
+                <option value="進行中">進行中</option>
+                <option value="完了">完了</option>
+            </select>
+        </div>
+        <button id="saveBtn">タスク追加</button>
+    </div>
+    <div class="helper-text">※ テーブルの行をクリックすると、そのタスクをフォームに読み込んで**編集**できます。</div>
+
+    <!-- WBS一覧テーブル -->
+    <h2>タスク一覧</h2>
+    <div class="table-responsive">
+        <table id="wbsTable">
+            <thead>
+                <tr>
+                    <th>大項目</th>
+                    <th>中項目</th>
+                    <th>タスク名</th>
+                    <th>担当者</th>
+                    <th>開始日</th>
+                    <th>期限</th>
+                    <th>進捗</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="wbsBody">
+                <!-- 動的挿入 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ステップ1: ガントチャート表示エリア -->
+    <h2>ガントチャート（スケジュール視覚化）</h2>
+    <div class="chart-container">
+        <canvas id="ganttChart"></canvas>
+    </div>
+</div>
+
+<script>
+    // DOM要素
+    const categoryInput = document.getElementById('category');
+    const subCategoryInput = document.getElementById('subCategory');
+    const taskNameInput = document.getElementById('taskName');
+    const assigneeInput = document.getElementById('assignee');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const statusSelect = document.getElementById('status');
+    const saveBtn = document.getElementById('saveBtn');
+    const editIndexInput = document.getElementById('editIndex');
+    const wbsBody = document.getElementById('wbsBody');
+    
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const importCsvBtn = document.getElementById('importCsvBtn');
+    const csvFileInput = document.getElementById('csvFileInput');
+
+    // ローカルストレージからデータ取得
+    let tasks = JSON.parse(localStorage.getItem('wbs_extended_tasks')) || [];
+    let ganttChartInstance = null;
+
+    // 初期化実行
+    renderTasks();
+    updateGanttChart();
+
+    // ステップ2: 追加・編集ボタンの切り替え処理
+    saveBtn.addEventListener('click', () => {
+        const category = categoryInput.value.trim();
+        const subCategory = subCategoryInput.value.trim();
+        const taskName = taskNameInput.value.trim();
+        const assignee = assigneeInput.value.trim();
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        const status = statusSelect.value;
+        const editIndex = editIndexInput.value;
+
+        if (!taskName) {
+            alert('タスク名は必須です。');
+            return;
+        }
+
+        // 開始日と期限の整合性チェック
+        if (startDate && endDate && startDate > endDate) {
+            alert('開始日は期限より前の日付を指定してください。');
+            return;
+        }
+
+        if (editIndex === "") {
+            // 新規追加
+            const newTask = {
+                id: Date.now(),
+                category,
+                subCategory,
+                taskName,
+                assignee,
+                startDate,
+                endDate,
+                status
+            };
+            tasks.push(newTask);
+        } else {
+            // 既存編集
+            const index = parseInt(editIndex);
+            tasks[index].category = category;
+            tasks[index].subCategory = subCategory;
+            tasks[index].taskName = taskName;
+            tasks[index].assignee = assignee;
+            tasks[index].startDate = startDate;
+            tasks[index].endDate = endDate;
+            tasks[index].status = status;
+            
+            // 編集モードを解除
+            editIndexInput.value = "";
+            saveBtn.textContent = "タスク追加";
+            saveBtn.style.backgroundColor = "#3498db";
+        }
+
+        saveAndRefresh();
+        clearForm();
+    });
+
+    // タスク削除
+    function deleteTask(id, event) {
+        event.stopPropagation(); // 行クリックイベント（編集）の伝播を防ぐ
+        if (!confirm('このタスクを削除してもよろしいですか？')) return;
+        tasks = tasks.filter(task => task.id !== id);
+        
+        // もし現在編集中だったタスクが削除されたらフォームをリセット
+        if (editIndexInput.value !== "") {
+            clearForm();
+            editIndexInput.value = "";
+            saveBtn.textContent = "タスク追加";
+            saveBtn.style.backgroundColor = "#3498db";
+        }
+
+        saveAndRefresh();
+    }
+
+    // ステップ2: テーブル行クリックで編集モードにする
+    function editTask(index) {
+        const task = tasks[index];
+        categoryInput.value = task.category || '';
+        subCategoryInput.value = task.subCategory || '';
+        taskNameInput.value = task.taskName || '';
+        assigneeInput.value = task.assignee || '';
+        startDateInput.value = task.startDate || '';
+        endDateInput.value = task.endDate || '';
+        statusSelect.value = task.status || '未着手';
+        
+        editIndexInput.value = index;
+        saveBtn.textContent = "タスク更新";
+        saveBtn.style.backgroundColor = "#e67e22";
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // データの保存・再描画・チャート更新
+    function saveAndRefresh() {
+        localStorage.setItem('wbs_extended_tasks', JSON.stringify(tasks));
+        renderTasks();
+        updateGanttChart();
+    }
+
+    // フォーム初期化
+    function clearForm() {
+        categoryInput.value = '';
+        subCategoryInput.value = '';
+        taskNameInput.value = '';
+        assigneeInput.value = '';
+        startDateInput.value = '';
+        endDateInput.value = '';
+        statusSelect.value = '未着手';
+        editIndexInput.value = '';
+        saveBtn.textContent = "タスク追加";
+        saveBtn.style.backgroundColor = "#3498db";
+    }
+
+    // テーブル描画
+    function renderTasks() {
+        wbsBody.innerHTML = '';
+
+        if (tasks.length === 0) {
+            wbsBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#777;">タスクが登録されていません</td></tr>`;
+            return;
+        }
+
+        tasks.forEach((task, index) => {
+            const tr = document.createElement('tr');
+            tr.className = 'editable-row';
+            tr.title = 'クリックして編集';
+            tr.onclick = () => editTask(index);
+
+            let statusClass = '';
+            if (task.status === '未着手') statusClass = 'status-not-started';
+            else if (task.status === '進行中') statusClass = 'status-in-progress';
+            else if (task.status === '完了') statusClass = 'status-completed';
+
+            tr.innerHTML = `
+                <td>${escapeHTML(task.category)}</td>
+                <td>${escapeHTML(task.subCategory)}</td>
+                <td>${escapeHTML(task.taskName)}</td>
+                <td>${escapeHTML(task.assignee)}</td>
+                <td>${escapeHTML(task.startDate)}</td>
+                <td>${escapeHTML(task.endDate)}</td>
+                <td class="${statusClass}">${escapeHTML(task.status)}</td>
+                <td><button class="delete-btn" onclick="deleteTask(${task.id}, event)">削除</button></td>
+            `;
+            wbsBody.appendChild(tr);
+        });
+    }
+
+    // ステップ1: ガントチャートの更新（Chart.jsを使用）
+    function updateGanttChart() {
+        const ctx = document.getElementById('ganttChart').getContext('2d');
+        
+        // 日付が設定されているタスクのみをフィルタリング
+        const validTasks = tasks.filter(t => t.startDate && t.endDate);
+
+        const labels = validTasks.map(t => t.taskName);
+        // Chart.jsのFloating Bars用データ形式: [開始日, 終了日]
+        const dataValues = validTasks.map(t => [t.startDate, t.endDate]);
+        
+        // ステータスに応じたバーの色を設定
+        const backgroundColors = validTasks.map(t => {
+            if (t.status === '完了') return 'rgba(46, 204, 113, 0.7)';
+            if (t.status === '進行中') return 'rgba(52, 152, 219, 0.7)';
+            return 'rgba(230, 126, 34, 0.7)';
+        });
+
+        if (ganttChartInstance) {
+            ganttChartInstance.destroy();
+        }
+
+        if (validTasks.length === 0) {
+            // データがない場合のプレースホルダー表示用
+            ganttChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['（開始日と期限が設定されたタスクがありません）'],
+                    datasets: [{ data: [] }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { x: { display: false } }
+                }
+            });
+            return;
+        }
+
+        ganttChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'タスク期間',
+                    data: dataValues,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1,
+                    borderSkipped: false,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                indexAxis: 'y', // 横向きの棒グラフ（ガントチャート風）
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'day',
+                            tooltipFormat: 'yyyy-MM-dd',
+                            displayFormats: {
+                                day: 'MM/dd'
+                            }
+                        },
+                        title: { display: true, text: 'スケジュール' }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const raw = context.raw;
+                                return ` 期間: ${raw[0]} ～${raw[1]}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ステップ3: CSVエクスポート機能
+    exportCsvBtn.addEventListener('click', () => {
+        if (tasks.length === 0) {
+            alert('エクスポートするタスクがありません。');
+            return;
+        }
+
+        let csvContent = "\uFEFF"; // UTF-8 BOM付き（Excel文字化け対策）
+        csvContent += "大項目,中項目,タスク名,担当者,開始日,期限,進捗状況\n";
+
+        tasks.forEach(t => {
+            const row = [
+                `"${(t.category || '').replace(/"/g, '""')}"`,
+                `"${(t.subCategory || '').replace(/"/g, '""')}"`,
+                `"${(t.taskName || '').replace(/"/g, '""')}"`,
+                `"${(t.assignee || '').replace(/"/g, '""')}"`,
+                `"${t.startDate || ''}"`,
+                `"${t.endDate || ''}"`,
+                `"${t.status || ''}"`
+            ].join(',');
+            csvContent += row + "\n";
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wbs_data_${new Date().toISOString().slice(0, 1

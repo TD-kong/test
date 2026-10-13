@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>シンプルメモ帳</title>
+    <style>
+        /* CSS：デザインの設定 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #4a5568;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        button {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #4338ca;
+        }
+
+        #clear-btn {
+            background-color: #ef4444;
+        }
+
+        #clear-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            padding: 20px;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+        }
+
+        footer {
+            padding: 10px 20px;
+            background-color: #f9fafb;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📝 マイメモ帳</h1>
+        <div class="actions">
+            <span id="save-status" style="color: #10b981; font-size: 0.9rem;"></span>
+            <button id="download-btn">テキストとして保存</button>
+            <button id="clear-btn">すべてクリア</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- メモ入力エリア -->
+        <textarea id="memo-input" placeholder="ここにメモを入力してください... (自動保存されます)"></textarea>
+        
+        <footer>
+            <div id="char-count">文字数: 0文字</div>
+            <div>ローカルストレージ自動保存</div>
+        </footer>
+    </div>
+
+    <script>
+        // JavaScript：機能の実装
+        const memoInput = document.getElementById('memo-input');
+        const clearBtn = document.getElementById('clear-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const charCount = document.getElementById('char-count');
+        const saveStatus = document.getElementById('save-status');
+
+        // 1. ページ読み込み時に保存されたデータを復元
+        const savedMemo = localStorage.getItem('my_memo_content');
+        if (savedMemo !== null) {
+            memoInput.value = savedMemo;
+            updateCharCount(savedMemo.length);
+        }
+
+        // 2. 入力するたびに自動保存（localStorage）＆文字数更新
+        memoInput.addEventListener('input', () => {
+            const content = memoInput.value;
+            localStorage.setItem('my_memo_content', content);
+            updateCharCount(content.length);
+            showSaveStatus();
+        });
+
+        // 3. すべてクリアボタンの処理
+        clearBtn.addEventListener('click', () => {
+            if (confirm('本当にすべてのメモを削除しますか？')) {
+                memoInput.value = '';
+                localStorage.removeItem('my_memo_content');
+                updateCharCount(0);
+                showSaveStatus('クリアしました');
+            }
+        });
+
+        // 4. テキストファイルとしてダウンロードする処理
+        downloadBtn.addEventListener('click', () => {
+            const content = memoInput.value;
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'memo.txt'; // 保存されるファイル名
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        // 文字数更新用関数
+        function updateCharCount(length) {
+            charCount.textContent = `文字数: ${length}文字`;
+        }
+
+        // 保存完了メッセージの表示
+        let timeoutId;
+        function showSaveStatus(customText = '自動保存しました') {
+            saveStatus.textContent = customText;
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                saveStatus.textContent = '';
+            }, 1500);
+        }
+    </script>
+
+</body>
+</html>

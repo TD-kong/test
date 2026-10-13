@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Java Source Code Analyzer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-full flex flex-col antialiased">
+
+    <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 flex-shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-orange-600 p-2 rounded-lg text-white shadow-inner flex items-center justify-center">
+                    <i class="fa-brands fa-java text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight">Java Source Analyzer</h1>
+                    <p class="text-xs text-slate-400">クラス構造・メソッド・フィールド高速解析ツール</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="loadSampleCode()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-200 bg-slate-800 hover:bg-slate-700 transition border border-slate-700">
+                    <i class="fa-solid fa-code mr-1.5 text-orange-400"></i> サンプル読込
+                </button>
+                <button onclick="clearAll()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-slate-200 bg-slate-800 hover:bg-slate-700 transition border border-slate-700">
+                    <i class="fa-solid fa-trash-can mr-1.5 text-rose-400"></i> クリア
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col lg:flex-row gap-6 overflow-hidden">
+        
+        <!-- Left Panel: Source Input -->
+        <div class="lg:w-5/12 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center">
+                    <i class="fa-solid fa-file-code mr-2 text-indigo-600"></i> Javaソースコード入力
+                </span>
+                <span id="charCount" class="text-xs text-slate-500 font-mono">0 文字</span>
+            </div>
+            <div class="flex-1 p-4 flex flex-col relative">
+                <textarea id="sourceCode" 
+                    oninput="updateCharCount()"
+                    placeholder="ここにJavaのソースコードを貼り付けてください... (例: public class User extends Account implements Serializable { ... })" 
+                    class="w-full flex-1 p-3 font-mono text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none leading-relaxed text-slate-700"></textarea>
+                
+                <div class="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
+                    <div class="text-xs text-slate-500 flex items-center">
+                        <i class="fa-solid fa-circle-info text-indigo-500 mr-1.5"></i> クラス、メソッド、フィールドを自動抽出
+                    </div>
+                    <button onclick="analyzeCode()" class="inline-flex items-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-xl shadow-md transition transform active:scale-95">
+                        <i class="fa-solid fa-magnifying-glass-chart mr-2"></i> 解析する
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Analysis Results -->
+        <div class="lg:w-7/12 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- Tabs Header -->
+            <div class="bg-slate-100 px-4 pt-3 border-b border-slate-200 flex items-center justify-between flex-wrap gap-2">
+                <div class="flex space-x-1" id="resultTabs">
+                    <button onclick="switchTab('overview')" data-tab="overview" class="tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg bg-white text-indigo-600 border-t border-x border-slate-200 shadow-sm transition">
+                        <i class="fa-solid fa-chart-pie mr-1.5"></i> 概要・統計
+                    </button>
+                    <button onclick="switchTab('classes')" data-tab="classes" class="tab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-t-lg text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-cubes mr-1.5"></i> クラス情報
+                    </button>
+                    <button onclick="switchTab('methods')" data-tab="methods" class="tab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-t-lg text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-cube mr-1.5"></i> メソッド <span id="methodBadge" class="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-200 text-slate-700 rounded-full">0</span>
+                    </button>
+                    <button onclick="switchTab('fields')" data-tab="fields" class="tab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-t-lg text-slate-600 hover:text-slate-900 transition">
+                        <i class="fa-solid fa-list mr-1.5"></i> フィールド <span id="fieldBadge" class="ml-1 px-1.5 py-0.5 text-[10px] bg-slate-200 text-slate-700 rounded-full">0</span>
+                    </button>
+                </div>
+                <div id="exportAction" class="hidden pb-2 sm:pb-0">
+                    <button onclick="exportJSON()" class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition border border-emerald-200">
+                        <i class="fa-solid fa-download mr-1.5"></i> JSONエクスポート
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Contents Container -->
+            <div class="flex-1 p-4 sm:p-6 overflow-y-auto bg-slate-50/50" id="resultContainer">
+                <!-- Initial State -->
+                <div id="emptyState" class="h-full flex flex-col items-center justify-center text-center p-8">
+                    <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-500 mb-4 text-2xl shadow-inner">
+                        <i class="fa-solid fa-code-compare"></i>
+                    </div>
+                    <h3 class="text-base font-semibold text-slate-700 mb-1">まだ解析が行われていません</h3>
+                    <p class="text-xs text-slate-500 max-w-sm mb-4">左側のエリアにJavaコードを貼り付けるか、「サンプル読込」ボタンを押して解析を実行してください。</p>
+                    <button onclick="loadSampleCode()" class="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-semibold rounded-xl transition border border-indigo-200">
+                        サンプルコードを試す
+                    </button>
+                </div>
+
+                <!-- Active Content View (Hidden by default) -->
+                <div id="activeContent" class="hidden space-y-6">
+                    
+                    <!-- Overview Tab Content -->
+                    <div id="tab-overview" class="tab-pane space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">統計情報ハイライト</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <span class="text-xs text-slate-500 font-medium">総行数</span>
+                                <span id="statLines" class="text-2xl font-bold text-slate-800 mt-1">0</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <span class="text-xs text-slate-500 font-medium">クラス数</span>
+                                <span id="statClasses" class="text-2xl font-bold text-indigo-600 mt-1">0</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <span class="text-xs text-slate-500 font-medium">メソッド数</span>
+                                <span id="statMethods" class="text-2xl font-bold text-emerald-600 mt-1">0</span>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <span class="text-xs text-slate-500 font-medium">フィールド数</span>
+                                <span id="statFields" class="text-2xl font-bold text-amber-600 mt-1">0</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm mt-4">
+                            <h4 class="text-sm font-semibold text-slate-800 mb-3 flex items-center">
+                                <i class="fa-solid fa-circle-info text-indigo-500 mr-2"></i> パッケージおよび依存関係
+                            </h4>
+                            <div class="space-y-2 text-xs sm:text-sm">
+                                <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+                                    <span class="text-slate-500 font-medium">パッケージ名:</span>
+                                    <span id="overviewPackage" class="font-mono text-slate-800 font-semibold">-</span>
+                                </div>
+                                <div class="flex items-start justify-between py-1.5">
+                                    <span class="text-slate-500 font-medium mt-0.5">インポート宣言:</span>
+                                    <div id="overviewImports" class="font-mono text-slate-700 text-right max-w-xs truncate">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Classes Tab Content -->
+                    <div id="tab-classes" class="tab-pane hidden space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">検出されたクラス・インターフェース</h3>
+                        <div id="classesList" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Methods Tab Content -->
+                    <div id="tab-methods" class="tab-pane hidden space-y-4">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 mb-3">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">メソッド一覧</h3>
+                            <div class="relative w-full sm:w-64">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <i class="fa-solid fa-search text-xs"></i>
+                                </span>
+                                <input type="text" id="methodSearch" oninput="filterMethods()" placeholder="メソッド名で検索..." class="w-full pl-9 pr-4 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div id="methodsList" class="space-y-3">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Fields Tab Content -->
+                    <div id="tab-fields" class="tab-pane hidden space-y-4">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">フィールド変数一覧</h3>
+                        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                        <th class="p-3">アクセス</th>
+                                        <th class="p-3">型</th>
+                                        <th class="p-3">変数名</th>
+                                        <th class="p-3">初期値・修飾子</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fieldsTableBody" class="divide-y divide-slate-100">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const sampleJavaCode = `package com.example.app;
+
+import java.util.List;
+import java.util.ArrayList;
+import java.io.Serializable;
+
+/**
+ * ユーザー管理を行うサービスクラス
+ * データベースとのやり取りやビジネスロジックをカプセル化します。
+ */
+public class UserService extends BaseService implements Serializable, Cloneable {
+
+    private static final long serialVersionUID = 1L;
+    
+    private String databaseUrl;
+    protected int timeoutSeconds = 30;
+    public List<User> activeUsers;
+
+    /**
+     * コンストラクタ
+     * @param url 接続先URL
+     */
+    public UserService(String url) {
+        this.databaseUrl = url;
+        this.activeUsers = new ArrayList<>();
+    }
+
+    /**
+     * ユーザーをIDで検索します。
+     * @param userId 検索対象のユーザーID
+     * @return 該当するUserオブジェクト
+     */
+    public User findUserById(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        for (User u : activeUsers) {
+            if (u.getId().equals(userId)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    /*
+     * 新規ユーザーを登録する内部処理
+     */
+    protected boolean registerUser(User newUser, String password) {
+        if (newUser == null || password.isEmpty()) {
+            return false;
+        }
+        activeUsers.add(newUser);
+        logActivity("Registered user: " + newUser.getName());
+        return true;
+    }
+
+    private void logActivity(String message) {
+        System.out.println("[LOG] " + message);
+    }
+
+    public int getActiveCount() {
+        return this.activeUsers.size();
+    }
+}`;
+
+        let currentAnalysisResult = null;
+
+        window.onload = function() {
+            // Initialize with empty state or sample if desired
+            updateCharCount();
+        };
+
+        function loadSampleCode() {
+            document.getElementById('sourceCode').value = sampleJavaCode;
+            updateCharCount();
+            analyzeCode();
+        }
+
+        function clearAll() {
+            document.getElementById('sourceCode').value = '';
+            updateCharCount();
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('activeContent').classList.add('hidden');
+            document.getElementById('exportAction').classList.add('hidden');
+            currentAnalysisResult = null;
+        }
+
+        function updateCharCount() {
+            const text = document.getElementById('sourceCode').value;
+            document.getElementById('charCount').textContent = text.length + ' 文字';
+        }
+
+        function switchTab(tabName) {
+            // Update Tab buttons styling
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabName) {
+                    btn.className = 'tab-btn px-4 py-2 text-xs sm:text-sm font-semibold rounded-t-lg bg-white text-indigo-600 border-t border-x border-slate-200 shadow-sm transition';
+                } else {
+                    btn.className = 'tab-btn px-4 py-2 text-xs sm:text-sm font-medium rounded-t-lg text-slate-600 hover:text-slate-900 transition';
+                }
+            });
+
+            // Update Tab panes visibility
+            const panes = document.querySelectorAll('.tab-pane');
+            panes.forEach(pane => {
+                if (pane.id === 'tab-' + tabName) {
+                    pane.classList.remove('hidden');
+                } else {
+                    pane.classList.add('hidden');
+                }
+            });
+        }
+
+        function analyzeCode() {
+            const code = document.getElementById('sourceCode').value.trim();
+            if (!code) {
+                alertBox('解析するJavaソースコードを入力してください。');
+                return;
+            }
+
+            // Basic metrics
+            const lines = code.split('\n');
+            const totalLines = lines.length;
+
+            // Extract Package
+            const packageMatch = code.match(/package\s+([a-zA-Z0-9_.]+)\s*;/);
+            const packageName = packageMatch ? packageMatch[1] : 'default package';
+
+            // Extract Imports
+            const importMatches = [...code.matchAll(/import\s+(static\s+)?([a-zA-Z0-9_.*]+)\s*;/g)];
+            const imports = importMatches.map(m => m[2]);
+
+            // Extract Classes / Interfaces / Enums
+            // e.g., public class UserService extends BaseService implements Serializable
+            const classRegex = /(?:public|protected|private)?\s*(?:abstract|final)?\s*(class|interface|enum)\s+([a-zA-Z0-9_]+)(?:\s+extends\s+([a-zA-Z0-9_<>.]+))?(?:\s+implements\s+([a-zA-Z0-9_<>.,\s]+))?/g;
+            const classes = [];
+            let classMatch;
+            while ((classMatch = classRegex.exec(code)) !== null) {
+                classes.push({
+                    type: classMatch[1],
+                    name: classMatch[2],
+                    extends: classMatch[3] || null,
+                    implements: classMatch[4] ? classMatch[4].split(',').map(s => s.trim()) : []
+                });
+            }
+
+            // Extract Fields
+            // e.g., private static final long serialVersionUID = 1L;
+            // e.g., protected int timeoutSeconds = 30;
+            const fieldRegex = /(?:(\/\*\*[\s\S]*?\*\/|\/\/[^\n]*))?\s*(?:@\w+(?:\([^)]*\))?\s*)*(public|protected|private)?\s*(?:static)?\s*(?:final)?\s*(?:volatile)?\s*(?:transient)?\s+([a-zA-Z0-9_<>[\].,]+)\s+([a-zA-Z0-9_$]+)\s*(?:=\s*([^;]+))?\s*;/g;
+            const fields = [];
+            let fieldMatch;
+            while ((fieldMatch = fieldRegex.exec(code)) !== null) {
+                // Avoid capturing methods or constructors incorrectly
+                const potentialName = fieldMatch[4];
+                if (potentialName && !potentialName.includes('(')) {
+                    fields.push({
+                        doc: fieldMatch[1] ? fieldMatch[1].trim() : null,
+                        modifier: fieldMatch[2] || 'package-private',
+                        type: fieldMatch[3],
+                        name: potentialName,
+                        initializer: fieldMatch[5] ? fieldMatch[5].trim() : null
+                    });
+                }
+            }
+
+            // Extract Methods & Constructors
+            // e.g., public User findUserById(Long userId) { ... }
+            const methodRegex = /(?:(\/\*\*[\s\S]*?\*\/|\/\/[^\n]*))?\s*(?:@\w+(?:\([^)]*\))?\s*)*(public|protected|private)?\s*(?:static)?\s*(?:final)?\s*(?:abstract)?\s*(?:synchronized)?\s*([a-zA-Z0-9_<>[\].]+)\s+([a-zA-Z0-9_$]+)\s*\(([^)]*)\)\s*(?:throws\s+[a-zA-Z0-9_.,\s]+)?\s*(?:\{|;)/g;
+            const methods = [];
+            let methodMatch;
+            while ((methodMatch = methodRegex.exec(code)) !== null) {
+                const returnType = methodMatch[3];
+                const methodName = methodMatch[4];
+                
+                // Filter out common control keywords if falsely matched
+                if (['if', 'for', 'while', 'switch', 'catch', 'return'].includes(methodName)) {
+                    continue;
+                }
+
+                const rawParams = methodMatch[5].trim();
+                const parameters = rawParams ? rawParams.split(',').map(p => {
+                    const parts = p.trim().split(/\s+/);
+                    return {
+                        type: parts.length > 1 ? parts[parts.length - 2] : '',
+                        name: parts[parts.length - 1]
+                    };
+                }) : [];
+
+                // Check Javadoc presence
+                const docStr = methodMatch[1] ? methodMatch[1].trim() : null;
+                const hasJavadoc = docStr && docStr.startsWith('/**');
+
+                methods.push({
+                    doc: docStr,
+                    hasJavadoc: hasJavadoc,
+                    modifier: methodMatch[2] || 'package-private',
+                    returnType: returnType,
+                    name: methodName,
+                    parameters: parameters,
+                    rawParams: rawParams
+                });
+            }
+
+            currentAnalysisResult = {
+                totalLines,
+                packageName,
+                imports,
+                classes,
+                fields,
+                methods
+            };
+
+            renderResults(currentAnalysisResult);
+        }
+
+        function renderResults(data) {
+            // Toggle view panels
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('activeContent').classList.remove('hidden');
+            document.getElementById('exportAction').classList.remove('hidden');
+
+            // Update stats badges & numbers
+            document.getElementById('statLines').textContent = data.totalLines;
+            document.getElementById('statClasses').textContent = data.classes.length;
+            document.getElementById('statMethods').textContent = data.methods.length;
+            document.getElementById('statFields').textContent = data.fields.length;
+            document.getElementById('methodBadge').textContent = data.methods.length;
+            document.getElementById('fieldBadge').textContent = data.fields.length;
+
+            // Overview details
+            document.getElementById('overviewPackage').textContent = data.packageName;
+            document.getElementById('overviewImports').textContent = data.imports.length > 0 ? data.imports.join(', ') : 'なし';
+
+            // Render Classes
+            const classesContainer = document.getElementById('classesList');
+            if (data.classes.length === 0) {
+                classesContainer.innerHTML = `<p class="text-xs text-slate-500 italic">クラスが検出されませんでした。</p>`;
+            } else {
+                classesContainer.innerHTML = data.classes.map(cls => `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 uppercase tracking-wide border border-indigo-100">${cls.type}</span>
+                            <span class="text-base font-bold text-slate-800 font-mono">${cls.name}</span>
+                        </div>
+                        <div class="text-xs space-y-1 pt-1 text-slate-600">
+                            ${cls.extends ? `<div class="flex items-center"><span class="w-24 text-slate-400 font-medium">extends:</span> <span class="font-mono text-slate-700">${cls.extends}</span></div>` : ''}
+                            ${cls.implements.length > 0 ? `<div class="flex items-center"><span class="w-24 text-slate-400 font-medium">implements:</span> <span class="font-mono text-slate-700">${cls.implements.join(', ')}</span></div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Render Methods
+            window._allMethods = data.methods;
+            renderMethodCards(data.methods);
+
+            // Render Fields Table
+            const fieldsBody = document.getElementById('fieldsTableBody');
+            if (data.fields.length === 0) {
+                fieldsBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-xs text-slate-500 italic">フィールドが検出されませんでした。</td></tr>`;
+            } else {
+                fieldsBody.innerHTML = data.fields.map(f => `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-3"><span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-700 border border-slate-200">${f.modifier}</span></td>
+                        <td class="p-3 font-mono text-indigo-600 font-medium">${f.type}</td>
+                        <td class="p-3 font-mono text-slate-800 font-semibold">${f.name}</td>
+                        <td class="p-3 font-mono text-slate-500">${f.initializer ? '= ' + f.initializer : '-'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Switch to overview tab by default on new analyze
+            switchTab('overview');
+        }
+
+        function renderMethodCards(methods) {
+            const methodsContainer = document.getElementById('methodsList');
+            if (methods.length === 0) {
+                methodsContainer.innerHTML = `<p class="text-xs text-slate-500 italic">条件に一致するメソッドはありません。</p>`;
+                return;
+            }
+
+            methodsContainer.innerHTML = methods.map(m => `
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                    <div class="flex items-start justify-between flex-wrap gap-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-700 border border-slate-200">${m.modifier}</span>
+                            <span class="font-mono text-xs font-semibold text-emerald-600">${m.returnType}</span>
+                            <span class="font-mono text-sm font-bold text-slate-800">${m.name}</span>
+                        </div>
+                        <div>
+                            ${m.hasJavadoc ? 
+                                '<span class="px-2 py-0.5 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full font-medium"><i class="fa-solid fa-comment-dots mr-1"></i>Javadocあり</span>' : 
+                                '<span class="px-2 py-0.5 text-[10px] bg-slate-100 text-slate-500 rounded-full font-medium">Javadocなし</span>'
+                            }
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 font-mono text-xs text-slate-700 overflow-x-auto">
+                        <span class="text-slate-400">引数:</span> (${m.rawParams || 'なし'})
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterMethods() {
+            const query = document.getElementById('methodSearch').value.toLowerCase();
+            if (!window._allMethods) return;
+            const filtered = window._allMethods.filter(m => m.name.toLowerCase().includes(query) || m.returnType.toLowerCase().includes(query));
+            renderMethodCards(filtered);
+        }
+
+        function exportJSON() {
+            if (!currentAnalysisResult) return;
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentAnalysisResult, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "java_analysis_result.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function alertBox(message) {
+            // Custom modern non-blocking notice box instead of native alert
+            const div = document.createElement('div');
+            div.className = 'fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-xs sm:text-sm animate-bounce';
+            div.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i><span>${message}</span>`;
+            document.body.appendChild(div);
+            setTimeout(() => { div.remove(); }, 3500);
+        }
+    </script>
+</body>
+</html>

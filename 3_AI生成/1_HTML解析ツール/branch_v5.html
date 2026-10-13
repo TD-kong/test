@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Tech Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-light: #eff6ff;
+            --code-bg: #f1f5f9;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --accent-color: #3b82f6;
+            --accent-hover: #60a5fa;
+            --accent-light: #1e3a8a33;
+            --code-bg: #090d16;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        header {
+            background-color: var(--card-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        button.theme-btn {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        main {
+            max-width: 1200px;
+            width: 100%;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            main {
+                grid-template-columns: 1fr 2fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 0.75rem;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+            background-color: var(--code-bg);
+        }
+
+        .upload-area:hover {
+            border-color: var(--accent-color);
+        }
+
+        .upload-area input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .btn-primary {
+            width: 100%;
+            margin-top: 1.5rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-box {
+            background-color: var(--code-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .stat-box span {
+            display: block;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .stat-box strong {
+            font-size: 1.1rem;
+            color: var(--accent-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        th, td {
+            padding: 0.65rem 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-secondary);
+            background-color: var(--code-bg);
+        }
+
+        td code {
+            font-family: monospace;
+            background: var(--code-bg);
+            padding: 0.15rem 0.35rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        .tag-badge {
+            display: inline-block;
+            background-color: var(--accent-light);
+            color: var(--accent-color);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-family: monospace;
+            margin: 0.15rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .code-block {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 0.85rem;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.8rem;
+            max-height: 420px;
+            overflow: auto;
+        }
+
+        .js-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.5rem 0 1rem;
+        }
+
+        .js-tabs button {
+            border: 1px solid var(--border-color);
+            background: var(--code-bg);
+            color: var(--text-primary);
+            border-radius: 0.4rem;
+            padding: 0.45rem 0.7rem;
+            cursor: pointer;
+        }
+
+        .js-tabs button.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .warning-text { color: #b45309; font-size: 0.85rem; }
+        .muted-text { color: var(--text-secondary); font-size: 0.85rem; }
+        .resource-cell { display:flex; align-items:center; justify-content:space-between; gap:.75rem; min-width:0; }
+        .resource-value { overflow-wrap:anywhere; min-width:0; }
+        .resource-link { color:var(--accent-color); text-decoration:underline; }
+        .resource-link:hover { color:var(--accent-hover); }
+        .tag-select {
+            border:1px solid var(--border-color); background:var(--code-bg);
+            color:var(--text-primary); border-radius:.35rem; padding:.3rem .45rem; cursor:pointer;
+        }
+        .detail-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem; margin:.75rem 0; }
+        .detail-item { background:var(--code-bg); border-radius:.45rem; padding:.7rem; min-width:0; }
+        .detail-item span { display:block; color:var(--text-secondary); font-size:.72rem; margin-bottom:.25rem; }
+        .detail-item strong { overflow-wrap:anywhere; }
+        .detail-table-wrap { overflow-x:auto; }
+        .detail-code { white-space:pre-wrap; overflow-wrap:anywhere; max-height:260px; overflow:auto; background:var(--code-bg); padding:.75rem; border-radius:.45rem; font-family:Consolas,"Courier New",monospace; font-size:.8rem; }
+        .detail-pill { display:inline-block; border:1px solid var(--border-color); border-radius:99px; padding:.15rem .5rem; margin:.15rem; font-size:.75rem; }
+        .detail-section-title { margin:1rem 0 .5rem; font-size:.95rem; }
+        @media (max-width:600px) { .detail-grid { grid-template-columns:1fr; } }
+        .download-btn { flex:0 0 auto; border:1px solid var(--accent-color); background:var(--accent-light); color:var(--accent-color); border-radius:.4rem; padding:.35rem .6rem; font-size:.78rem; cursor:pointer; white-space:nowrap; }
+        .download-btn:hover { background:var(--accent-color); color:white; }
+        .download-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+        }
+    </style>
+</head>
+<body data-theme="light">
+
+    <header>
+        <div>
+            <h1>HTML Tech Analyzer</h1>
+            <div class="subtitle">ローカルファイル読込によるタグ・URL解析ツール</div>
+        </div>
+        <button id="themeToggle" class="theme-btn">ダークモード切替</button>
+    </header>
+
+    <main>
+        <!-- Left Column: File Upload -->
+        <div class="card">
+            <h2>📁 HTMLファイル選択</h2>
+            <div class="upload-area" id="dropZone">
+                <p><strong>クリックしてHTMLファイルを選択</strong><br><span style="font-size:0.8rem; color:var(--text-secondary);">またはここにファイルをドラッグ＆ドロップ</span></p>
+                <input type="file" id="fileInput" accept=".html,.htm">
+            </div>
+            <div id="fileInfo" class="file-info">ファイルが選択されていません</div>
+            <button id="analyzeBtn" class="btn-primary" disabled>ファイル解析を実行</button>
+        </div>
+
+        <!-- Right Column: Analysis Results -->
+        <div class="results-section">
+            <div class="card">
+                <h2>📊 解析結果サマリー</h2>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <span>検出されたHTMLタグ種別</span>
+                        <strong id="tagCount">0</strong>
+                    </div>
+                    <div class="stat-box">
+                        <span>検出されたURL / リンク</span>
+                        <strong id="urlCount">0</strong>
+                    </div>
+                </div>
+                <div id="summaryText" style="font-size: 0.85rem; color: var(--text-secondary);">
+                    HTMLファイルを選択して「ファイル解析を実行」を押してください。外部ライブラリ不使用の軽量パーサーで解析します。
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🏷️ 検出されたHTMLタグ一覧</h2>
+                <div id="tagsResult">
+                    <div class="empty-state">データがありません</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔎 HTMLタグ詳細解析</h2>
+                <p class="muted-text">タグを選択すると、属性・内容・用途・アクセシビリティ上の確認点を表示します。</p>
+                <div id="htmlDetailSummary" class="muted-text" style="margin:.75rem 0;">解析結果がありません</div>
+                <div id="htmlDetailResult">
+                    <div class="empty-state">HTMLファイルを解析してください</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔗 検出されたURL・外部リソース一覧</h2>
+                <div id="urlsResult">
+                    <div class="empty-state">データがありません</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🧩 JavaScript解析</h2>
+                <div id="jsSummary" class="muted-text">HTMLファイルを解析すると、script要素・イベント・関数・変数宣言などを集計します。</div>
+                <div id="jsStats" class="stat-grid" style="margin-top:1rem;"></div>
+                <div class="js-tabs">
+                    <button type="button" class="active" data-js-tab="overview">検出一覧</button>
+                    <button type="button" data-js-tab="scripts">script内容</button>
+                    <button type="button" data-js-tab="handlers">イベント属性</button>
+                </div>
+                <div id="jsAnalysisResult">
+                    <div class="empty-state">データがありません</div>
+                </div>
+                <p class="muted-text" style="margin-top:1rem;">※ 静的解析です。JavaScriptは実行しません。正規表現による検出のため、コメントや文字列内の記述も集計される場合があります。構文の完全な検証や実行時の動作保証は行いません。</p>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        HTML Tech Analyzer &copy; 2026 - No External Libraries
+    </footer>
+
+    <script>
+        // Theme switcher
+        const themeToggle = document.getElementById('themeToggle');
+        const body = document.body;
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            body.setAttribute('data-theme', newTheme);
+            themeToggle.textContent = newTheme === 'light' ? 'ダークモード切替' : 'ライトモード切替';
+        });
+
+        // File Selection & Drag-and-Drop
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        let selectedFileText = '';
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--accent-color)';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = 'var(--border-color)';
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'var(--border-color)';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.name.match(/\.(html|htm)$/i)) {
+                alert('HTMLファイル(.html, .htm)を選択してください。');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                selectedFileText = e.target.result;
+                fileInfo.textContent = `選択中: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsText(file);
+        }
+
+        let lastHtmlAnalysis = null;
+
+        const htmlTagDescriptions = {
+            html: ['文書全体', 'HTML文書のルート要素。通常はheadとbodyを含みます。', 'lang属性を指定して文書の言語を明示します。'],
+            head: ['メタ情報', 'タイトル、文字コード、CSS、メタデータなど、文書自体の情報をまとめます。', '画面本文を直接表示する要素を置く場所ではありません。'],
+            title: ['ページタイトル', 'ブラウザのタブやブックマークなどに使われる文書タイトルです。', '空でない、内容を表すタイトルを設定します。'],
+            meta: ['メタデータ', '文字コード、viewport、descriptionなどの文書情報を指定します。', 'name/contentやcharsetなど、用途に合う属性を確認します。'],
+            link: ['外部リソース参照', 'CSSやアイコンなど、外部リソースとの関係を指定します。', 'relとhrefの組み合わせ、参照先の存在を確認します。'],
+            script: ['スクリプト', 'JavaScriptの埋め込み、または外部スクリプトの読み込みに使います。', '外部ファイルはsrc、読み込み順序やtype/defer/asyncも確認します。'],
+            style: ['スタイル定義', '文書内にCSSルールを記述します。', 'CSSの構文、適用範囲、重複ルールを確認します。'],
+            body: ['表示内容', 'ブラウザに表示する文書本文を含みます。', '同じ文書にbodyを複数配置していないか確認します。'],
+            main: ['主要コンテンツ', 'ページの主たる内容を示します。', '通常、ページ内の主要コンテンツ領域は一つにします。'],
+            header: ['導入・ヘッダー', 'ページやセクションの見出し、ロゴ、導入情報などをまとめます。', 'header自体が見出しを意味するわけではありません。'],
+            footer: ['フッター', 'ページやセクションの補足情報、著作権表記などをまとめます。', '配置されている階層に合った情報か確認します。'],
+            nav: ['ナビゲーション', '主要なナビゲーションリンクのまとまりを示します。', 'すべてのリンク群をnavにする必要はありません。'],
+            section: ['主題ごとの区分', '関連する内容をテーマごとにまとめるセクションです。', '可能であれば見出しを付け、単なる装飾目的では使わないようにします。'],
+            article: ['独立したコンテンツ', '単独で配布・再利用できる記事や投稿などを表します。', '独立したコンテンツとして意味があるか確認します。'],
+            h1: ['最上位見出し', 'ページまたはセクションの主要見出しです。', '見出し階層が内容構造と一致しているか確認します。'],
+            h2: ['第2階層見出し', '大きな区分の見出しです。', 'h1からh6を見た目だけの理由で選ばないようにします。'],
+            h3: ['第3階層見出し', '下位区分の見出しです。', '見出しレベルを不必要に飛ばさないようにします。'],
+            p: ['段落', '文章の段落を表します。', '段落として適切な内容か確認します。'],
+            a: ['ハイパーリンク', 'hrefで指定したページや場所へのリンクを作ります。', 'リンク先とリンクテキストが目的を伝えているか確認します。'],
+            img: ['画像', '画像リソースを表示します。', '意味のある画像には適切なalt、装飾画像には空のaltを検討します。'],
+            picture: ['画像候補の切り替え', '画面条件などに応じて画像候補を提供し、imgと組み合わせます。', '最後にimg要素があるか確認します。'],
+            source: ['メディア・画像候補', 'picture、audio、videoなどの候補リソースを指定します。', '親要素とsrc/srcset/type/mediaの整合性を確認します。'],
+            audio: ['音声', '音声コンテンツを埋め込みます。', '操作手段や必要に応じた字幕・代替情報を確認します。'],
+            video: ['動画', '動画コンテンツを埋め込みます。', '字幕、操作手段、代替情報を確認します。'],
+            iframe: ['別文書の埋め込み', '別のHTMLページなどを現在のページ内に表示します。', 'title、埋め込み先、sandbox等の必要性を確認します。'],
+            form: ['フォーム', '入力値を送信するためのコントロールをまとめます。', '送信先、method、入力項目のラベル、検証を確認します。'],
+            label: ['入力項目のラベル', 'フォーム部品の目的を示します。', 'for属性と入力部品のid、または内包関係を確認します。'],
+            input: ['入力コントロール', 'テキスト、チェックボックス、ボタンなどの入力部品です。', 'type、name、label、requiredなどを用途に応じて確認します。'],
+            button: ['ボタン', '操作やフォーム送信を実行するコントロールです。', 'フォーム内ではtype属性を明示し、意図しない送信を防ぎます。'],
+            select: ['選択リスト', '選択肢から値を選ぶフォーム部品です。', 'label、option、初期値、nameを確認します。'],
+            option: ['選択肢', 'selectやdatalist内で選択候補を定義します。', 'ユーザーに見えるラベルと送信値を確認します。'],
+            textarea: ['複数行入力', '複数行のテキストを入力するフォーム部品です。', 'label、name、必要に応じてrowsやmaxlengthを確認します。'],
+            table: ['表', '行と列で構成される表形式データを表します。', 'レイアウト目的ではなく表データに使い、見出しセルを適切に設定します。'],
+            thead: ['表ヘッダー領域', '表の列見出しなどをまとめます。', 'th要素などの見出し構造を確認します。'],
+            tbody: ['表本体', '表の主要なデータ行をまとめます。', '行と列の構造が適切か確認します。'],
+            tr: ['表の行', '表の一行を構成します。', 'th/tdの配置を確認します。'],
+            th: ['表見出しセル', '列や行の見出しを表します。', '必要に応じてscope属性を設定します。'],
+            td: ['表データセル', '表のデータを格納します。', '見出しとの対応が分かる表構造か確認します。'],
+            ul: ['順序なしリスト', '順序に意味のない項目群を表します。', '子要素にliを配置します。'],
+            ol: ['順序付きリスト', '順番に意味のある項目群を表します。', '子要素にliを配置します。'],
+            li: ['リスト項目', 'ul、olなどのリスト内の各項目です。', '適切なリスト要素の子として配置します。'],
+            div: ['汎用コンテナ', '意味を持たないブロック単位のグループ化に使います。', '意味を持つ要素で表現できないか検討します。'],
+            span: ['汎用インライン要素', '文章中の一部をグループ化します。', '単独では意味を付加しないため、必要な場合に使います。'],
+            br: ['改行', '文章内に改行を挿入します。', '余白を作る目的ではなく、意味のある改行に使います。'],
+            strong: ['重要性の強調', '内容の重要性や重大性を示します。', '見た目を太字にするだけの目的ならCSSを検討します。'],
+            em: ['強調', '文脈上の強調を表します。', '意味上の強調が必要な箇所に使います。'],
+            details: ['開閉可能な詳細', 'ユーザーが開閉できる補足情報を表します。', 'summaryを含め、閉じた状態でも目的が分かるようにします。'],
+            summary: ['詳細の見出し', 'details要素の開閉用ラベルになります。', 'detailsの最初の子要素に配置します。'],
+            template: ['再利用用テンプレート', '複製して利用するHTML断片を保持します。', '内容は通常の表示ツリーには直ちに描画されません。']
+        };
+
+        function getElementText(el) {
+            if (/^(script|style|template)$/i.test(el.tagName)) return el.textContent || '';
+            return (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function analyzeHtmlDetails(htmlText) {
+            const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+            const allElements = Array.from(doc.querySelectorAll('*'));
+            const elementsByTag = {};
+            allElements.forEach(el => {
+                const tag = el.tagName.toLowerCase();
+                (elementsByTag[tag] ||= []).push(el);
+            });
+            const rows = Object.entries(elementsByTag).map(([tag, elements]) => ({
+                tag, count: elements.length, elements
+            })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag));
+            const allIds = new Map();
+            allElements.forEach(el => {
+                if (el.id) allIds.set(el.id, (allIds.get(el.id) || 0) + 1);
+            });
+            const duplicateIds = Array.from(allIds.entries()).filter(([, count]) => count > 1);
+            const imagesMissingAlt = allElements.filter(el => el.tagName.toLowerCase() === 'img' && !el.hasAttribute('alt'));
+            const unlabeledInputs = allElements.filter(el => /^(input|select|textarea)$/i.test(el.tagName) &&
+                !el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby') &&
+                !(el.id && doc.querySelector(`label[for="${CSS.escape(el.id)}"]`)) &&
+                !el.closest('label'));
+            const linksWithoutText = allElements.filter(el => el.tagName.toLowerCase() === 'a' &&
+                !((el.textContent || '').trim()) && !el.querySelector('img[alt], svg title'));
+            const missingAltImages = imagesMissingAlt.length;
+            const brokenLocalRefs = [];
+            allElements.forEach(el => {
+                ['href', 'src'].forEach(attrName => {
+                    const val = el.getAttribute(attrName);
+                    if (val && val.startsWith('#') && val.length > 1 && !doc.getElementById(decodeURIComponent(val.slice(1)))) {
+                        brokenLocalRefs.push({ tag: el.tagName.toLowerCase(), attr: attrName, value: val });
+                    }
+                });
+            });
+            const headingOutline = allElements.filter(el => /^H[1-6]$/.test(el.tagName)).map(el => ({
+                level: Number(el.tagName.substring(1)), text: getElementText(el) || '(テキストなし)'
+            }));
+            return { doc, allElements, rows, duplicateIds, missingAltImages, imagesMissingAlt,
+                unlabeledInputs, linksWithoutText, brokenLocalRefs, headingOutline };
+        }
+
+        function renderHtmlTagDetail(tagName) {
+            if (!lastHtmlAnalysis) return;
+            const data = lastHtmlAnalysis;
+            const row = data.rows.find(x => x.tag === tagName);
+            if (!row) return;
+            const result = document.getElementById('htmlDetailResult');
+            const desc = htmlTagDescriptions[tagName] || [
+                'HTML要素',
+                'このタグの詳細な用途説明は簡易辞書に登録されていません。要素名と属性、親子関係を確認してください。',
+                'HTML仕様に沿った要素の用途、必須属性、ブラウザ対応状況を確認してください。'
+            ];
+            const examples = row.elements.slice(0, 30);
+            let output = `<h3 class="detail-section-title">&lt;${escapeHtml(tagName)}&gt; の詳細</h3>
+                <div class="detail-grid">
+                    <div class="detail-item"><span>用途分類</span><strong>${escapeHtml(desc[0])}</strong></div>
+                    <div class="detail-item"><span>検出件数</span><strong>${row.count} 件</strong></div>
+                </div>
+                <h4 class="detail-section-title">タグの説明</h4><p>${escapeHtml(desc[1])}</p>
+                <h4 class="detail-section-title">確認ポイント</h4><p>${escapeHtml(desc[2])}</p>
+                <h4 class="detail-section-title">使用されている属性</h4>`;
+            const attrCounts = {};
+            row.elements.forEach(el => Array.from(el.attributes).forEach(attr => {
+                attrCounts[attr.name] = (attrCounts[attr.name] || 0) + 1;
+            }));
+            const attrs = Object.entries(attrCounts).sort((a,b) => b[1]-a[1]);
+            output += attrs.length ? attrs.map(([name,count]) => `<span class="detail-pill">${escapeHtml(name)} (${count})</span>`).join('') : '<p class="muted-text">属性はありません。</p>';
+            output += '<h4 class="detail-section-title">タグ内の内容・記述例（最大30件）</h4>';
+            examples.forEach((el, index) => {
+                const attributes = Array.from(el.attributes).map(a => `${a.name}="${a.value}"`).join(' ');
+                const opening = `<${tagName}${attributes ? ' ' + attributes : ''}${/^(img|br|hr|input|meta|link|source|area|base|embed|param|track|wbr)$/i.test(tagName) ? ' /' : ''}>`;
+                let content = getElementText(el);
+                if (content.length > 1200) content = content.slice(0,1200) + '\\n…（長いため省略）';
+                const sample = /^(script|style|template)$/i.test(tagName) ? content : content;
+                output += `<div class="detail-item" style="margin:.5rem 0;">
+                    <span>例 ${index + 1} — ${escapeHtml(el.id ? '#' + el.id : tagName)}${el.className && typeof el.className === 'string' ? ' .' + escapeHtml(el.className.trim().replace(/\s+/g,'.')) : ''}</span>
+                    <pre class="detail-code">${escapeHtml(opening)}${sample ? '\\n' + escapeHtml(sample) + (/^(script|style|template)$/i.test(tagName) ? '' : '\\n') + ( /^(img|br|hr|input|meta|link|source|area|base|embed|param|track|wbr)$/i.test(tagName) ? '' : `</${tagName}>`) : (/^(img|br|hr|input|meta|link|source|area|base|embed|param|track|wbr)$/i.test(tagName) ? '' : `</${tagName}>`)}</pre>
+                </div>`;
+            });
+            if (row.count > 30) output += `<p class="muted-text">表示を30件に制限しています（全${row.count}件）。</p>`;
+            result.innerHTML = output;
+        }
+
+        function renderHtmlAnalysis(data) {
+            lastHtmlAnalysis = data;
+            document.getElementById('htmlDetailSummary').textContent =
+                `要素 ${data.allElements.length} 件、タグ種別 ${data.rows.length} 種を解析しました。画像alt未指定 ${data.missingAltImages} 件、ラベル未関連付けの入力欄候補 ${data.unlabeledInputs.length} 件、重複ID ${data.duplicateIds.length} 種。`;
+            const result = document.getElementById('htmlDetailResult');
+            let html = '<h3 class="detail-section-title">タグ種別を選択</h3><div class="detail-table-wrap"><table><thead><tr><th>タグ</th><th>件数</th><th>用途</th><th>詳細</th></tr></thead><tbody>';
+            data.rows.forEach(row => {
+                const desc = htmlTagDescriptions[row.tag] || ['HTML要素', '簡易辞書に説明は未登録です。', 'HTML仕様と属性を確認してください。'];
+                html += `<tr><td><code>&lt;${escapeHtml(row.tag)}&gt;</code></td><td>${row.count}</td><td>${escapeHtml(desc[0])}</td><td><button type="button" class="tag-select" data-tag-detail="${escapeHtml(row.tag)}">内容を確認</button></td></tr>`;
+            });
+            html += '</tbody></table></div>';
+            html += '<h3 class="detail-section-title">HTML構造・品質チェック</h3><div class="detail-grid">';
+            const checks = [
+                ['見出し数', data.headingOutline.length + ' 件'],
+                ['画像のalt未指定', data.missingAltImages + ' 件'],
+                ['ラベル関連付け要確認', data.unlabeledInputs.length + ' 件'],
+                ['リンクテキスト要確認', data.linksWithoutText.length + ' 件'],
+                ['重複ID', data.duplicateIds.length + ' 種'],
+                ['存在しないページ内参照', data.brokenLocalRefs.length + ' 件']
+            ];
+            checks.forEach(([label,value]) => html += `<div class="detail-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`);
+            html += '</div>';
+            if (data.headingOutline.length) {
+                html += '<h4 class="detail-section-title">見出し構造</h4><ol>';
+                data.headingOutline.forEach(h => html += `<li>${'　'.repeat(h.level-1)}H${h.level}: ${escapeHtml(h.text)}</li>`);
+                html += '</ol>';
+            }
+            if (data.duplicateIds.length) html += `<p class="warning-text">重複ID: ${data.duplicateIds.map(([id,count]) => `${escapeHtml(id)} (${count}回)`).join('、')}</p>`;
+            if (data.imagesMissingAlt.length) html += `<p class="warning-text">alt属性がない画像: ${data.imagesMissingAlt.map(el => escapeHtml(el.getAttribute('src') || '(srcなし)')).slice(0,20).join('、')}</p>`;
+            if (data.unlabeledInputs.length) html += `<p class="warning-text">ラベル関連付けを確認する入力欄: ${data.unlabeledInputs.slice(0,20).map(el => `<code>${escapeHtml(el.tagName.toLowerCase())}${el.id ? '#' + escapeHtml(el.id) : ''}${el.getAttribute('name') ? '[name=' + escapeHtml(el.getAttribute('name')) + ']' : ''}</code>`).join('、')}</p>`;
+            if (data.linksWithoutText.length) html += `<p class="warning-text">リンクテキストが空の可能性: ${data.linksWithoutText.slice(0,20).map(el => escapeHtml(el.getAttribute('href') || '(hrefなし)')).join('、')}</p>`;
+            if (data.brokenLocalRefs.length) html += `<p class="warning-text">存在しないページ内参照: ${data.brokenLocalRefs.slice(0,20).map(x => escapeHtml(x.value)).join('、')}</p>`;
+            result.innerHTML = html;
+            result.querySelectorAll('[data-tag-detail]').forEach(button => button.addEventListener('click', () => renderHtmlTagDetail(button.getAttribute('data-tag-detail'))));
+        }
+
+        let lastJsAnalysis = null;
+        let currentJsTab = 'overview';
+
+        document.querySelectorAll('[data-js-tab]').forEach(button => {
+            button.addEventListener('click', () => {
+                currentJsTab = button.getAttribute('data-js-tab');
+                document.querySelectorAll('[data-js-tab]').forEach(b => b.classList.toggle('active', b === button));
+                if (lastJsAnalysis) renderJsAnalysis(lastJsAnalysis);
+            });
+        });
+
+        function countMatches(text, regex) {
+            const matches = text.match(regex);
+            return matches ? matches.length : 0;
+        }
+
+        function analyzeJavaScript(htmlText) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            const scripts = Array.from(doc.querySelectorAll('script')).map((el, index) => ({
+                index: index + 1,
+                type: el.getAttribute('type') || 'text/javascript',
+                src: el.getAttribute('src') || '',
+                code: el.textContent || ''
+            }));
+            const handlers = [];
+            Array.from(doc.querySelectorAll('*')).forEach(el => {
+                Array.from(el.attributes).forEach(attr => {
+                    if (/^on[a-z]+$/i.test(attr.name)) {
+                        handlers.push({
+                            tag: el.tagName.toLowerCase(),
+                            id: el.id || '',
+                            event: attr.name,
+                            code: attr.value
+                        });
+                    }
+                });
+            });
+
+            const inlineCode = scripts.map(x => x.code).join('\n');
+            const stats = {
+                scriptCount: scripts.length,
+                inlineScriptCount: scripts.filter(x => !x.src).length,
+                externalScriptCount: scripts.filter(x => !!x.src).length,
+                handlerCount: handlers.length,
+                functionCount: countMatches(inlineCode, /\bfunction\s*[\w$]*\s*\(/g) + countMatches(inlineCode, /\b(?:async\s*)?\([^)]*\)\s*=>/g) + countMatches(inlineCode, /\b(?:const|let|var)\s+[\w$]+\s*=\s*(?:async\s*)?function\b/g),
+                variableCount: countMatches(inlineCode, /\b(?:const|let|var)\s+[\w$]+/g),
+                eventListenerCount: countMatches(inlineCode, /\.addEventListener\s*\(/g),
+                domAccessCount: countMatches(inlineCode, /\bdocument\s*\.|\bwindow\s*\.|\bgetElementById\s*\(|\bquerySelector(?:All)?\s*\(/g),
+                asyncCount: countMatches(inlineCode, /\basync\b|\bawait\b/g),
+                networkCount: countMatches(inlineCode, /\bfetch\s*\(|\bXMLHttpRequest\b|\baxios\s*\./g),
+                riskyCount: countMatches(inlineCode, /\beval\s*\(|\bnew\s+Function\s*\(/g),
+                todoCount: countMatches(inlineCode, /\bTODO\b|\bFIXME\b|\bXXX\b/gi)
+            };
+            return { scripts, handlers, stats, inlineCode };
+        }
+
+        function renderJsAnalysis(data) {
+            const stats = data.stats;
+            document.getElementById('jsSummary').textContent =
+                `script要素 ${stats.scriptCount} 件（インライン ${stats.inlineScriptCount} 件／外部参照 ${stats.externalScriptCount} 件）、イベント属性 ${stats.handlerCount} 件を検出しました。`;
+            const statItems = [
+                ['script要素', stats.scriptCount], ['関数（推定）', stats.functionCount],
+                ['変数宣言（推定）', stats.variableCount], ['イベント登録', stats.eventListenerCount],
+                ['DOMアクセス（推定）', stats.domAccessCount], ['非同期関連', stats.asyncCount],
+                ['通信処理候補', stats.networkCount], ['eval等の使用候補', stats.riskyCount],
+                ['TODO等', stats.todoCount], ['イベント属性', stats.handlerCount]
+            ];
+            document.getElementById('jsStats').innerHTML = statItems.map(([label, value]) =>
+                `<div class="stat-box"><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`
+            ).join('');
+
+            const result = document.getElementById('jsAnalysisResult');
+            if (currentJsTab === 'scripts') {
+                if (!data.scripts.length) {
+                    result.innerHTML = '<div class="empty-state">script要素は検出されませんでした</div>';
+                    return;
+                }
+                result.innerHTML = data.scripts.map(script => {
+                    const sourceLabel = script.src ? `外部参照: ${script.src}` : 'インライン JavaScript';
+                    return `<h3 style="margin:1rem 0 0.5rem;">script #${script.index} — ${escapeHtml(sourceLabel)} <span class="muted-text">(${escapeHtml(script.type)})</span></h3>
+                        <pre class="code-block">${escapeHtml(script.code || (script.src ? '外部ファイルの内容はHTML内に含まれていません。' : '(内容なし)'))}</pre>`;
+                }).join('');
+            } else if (currentJsTab === 'handlers') {
+                if (!data.handlers.length) {
+                    result.innerHTML = '<div class="empty-state">onclick等のイベント属性は検出されませんでした</div>';
+                    return;
+                }
+                let html = '<table><thead><tr><th>要素</th><th>ID</th><th>イベント属性</th><th>記述内容</th></tr></thead><tbody>';
+                data.handlers.forEach(item => {
+                    html += `<tr><td><code>${escapeHtml(item.tag)}</code></td><td>${escapeHtml(item.id || '—')}</td><td><code>${escapeHtml(item.event)}</code></td><td><pre class="code-block">${escapeHtml(item.code)}</pre></td></tr>`;
+                });
+                result.innerHTML = html + '</tbody></table>';
+            } else {
+                const rows = [
+                    ['関数定義（推定）', stats.functionCount, 'function宣言・一部のアロー関数を検出'],
+                    ['変数宣言（推定）', stats.variableCount, 'const / let / var の宣言を検出'],
+                    ['イベント登録', stats.eventListenerCount, 'addEventListener() の呼び出し'],
+                    ['DOM・画面アクセス（推定）', stats.domAccessCount, 'document / window / セレクター等の参照'],
+                    ['非同期処理（推定）', stats.asyncCount, 'async / await の出現回数'],
+                    ['通信処理候補', stats.networkCount, 'fetch / XMLHttpRequest / axios の出現'],
+                    ['動的実行候補', stats.riskyCount, 'eval() / new Function() の出現'],
+                    ['TODO等', stats.todoCount, 'TODO / FIXME / XXX の出現']
+                ];
+                let html = '<table><thead><tr><th>項目</th><th>件数</th><th>説明</th></tr></thead><tbody>';
+                rows.forEach(([name, count, desc]) => {
+                    html += `<tr><td>${escapeHtml(name)}</td><td><strong>${count}</strong></td><td>${escapeHtml(desc)}</td></tr>`;
+                });
+                html += '</tbody></table>';
+                if (data.scripts.some(x => x.src)) {
+                    html += '<p class="warning-text" style="margin-top:1rem;">外部JavaScriptファイルは参照先URLのみ検出します。外部ファイルの中身は取得・解析しません（サーバー接続なしのため）。</p>';
+                }
+                result.innerHTML = html;
+            }
+        }
+
+        // Parse HTML tags, URLs, and JavaScript without external libraries
+        analyzeBtn.addEventListener('click', () => {
+            if (!selectedFileText) return;
+
+            // 1. Tag Extraction using Regular Expressions
+            const tagRegex = /<\s*([a-zA-Z0-9\-]+)(?:\s+[^>]*?)?>/g;
+            const tagCounts = {};
+            let match;
+
+            while ((match = tagRegex.exec(selectedFileText)) !== null) {
+                const tagName = match[1].toLowerCase();
+                tagCounts[tagName] = (tagCounts[tagName] || 0) + 1;
+            }
+
+            const sortedTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+
+            // 2. URL & Resource Extraction (href, src attributes, or http/https URLs)
+            const attrUrlRegex = /(?:href|src)\s*=\s*(["'])(.*?)\1/gi;
+            const plainUrlRegex = /https?:\/\/[^\s"'<>]+/gi;
+            
+            const urlSet = new Set();
+            let attrMatch;
+            while ((attrMatch = attrUrlRegex.exec(selectedFileText)) !== null) {
+                if (attrMatch[2].trim()) {
+                    urlSet.add(attrMatch[2].trim());
+                }
+            }
+
+            let plainMatch;
+            while ((plainMatch = plainUrlRegex.exec(selectedFileText)) !== null) {
+                urlSet.add(plainMatch[0]);
+            }
+
+            const urls = Array.from(urlSet);
+
+            // Update UI Counters & Summaries
+            document.getElementById('tagCount').textContent = sortedTags.length;
+            document.getElementById('urlCount').textContent = urls.length;
+            document.getElementById('summaryText').textContent = `解析完了: 合計 ${sortedTags.reduce((acc, cur) => acc + cur[1], 0)} 個のタグを検出しました。`;
+
+            // Render Tags Table
+            const tagsResultDiv = document.getElementById('tagsResult');
+            if (sortedTags.length === 0) {
+                tagsResultDiv.innerHTML = '<div class="empty-state">タグが検出されませんでした</div>';
+            } else {
+                let html = '<table><thead><tr><th>タグ名</th><th>出現回数</th></tr></thead><tbody>';
+                sortedTags.forEach(([tag, count]) => {
+                    html += `<tr><td><button type="button" class="tag-select" data-tag-detail="${escapeHtml(tag)}">&lt;${escapeHtml(tag)}&gt; 詳細</button></td><td><strong>${count}</strong> 回</td></tr>`;
+                });
+                html += '</tbody></table>';
+                tagsResultDiv.innerHTML = html;
+                tagsResultDiv.querySelectorAll('[data-tag-detail]').forEach(button => {
+                    button.addEventListener('click', () => renderHtmlTagDetail(button.getAttribute('data-tag-detail')));
+                });
+            }
+
+            // Detailed HTML tag analysis
+            renderHtmlAnalysis(analyzeHtmlDetails(selectedFileText));
+
+            // Render URLs Table
+            const urlsResultDiv = document.getElementById('urlsResult');
+            if (urls.length === 0) {
+                urlsResultDiv.innerHTML = '<div class="empty-state">URLや外部リソースは検出されませんでした</div>';
+            } else {
+                let html = '<table><thead><tr><th>検出されたURL / リソースパス</th></tr></thead><tbody>';
+                urls.forEach((url, index) => {
+                    const canDownload = isJavaScriptResource(url);
+                    const button = canDownload
+                        ? `<button type="button" class="download-btn" data-download-url="${escapeHtml(url)}" data-download-index="${index}">ダウンロード</button>`
+                        : '';
+                    const safeHref = escapeHtml(new URL(url, window.location.href).href);
+                    html += `<tr><td><div class="resource-cell"><a class="resource-value resource-link" href="${safeHref}" target="_blank" rel="noopener noreferrer"><code>${escapeHtml(url)}</code></a>${button}</div></td></tr>`;
+                });
+                html += '</tbody></table>';
+                urlsResultDiv.innerHTML = html;
+                urlsResultDiv.querySelectorAll('[data-download-url]').forEach(button => {
+                    button.addEventListener('click', () => downloadExternalResource(button.getAttribute('data-download-url'), button));
+                });
+            }
+
+            lastJsAnalysis = analyzeJavaScript(selectedFileText);
+            renderJsAnalysis(lastJsAnalysis);
+        });
+
+        function isJavaScriptResource(resourceUrl) {
+            try {
+                const parsed = new URL(resourceUrl, window.location.href);
+                const path = parsed.pathname.toLowerCase();
+                return /\.(?:m?js|css)$/.test(path) ||
+                    /(?:jquery|bootstrap|react|react-dom|vue|angular|lodash|moment|axios|chart|sweetalert|dayjs|popper|underscore|zepto|datatables|select2|three|d3|fontawesome|font-awesome|normalize|bulma|tailwind)(?:[._/-]|$)/i.test(resourceUrl);
+            } catch (e) {
+                return /\.(?:m?js|css)(?:[?#]|$)/i.test(resourceUrl);
+            }
+        }
+
+        async function downloadExternalResource(resourceUrl, button) {
+            if (!resourceUrl) return;
+            let absoluteUrl;
+            try {
+                absoluteUrl = new URL(resourceUrl, window.location.href).href;
+            } catch (e) {
+                alert('URLを解析できませんでした。');
+                return;
+            }
+
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = '取得中...';
+            try {
+                const response = await fetch(absoluteUrl, { mode: 'cors' });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const blob = await response.blob();
+                const parsed = new URL(absoluteUrl);
+                let filename = decodeURIComponent(parsed.pathname.split('/').pop() || 'library.js');
+                if (!/\.(?:m?js|css)$/i.test(filename)) filename = 'resource.txt';
+                const objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+                button.textContent = 'ダウンロード開始';
+            } catch (error) {
+                button.textContent = originalText;
+                alert(
+                    'ダウンロードできませんでした。\n' +
+                    '外部サイトのCORS制限、ネットワーク制限、または file:// からのアクセス制限の可能性があります。\n\n' +
+                    'URLをブラウザで直接開き、表示されたJavaScriptまたはCSSを保存してください。\n' +
+                    absoluteUrl
+                );
+            } finally {
+                button.disabled = false;
+                if (button.textContent === '取得中...') button.textContent = originalText;
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

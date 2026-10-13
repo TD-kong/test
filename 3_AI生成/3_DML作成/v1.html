@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DML作成ツール</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f8fafc;
+            --border-color: #cbd5e1;
+        }
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: #1e293b;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        h1 {
+            margin-top: 0;
+            font-size: 24px;
+            color: #0f172a;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        table.grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        table.grid-table th, table.grid-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+        }
+        table.grid-table th {
+            background-color: #f1f5f9;
+            font-size: 13px;
+        }
+        table.grid-table input[type="text"] {
+            border: none;
+            padding: 4px;
+            background: transparent;
+        }
+        table.grid-table input[type="text"]:focus {
+            outline: 2px solid var(--primary-color);
+            background: #fff;
+        }
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+        .btn-secondary {
+            background-color: #64748b;
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+        .btn-danger {
+            background-color: #ef4444;
+            padding: 6px 10px;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        .output-area {
+            margin-top: 30px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            background-color: #0f172a;
+            color: #38bdf8;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>DML（SQL）作成ツール</h1>
+
+    <!-- 基本設定 -->
+    <div class="form-group">
+        <label for="dmlType">DMLの種類</label>
+        <select id="dmlType">
+            <option value="INSERT">INSERT (新規登録)</option>
+            <option value="UPDATE">UPDATE (更新 ※第1カラムをWHERE条件にします)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="tableName">テーブル名</label>
+        <input type="text" id="tableName" value="users" placeholder="例: users">
+    </div>
+
+    <div class="form-group">
+        <label for="columnsInput">カラム名（カンマ区切りで入力すると入力欄が自動生成されます）</label>
+        <input type="text" id="columnsInput" value="id, name, age, email" placeholder="id, name, age, email">
+        <button class="btn btn-secondary" style="margin-top: 8px;" onclick="updateGridColumns()">カラム構成を適用</button>
+    </div>
+
+    <!-- データ入力グリッド -->
+    <div class="form-group">
+        <label>データ入力行</label>
+        <table class="grid-table" id="dataGrid">
+            <thead>
+                <tr id="gridHeader"></tr>
+            </thead>
+            <tbody id="gridBody">
+                <!-- JavaScriptで動的生成 -->
+            </tbody>
+        </table>
+        <div class="actions">
+            <button class="btn btn-secondary" onclick="addRow()">行を追加</button>
+            <button class="btn" onclick="generateDML()">DMLを生成</button>
+        </div>
+    </div>
+
+    <!-- 出力エリア -->
+    <div class="output-area">
+        <label for="sqlOutput">生成されたSQL</label>
+        <textarea id="sqlOutput" readonly placeholder="ここにSQLが出力されます..."></textarea>
+        <button class="btn btn-secondary" style="margin-top: 8px;" onclick="copySQL()">クリップボードにコピー</button>
+    </div>
+</div>
+
+<script>
+    // 初期化
+    window.onload = function() {
+        updateGridColumns();
+    };
+
+    // カラム設定をもとにテーブルのヘッダーと入力行を再構築する
+    function updateGridColumns() {
+        const columns = getColumns();
+        const headerTr = document.getElementById('gridHeader');
+        const tbody = document.getElementById('gridBody');
+        
+        headerTr.innerHTML = '';
+        tbody.innerHTML = '';
+
+        // ヘッダー追加
+        columns.forEach(col => {
+            const th = document.createElement('th');
+            th.textContent = col.trim();
+            headerTr.appendChild(th);
+        });
+        // 削除用列のヘッダー
+        const thDel = document.createElement('th');
+        thDel.textContent = '操作';
+        thDel.style.width = '60px';
+        headerTr.appendChild(thDel);
+
+        // 初期行を3行ほど追加
+        addRow();
+        addRow();
+        addRow();
+    }
+
+    // 入力行を追加する
+    function addRow() {
+        const columns = getColumns();
+        const tbody = document.getElementById('gridBody');
+        const tr = document.createElement('tr');
+
+        columns.forEach(() => {
+            const td = document.createElement('td');
+            const input = document.createElement('input');
+            input.type = 'text';
+            td.appendChild(input);
+            tr.appendChild(td);
+        });
+
+        // 削除ボタン列
+        const tdDel = document.createElement('td');
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '削除';
+        delBtn.className = 'btn btn-danger';
+        delBtn.onclick = function() {
+            tr.remove();
+        };
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+
+        tbody.appendChild(tr);
+    }
+
+    // カラム名の配列を取得する
+    function getColumns() {
+        const inputVal = document.getElementById('columnsInput').value;
+        return inputVal.split(',').map(c => c.trim()).filter(c => c.length > 0);
+    }
+
+    // DMLを生成するメイン処理
+    function generateDML() {
+        const dmlType = document.getElementById('dmlType').value;
+        const tableName = document.getElementById('tableName').value.trim() || 'target_table';
+        const columns = getColumns();
+        const tbody = document.getElementById('gridBody');
+        const rows = tbody.getElementsByTagName('tr');
+
+        if (columns.length === 0) {
+            alert('カラム名を指定してください。');
+            return;
+        }
+
+        let sqlStatements = [];
+
+        for (let i = 0; i < rows.length; i++) {
+            const inputs = rows[i].getElementsByTagName('input');
+            let values = [];
+            let isEmptyRow = true;
+
+            for (let j = 0; j < inputs.length; j++) {
+                let val = inputs[j].value;
+                if (val !== '') {
+                    isEmptyRow = false;
+                }
+                values.push(val);
+            }
+
+            // 空行はスキップ
+            if (isEmptyRow) continue;
+
+            if (dmlType === 'INSERT') {
+                // INSERT文の生成
+                let formattedValues = values.map(val => formatValue(val));
+                let sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${formattedValues.join(', ')});`;
+                sqlStatements.push(sql);
+
+            } else if (dmlType === 'UPDATE') {
+                // UPDATE文の生成（※第1カラムをWHEREキー、それ以外をSET対象とする）
+                if (columns.length < 2) {
+                    alert('UPDATE文を作成するには最低2つ以上のカラム（条件キーと更新対象）が必要です。');
+                    return;
+                }
+                let whereCol = columns[0];
+                let whereVal = formatValue(values[0]);
+                
+                let setClauses = [];
+                for (let k = 1; k < columns.length; k++) {
+                    setClauses.push(`${columns[k]} = ${formatValue(values[k])}`);
+                }
+
+                let sql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereCol} = ${whereVal};`;
+                sqlStatements.push(sql);
+            }
+        }
+
+        document.getElementById('sqlOutput').value = sqlStatements.join('\n');
+    }
+
+    // 値の型を推論してクォーテーションを付与する簡易関数
+    function formatValue(val) {
+        if (val === null || val === '') {
+            return 'NULL';
+        }
+        // 数値・関数・キーワードっぽいものはそのまま、それ以外はシングルクォートで囲む
+        // 例: 123, 3.14, NULL, NOW() などはそのまま
+        if (!isNaN(val) || val.toUpperCase() === 'NULL' || val.toUpperCase() === 'NOW()' || val.toUpperCase() === 'CURRENT_TIMESTAMP') {
+            return val;
+        }
+        // 文字列の場合はシングルクォートで囲み、エスケープ処理
+        return `'${val.replace(/'/g, "''")}'`;
+    }
+
+    // クリップボードにコピー
+    function copySQL() {
+        const output = document.getElementById('sqlOutput');
+        output.select();
+        document.execCommand('copy');
+        alert('SQLをクリップボードにコピーしました！');
+    }
+</script>
+
+</body>
+</html>

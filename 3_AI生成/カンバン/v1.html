@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モダンカンバンツール</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- SortableJS for Drag and Drop -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #cbd5e1 !important;
+            border: 2px dashed #6366f1 !important;
+        }
+        .sortable-chosen {
+            cursor: grabbing !important;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Header / Navigation -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30 shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 text-white p-2.5 rounded-xl shadow-md flex items-center justify-center">
+                <i data-lucide="kanban" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">ProTask Kanban</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">洗練されたタスク管理ワークスペース</p>
+            </div>
+        </div>
+
+        <!-- Controls: Search, Filter, Add Column, Theme Toggle -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Search Bar -->
+            <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="searchInput" placeholder="タスクを検索..." class="pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-700 text-sm rounded-xl border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none w-48 sm:w-64 transition-all">
+            </div>
+
+            <!-- Priority Filter -->
+            <select id="priorityFilter" class="bg-slate-100 dark:bg-slate-700 text-sm py-2 px-3 rounded-xl border border-transparent focus:border-indigo-500 focus:outline-none transition-all cursor-pointer">
+                <option value="">すべての優先度</option>
+                <option value="緊急">🚨 緊急</option>
+                <option value="高">⚡ 高</option>
+                <option value="中">📌 中</option>
+                <option value="低">☕ 低</option>
+            </select>
+
+            <!-- Add Column Button -->
+            <button onclick="openColumnModal()" class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm hover:shadow transition-all active:scale-95">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>カラム追加</span>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-slate-600 dark:text-slate-300">
+                <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Kanban Board -->
+    <main class="flex-1 p-6 overflow-x-auto flex items-start gap-6" id="boardContainer">
+        <!-- Columns will be dynamically injected here -->
+    </main>
+
+    <!-- Task Modal (Create / Edit) -->
+    <div id="taskModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 dark:border-slate-700 transform transition-all">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 id="modalTitle" class="text-lg font-bold text-slate-800 dark:text-slate-100">タスクを作成</h3>
+                <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="taskForm" onsubmit="handleTaskSubmit(event)" class="space-y-4">
+                <input type="hidden" id="taskId">
+                <input type="hidden" id="taskColumnId">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">タイトル *</label>
+                    <input type="text" id="taskTitleInput" required placeholder="例: ランディングページのワイヤーフレーム作成" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">詳細説明</label>
+                    <textarea id="taskDescInput" rows="3" placeholder="タスクの仕様や注意事項を入力..." class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">優先度</label>
+                        <select id="taskPriorityInput" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="低">☕ 低</option>
+                            <option value="中" selected>📌 中</option>
+                            <option value="高">⚡ 高</option>
+                            <option value="緊急">🚨 緊急</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">期限日</label>
+                        <input type="date" id="taskDueDateInput" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">担当者</label>
+                        <input type="text" id="taskAssigneeInput" placeholder="例: 山田 太郎" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">ラベル / タグ (カンマ区切り)</label>
+                        <input type="text" id="taskTagsInput" placeholder="例: 設計, フロントエンド" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">キャンセル</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium shadow-sm transition-all">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Column Modal (Create / Edit) -->
+    <div id="columnModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 dark:border-slate-700">
+                <h3 id="columnModalTitle" class="text-lg font-bold text-slate-800 dark:text-slate-100">カラムを追加</h3>
+                <button onclick="closeColumnModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="columnForm" onsubmit="handleColumnSubmit(event)" class="space-y-4">
+                <input type="hidden" id="columnEditId">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">カラム名 *</label>
+                    <input type="text" id="columnNameInput" required placeholder="例: テスト中" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+                    <button type="button" onclick="closeColumnModal()" class="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">キャンセル</button>
+                    <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium shadow-sm transition-all">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // Initial Sample Data
+        const defaultData = {
+            columns: [
+                { id: 'col-todo', title: '未着手 (Todo)' },
+                { id: 'col-progress', title: '進行中 (In Progress)' },
+                { id: 'col-review', title: '確認中 (Review)' },
+                { id: 'col-done', title: '完了 (Done)' }
+            ],
+            tasks: [
+                {
+                    id: 'task-1',
+                    columnId: 'col-todo',
+                    title: '新機能のUIデザイン設計',
+                    description: 'Figmaを用いて、ダッシュボードの新機能画面のワイヤーフレームおよびコンポーネントを作成する。',
+                    priority: '高',
+                    dueDate: '2026-04-20',
+                    assignee: '佐藤 花子',
+                    tags: ['デザイン', 'Figma']
+                },
+                {
+                    id: 'task-2',
+                    columnId: 'col-progress',
+                    title: 'APIエンドポイントの実装',
+                    description: 'ユーザー認証およびタスク管理に関するCRUD操作のAPIをNode.js/Expressで構築。',
+                    priority: '緊急',
+                    dueDate: '2026-04-15',
+                    assignee: '鈴木 健太',
+                    tags: ['バックエンド', 'API']
+                },
+                {
+                    id: 'task-3',
+                    columnId: 'col-review',
+                    title: 'セキュリティ脆弱性テスト',
+                    description: 'OWASP Top 10に基づく簡易的なセキュリティチェックと依存パッケージの脆弱性スキャン。',
+                    priority: '中',
+                    dueDate: '2026-04-22',
+                    assignee: '高橋 敏郎',
+                    tags: ['QA', 'セキュリティ']
+                },
+                {
+                    id: 'task-4',
+                    columnId: 'col-done',
+                    title: 'キックオフミーティングの実施',
+                    description: 'プロジェクトメンバー全員参加のもと、マイルストーンとタスク分担のすり合わせを行った。',
+                    priority: '低',
+                    dueDate: '2026-04-10',
+                    assignee: '山田 太郎',
+                    tags: ['ミーティング', 'マネジメント']
+                }
+            ]
+        };
+
+        // State Management
+        let boardData = JSON.parse(localStorage.getItem('protask_kanban_data')) || defaultData;
+        let sortableInstances = [];
+
+        function saveData() {
+            localStorage.setItem('protask_kanban_data', JSON.stringify(boardData));
+        }
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderBoard();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('searchInput').addEventListener('input', renderBoard);
+            document.getElementById('priorityFilter').addEventListener('change', renderBoard);
+        }
+
+        // Theme Toggle Handler
+        function initTheme() {
+            if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('themeIcon');
+            icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+
+        // Render Kanban Board
+        function renderBoard() {
+            const container = document.getElementById('boardContainer');
+            container.innerHTML = '';
+
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const priorityFilter = document.getElementById('priorityFilter').value;
+
+            // Destroy previous sortable instances to prevent memory leaks
+            sortableInstances.forEach(instance => instance.destroy());
+            sortableInstances = [];
+
+            boardData.columns.forEach(col => {
+                // Filter tasks for this column
+                const tasksInCol = boardData.tasks.filter(task => {
+                    if (task.columnId !== col.id) return false;
+                    
+                    // Search query match
+                    const matchesSearch = task.title.toLowerCase().includes(searchQuery) || 
+                                          (task.description && task.description.toLowerCase().includes(searchQuery)) ||
+                                          (task.assignee && task.assignee.toLowerCase().includes(searchQuery)) ||
+                                          (task.tags && task.tags.some(t => t.toLowerCase().includes(searchQuery)));
+                    
+                    // Priority filter match
+                    const matchesPriority = priorityFilter === '' || task.priority === priorityFilter;
+
+                    return matchesSearch && matchesPriority;
+                });
+
+                // Create column element
+                const colEl = document.createElement('div');
+                colEl.className = 'bg-slate-100/80 dark:bg-slate-800/80 backdrop-blur rounded-2xl w-80 flex-shrink-0 flex flex-col max-h-[calc(100vh-140px)] border border-slate-200/60 dark:border-slate-700/65 shadow-sm';
+                
+                colEl.innerHTML = `
+                    <!-- Column Header -->
+                    <div class="p-4 flex items-center justify-between border-b border-slate-200/60 dark:border-slate-700/60">
+                        <div class="flex items-center space-x-2">
+                            <h2 class="font-bold text-sm text-slate-700 dark:text-slate-200">${escapeHtml(col.title)}</h2>
+                            <span class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-0.5 rounded-full font-medium">${tasksInCol.length}</span>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="openColumnModal('${col.id')" class="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors" title="カラム名を編集">
+                                <i data-lucide="edit-2" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deleteColumn('${col.id}')" class="p-1.5 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-colors" title="カラムを削除">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tasks Container -->
+                    <div class="p-3 flex-1 overflow-y-auto space-y-3 task-drop-area" data-column-id="${col.id}">
+                        ${tasksInCol.map(task => renderTaskCard(task)).join('')}
+                    </div>
+
+                    <!-- Column Footer / Add Task Button -->
+                    <div class="p-3 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <button onclick="openTaskModal(null, '${col.id}')" class="w-full flex items-center justify-center space-x-2 py-2 bg-white dark:bg-slate-700 hover:bg-indigo-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-medium shadow-xs transition-all">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>タスクを追加</span>
+                        </button>
+                    </div>
+                `;
+
+                container.appendChild(colEl);
+
+                // Initialize Sortable for Drag and Drop
+                const dropArea = colEl.querySelector('.task-drop-area');
+                const sortable = Sortable.create(dropArea, {
+                    group: 'kanban-tasks',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function (evt) {
+                        const taskId = evt.item.dataset.taskId;
+                        const targetColumnId = evt.to.dataset.columnId;
+                        const newIndex = evt.newIndex;
+
+                        updateTaskPosition(taskId, targetColumnId, newIndex);
+                    }
+                });
+                sortableInstances.push(sortable);
+            });
+
+            // Add Column button container at the end of the board
+            const addColBtnContainer = document.createElement('div');
+            addColBtnContainer.className = 'w-80 flex-shrink-0';
+            addColBtnContainer.innerHTML = `
+                <button onclick="openColumnModal()" class="w-full flex items-center justify-center space-x-2 py-3 bg-white/60 dark:bg-slate-800/60 hover:bg-white dark:hover:bg-slate-800 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-2xl text-sm font-medium transition-all shadow-xs">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    <span>新しいカラムを追加</span>
+                </button>
+            `;
+            container.appendChild(addColBtnContainer);
+
+            lucide.createIcons();
+        }
+
+        // Render Individual Task Card
+        function renderTaskCard(task) {
+            const priorityColors = {
+                '低': 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+                '中': 'bg-blue-50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
+                '高': 'bg-amber-50 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
+                '緊急': 'bg-rose-50 text-rose-600 dark:bg-rose-900/40 dark:text-rose-300'
+            };
+
+            const priorityBadge = priorityColors[task.priority] || priorityColors['中'];
+
+            return `
+                <div data-task-id="${task.id}" class="bg-white dark:bg-slate-700/90 p-4 rounded-xl shadow-xs hover:shadow-md border border-slate-200/80 dark:border-slate-600 transition-all cursor-grab group relative">
+                    <!-- Top Row: Priority & Actions -->
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md ${priorityBadge}">${escapeHtml(task.priority)}</span>
+                        <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+                            <button onclick="openTaskModal('${task.id}')" class="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors" title="編集">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteTask('${task.id}')" class="p-1 text-slate-400 hover:text-rose-500 rounded transition-colors" title="削除">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Title -->
+                    <h3 class="font-semibold text-sm text-slate-800 dark:text-slate-100 mb-1 leading-snug">${escapeHtml(task.title)}</h3>
+                    
+                    <!-- Description Snippet -->
+                    ${task.description ? `<p class="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2">${escapeHtml(task.description)}</p>` : ''}
+
+                    <!-- Tags -->
+                    ${task.tags && task.tags.length > 0 ? `
+                        <div class="flex flex-wrap gap-1 mb-3">
+                            ${task.tags.map(tag => `<span class="text-[10px] bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">#${escapeHtml(tag.trim())}</span>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Footer: Due Date & Assignee -->
+                    <div class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-600 text-[11px] text-slate-500 dark:text-slate-400">
+                        ${task.dueDate ? `
+                            <div class="flex items-center space-x-1 ${isOverdue(task.dueDate) ? 'text-rose-500 font-medium' : ''}">
+                                <i data-lucide="calendar" class="w-3 h-3"></i>
+                                <span>${escapeHtml(task.dueDate)}</span>
+                            </div>
+                        ` : '<div></div>'}
+                        ${task.assignee ? `
+                            <div class="flex items-center space-x-1 bg-slate-100 dark:bg-slate-600 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300" title="担当者: ${escapeHtml(task.assignee)}">
+                                <i data-lucide="user" class="w-3 h-3"></i>
+                                <span class="truncate max-w-[80px]">${escapeHtml(task.assignee)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Task Drag & Drop Position Update
+        function updateTaskPosition(taskId, newColumnId, newIndex) {
+            const taskIndex = boardData.tasks.findIndex(t => t.id === taskId);
+            if (taskIndex === -1) return;
+
+            const [task] = boardData.tasks.splice(taskIndex, 1);
+            task.columnId = newColumnId;
+
+            // Find all tasks in target column to insert correctly
+            const tasksInTargetCol = boardData.tasks.filter(t => t.columnId === newColumnId);
+            tasksInTargetCol.splice(newIndex, 0, task);
+
+            // Rebuild tasks array maintaining order
+            boardData.tasks = boardData.tasks.filter(t => t.columnId !== newColumnId).concat(tasksInTargetCol);
+            
+            saveData();
+        }
+
+        // Task Modal Handlers
+        function openTaskModal(taskId = null, columnId = null) {
+            const modal = document.getElementById('taskModal');
+            const form = document.getElementById('taskForm');
+            form.reset();
+            
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskColumnId').value = columnId || boardData.columns[0]?.id || '';
+
+            if (taskId) {
+                document.getElementById('modalTitle').textContent = 'タスクを編集';
+                const task = boardData.tasks.find(t => t.id === taskId);
+                if (task) {
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskColumnId').value = task.columnId;
+                    document.getElementById('taskTitleInput').value = task.title;
+                    document.getElementById('taskDescInput').value = task.description || '';
+                    document.getElementById('taskPriorityInput').value = task.priority;
+                    document.getElementById('taskDueDateInput').value = task.dueDate || '';
+                    document.getElementById('taskAssigneeInput').value = task.assignee || '';
+                    document.getElementById('taskTagsInput').value = task.tags ? task.tags.join(', ') : '';
+                }
+            } else {
+                document.getElementById('modalTitle').textContent = '新規タスクを作成';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+        }
+
+        function handleTaskSubmit(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('taskId').value;
+            const columnId = document.getElementById('taskColumnId').value;
+            const title = document.getElementById('taskTitleInput').value.trim();
+            const description = document.getElementById('taskDescInput').value.trim();
+            const priority = document.getElementById('taskPriorityInput').value;
+            const dueDate = document.getElementById('taskDueDateInput').value;
+            const assignee = document.getElementById('taskAssigneeInput').value.trim();
+            const tagsRaw = document.getElementById('taskTagsInput').value;
+            const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(t => t.length > 0) : [];
+
+            if (id) {
+                // Update existing task
+                const task = boardData.tasks.find(t => t.id === id);
+                if (task) {
+                    task.title = title;
+                    task.description = description;
+                    task.priority = priority;
+                    task.dueDate = dueDate;
+                    task.assignee = assignee;
+                    task.tags = tags;
+                }
+            } else {
+                // Create new task
+                const newTask = {
+                    id: 'task-' + Date.now(),
+                    columnId: columnId,
+                    title,
+                    description,
+                    priority,
+                    dueDate,
+                    assignee,
+                    tags
+                };
+                boardData.tasks.push(newTask);
+            }
+
+            saveData();
+            closeTaskModal();
+            renderBoard();
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('このタスクを削除してもよろしいですか？')) {
+                boardData.tasks = boardData.tasks.filter(t => t.id !== taskId);
+                saveData();
+                renderBoard();
+            }
+        }
+
+        // Column Modal Handlers
+        function openColumnModal(columnId = null) {
+            const modal = document.getElementById('columnModal');
+            const form = document.getElementById('columnForm');
+            form.reset();
+
+            document.getElementById('columnEditId').value = '';
+
+            if (columnId) {
+                document.getElementById('columnModalTitle').textContent = 'カラム名を編集';
+                const col = boardData.columns.find(c => c.id === columnId);
+                if (col) {
+                    document.getElementById('columnEditId').value = col.id;
+                    document.getElementById('columnNameInput').value = col.title;
+                }
+            } else {
+                document.getElementById('columnModalTitle').textContent = '新しいカラムを追加';
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeColumnModal() {
+            document.getElementById('columnModal').classList.add('hidden');
+        }
+
+        function handleColumnSubmit(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('columnEditId').value;
+            const name = document.getElementById('columnNameInput').value.trim();
+
+            if (editId) {
+                const col = boardData.columns.find(c => c.id === editId);
+                if (col) col.title = name;
+            } else {
+                const newCol = {
+                    id: 'col-' + Date.now(),
+                    title: name
+                };
+                boardData.columns.push(newCol);
+            }
+
+            saveData();
+            closeColumnModal();
+            renderBoard();
+        }
+
+        function deleteColumn(columnId) {
+            const tasksInCol = boardData.tasks.filter(t => t.columnId === columnId);
+            if (tasksInCol.length > 0) {
+                if (!confirm(`このカラムには ${tasksInCol.length} 件のタスクが含まれています。カラムを削除すると中のタスクもすべて削除されますがよろしいですか？`)) {
+                    return;
+                }
+            } else {
+                if (!confirm('このカラムを削除してもよろしいですか？')) {
+                    return;
+                }
+            }
+
+            boardData.columns = boardData.columns.filter(c => c.id !== columnId);
+            boardData.tasks = boardData.tasks.filter(t => t.columnId !== columnId);
+            saveData();
+            renderBoard();
+        }
+
+        // Helper Utilities
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function isOverdue(dateString) {
+            const today = new Date().toISOString().split('T')[0];
+            return dateString < today;
+        }
+    </script>
+</body>
+</html>
