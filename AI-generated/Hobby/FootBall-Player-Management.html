@@ -1,0 +1,4188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>サッカー選手＆スカッド・クラブ管理ツール (v26)</title>
+    <!-- Google Fonts & FontAwesome CDN -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #334155;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-blue: #3b82f6;
+            --accent-danger: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-yellow: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+        }
+
+        /* ヘッダー */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* ボタン共通設定 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary { background-color: var(--accent-green); color: #ffffff; }
+        .btn-primary:hover { background-color: var(--accent-green-hover); }
+
+        .btn-secondary { background-color: var(--bg-card-hover); color: var(--text-main); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background-color: #475569; }
+
+        .btn-blue { background-color: var(--accent-blue); color: #ffffff; }
+        .btn-blue:hover { background-color: #2563eb; }
+
+        .btn-purple { background-color: var(--accent-purple); color: white; }
+        .btn-purple:hover { background-color: #7c3aed; }
+
+        .btn-danger { background-color: var(--accent-danger); color: white; }
+        .btn-danger:hover { background-color: #dc2626; }
+
+        .btn-icon { padding: 8px 12px; }
+        .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+
+        /* メインナビゲーションタブ */
+        .main-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background-color: var(--bg-card);
+            color: var(--accent-green);
+            border: 1px solid var(--border-color);
+        }
+
+        /* スカッド管理バー */
+        .squad-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-card);
+            padding: 16px;
+            border-radius: var(--radius);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .squad-selector {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+            flex-wrap: wrap;
+        }
+
+        .squad-selector select {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+            min-width: 220px;
+        }
+
+        .squad-actions-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* コントロール */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-filter-group {
+            display: flex;
+            gap: 12px;
+            flex-grow: 1;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex-grow: 1;
+            min-width: 240px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 10px 10px 38px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        .filter-select {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .player-count {
+            color: var(--accent-green);
+            font-size: 0.875rem;
+            font-weight: 700;
+            white-space: nowrap;
+            padding: 8px 12px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .view-toggle {
+            display: flex;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .view-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background-color: var(--bg-card-hover);
+            color: var(--accent-green);
+        }
+
+        /* ポジション & スカッドタグバッジ */
+        .badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .badge-FW { background-color: #ef4444; color: white; }
+        .badge-MF { background-color: #10b981; color: white; }
+        .badge-DF { background-color: #3b82f6; color: white; }
+        .badge-GK { background-color: #f59e0b; color: white; }
+
+        .squad-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        /* カード表示形式 */
+        .grid-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 20px;
+        }
+
+        .player-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, border-color 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .player-card:hover, .player-card:focus {
+            transform: translateY(-2px);
+            border-color: var(--accent-green);
+            outline: none;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .player-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            word-break: break-all;
+        }
+
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .card-body div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-body i {
+            width: 16px;
+            color: var(--accent-green);
+        }
+
+        .squad-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        /* テーブル表示形式 */
+        .table-view {
+            width: 100%;
+            overflow-x: auto;
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(0, 0, 0, 0.2);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr.clickable-row { cursor: pointer; }
+        tr.clickable-row:hover td, tr.clickable-row:focus td { background-color: var(--bg-card-hover); outline: none; }
+
+        /* チェックボックス グループ */
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background-color: var(--bg-main);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--bg-card);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+        }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            padding: 16px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            width: 100%;
+            max-width: 540px;
+            padding: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 { font-size: 1.25rem; }
+        .close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.25rem; cursor: pointer; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-muted); }
+        .form-group label .required { color: var(--accent-danger); margin-left: 2px; }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--accent-green); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+
+        /* 過去所属クラブ動的フォーム用スタイル & オートコンプリート */
+        .past-club-item {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .past-club-item .past-club-type {
+            flex: 0 0 112px;
+            min-width: 100px;
+        }
+        .timeline-transfer-type {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-size: .68rem;
+            font-weight: 700;
+            vertical-align: middle;
+            background: rgba(59,130,246,.18);
+            color: #93c5fd;
+            border: 1px solid rgba(59,130,246,.4);
+        }
+        .timeline-transfer-type.loan {
+            background: rgba(245,158,11,.18);
+            color: #fcd34d;
+            border-color: rgba(245,158,11,.45);
+        }
+        @media (max-width: 560px) {
+            .past-club-item { flex-wrap: wrap; }
+            .past-club-item .autocomplete-wrapper { flex: 1 1 100%; }
+            .past-club-item .past-club-period { flex: 1 1 42% !important; }
+        }
+
+        .autocomplete-wrapper {
+            position: relative;
+            flex: 2;
+        }
+
+        .autocomplete-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0 0 8px 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1100;
+            box-shadow: var(--shadow);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--bg-card-hover);
+            color: var(--accent-green);
+        }
+
+        /* クラブマスタ */
+        .master-management {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+
+        .master-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .master-toolbar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        /* 階層アコーディオン (折り畳み) スタイル */
+        details.region-details {
+            background-color: rgba(15, 23, 42, 0.6);
+            border-radius: var(--radius);
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        details.region-details summary {
+            padding: 14px 18px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--accent-purple);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            list-style: none;
+            transition: background-color 0.2s ease;
+        }
+
+        details.region-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.region-details summary:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .summary-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .summary-arrow {
+            transition: transform 0.2s ease;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        details.region-details[open] > summary .summary-arrow {
+            transform: rotate(90deg);
+            color: var(--accent-purple);
+        }
+
+        .region-content {
+            padding: 0 16px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        details.league-details {
+            background-color: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        details.league-details summary {
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            list-style: none;
+            background-color: rgba(255, 255, 255, 0.02);
+            transition: background-color 0.2s ease;
+        }
+
+        details.league-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details.league-details summary:hover {
+            background-color: var(--bg-card-hover);
+        }
+
+        details.league-details[open] > summary .summary-arrow {
+            transform: rotate(90deg);
+            color: var(--accent-green);
+        }
+
+        .league-content {
+            padding: 12px 14px;
+            background-color: rgba(15, 23, 42, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .club-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 8px;
+        }
+
+        .club-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(15, 23, 42, 0.6);
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .club-item:hover {
+            border-color: var(--accent-green);
+        }
+
+        .club-actions { display: flex; gap: 4px; }
+
+        /* フォーメーション画面専用CSS */
+        .formation-container {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 250px;
+            gap: 10px;
+            align-items: start;
+        }
+
+        @media (max-width: 980px) {
+            .formation-container {
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            }
+            .bench-card { grid-column: 1 / -1; height: 260px; }
+        }
+        @media (max-width: 620px) {
+            .formation-container { grid-template-columns: 1fr; }
+            .bench-card { grid-column: auto; }
+        }
+
+        .pitch-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pitch-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* サッカーピッチ本体：画面高に合わせて縮小 */
+        .soccer-pitch {
+            position: relative;
+            width: auto;
+            height: clamp(320px, calc(100vh - 330px), 600px);
+            aspect-ratio: 10 / 13;
+            padding-top: 0;
+            max-width: 100%;
+            margin: 0 auto;
+            background: linear-gradient(to bottom, #15803d, #166534);
+            border: 3px solid #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+            user-select: none;
+        }
+
+        .pitch-line {
+            position: absolute;
+            pointer-events: none;
+        }
+
+        .pitch-center-line {
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.7);
+            transform: translateY(-50%);
+        }
+
+        .pitch-center-circle {
+            top: 50%;
+            left: 50%;
+            width: 24%;
+            padding-top: 24%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .pitch-penalty-area-top {
+            top: 0;
+            left: 20%;
+            width: 60%;
+            height: 16%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-top: none;
+        }
+
+        .pitch-penalty-area-bottom {
+            bottom: 0;
+            left: 20%;
+            width: 60%;
+            height: 16%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-bottom: none;
+        }
+
+        .pitch-player-node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: default;
+            z-index: 10;
+            transition: transform 0.1s ease;
+        }
+
+        .pitch-player-node.slot-drop-target { cursor: pointer; z-index: 10; }
+        .pitch-player-node.has-player { cursor: grab; }
+        .pitch-player-node.has-player:active { cursor: grabbing; z-index: 100; }
+        .pitch-player-node.dragging { opacity: .45; }
+        .pitch-player-node.drag-over { z-index: 20; filter: drop-shadow(0 0 8px #facc15); }
+        .pitch-player-node.drag-over .player-icon-circle {
+            border-color: #facc15; background-color: #854d0e; transform: scale(1.12);
+        }
+
+        .player-icon-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--bg-card);
+            border: 2px solid var(--accent-green);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.68rem;
+            color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+            position: relative;
+        }
+
+        .player-icon-circle.empty {
+            border: 2px dashed var(--text-muted);
+            background-color: rgba(15, 23, 42, 0.6);
+            color: var(--text-muted);
+        }
+
+        .node-remove-btn {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 14px;
+            height: 14px;
+            background-color: var(--accent-danger);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            cursor: pointer;
+            border: 1px solid #ffffff;
+        }
+
+        /* バックアップ専用ピッチ */
+        .backup-pitch-node {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            width: 100px;
+            max-width: 30%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 3px;
+            border: 1px dashed rgba(255,255,255,.55);
+            border-radius: 6px;
+            background: rgba(15,23,42,.78);
+            min-height: 24px;
+        }
+        .backup-pitch-node.drag-over {
+            border-color: #facc15;
+            background: rgba(133,77,14,.9);
+        }
+        .backup-pitch-player {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            color: #fff;
+            font-size: .52rem;
+            line-height: 1.15;
+            cursor: grab;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .backup-pitch-player .backup-pos {
+            color: #a7f3d0;
+            font-weight: 800;
+            flex: 0 0 auto;
+        }
+        .backup-pitch-player .slot-backup-remove {
+            color: #fca5a5;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        .backup-pitch-empty {
+            color: rgba(255,255,255,.65);
+            font-size: .48rem;
+            text-align: center;
+        }
+
+        .player-label-name {
+            margin-top: 2px;
+            background-color: rgba(15, 23, 42, 0.85);
+            padding: 1px 5px;
+            border-radius: 5px;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+            border: 1px solid var(--border-color);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .bench-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: min(680px, calc(100vh - 260px));
+            min-height: 300px;
+        }
+
+        .bench-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            padding-right: 4px;
+            min-height: 0;
+            flex: 1;
+        }
+
+        .bench-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-main);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            cursor: grab;
+            transition: border-color 0.2s ease, transform 0.1s ease;
+        }
+
+        .bench-item:hover {
+            border-color: var(--accent-green);
+            transform: translateX(2px);
+        }
+
+        .bench-item:active {
+            cursor: grabbing;
+        }
+
+        .bench-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (max-height: 760px) and (min-width: 901px) {
+            .soccer-pitch {
+                height: calc(100vh - 285px);
+                min-height: 300px;
+            }
+            .bench-card {
+                height: calc(100vh - 230px);
+                min-height: 280px;
+            }
+            .pitch-controls .filter-select {
+                padding: 6px 9px;
+                font-size: .78rem;
+            }
+            .pitch-controls .btn {
+                padding: 6px 9px;
+                font-size: .75rem;
+            }
+        }
+
+        /* 詳細ポジション適正ミニピッチ */
+        .aptitude-pitch {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr 1fr;
+            gap: 5px;
+            padding: 7px;
+            min-height: 210px;
+            border: 2px solid rgba(255,255,255,.75);
+            border-radius: 9px;
+            background: repeating-linear-gradient(0deg, #166534 0, #166534 24px, #15803d 24px, #15803d 48px);
+            box-shadow: inset 0 0 12px rgba(0,0,0,.25);
+        }
+        .aptitude-lane {
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: space-around;
+            align-items: stretch;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid rgba(255,255,255,.35);
+            border-radius: 5px;
+            background: rgba(0,0,0,.08);
+        }
+        .aptitude-position {
+            min-height: 27px;
+            padding: 4px 2px;
+            border: 1px solid rgba(255,255,255,.65);
+            border-radius: 5px;
+            color: #fff;
+            font-size: .72rem;
+            font-weight: 800;
+            text-align: center;
+            cursor: pointer;
+            background: rgba(15,23,42,.28);
+            transition: background .12s, opacity .12s, transform .12s;
+        }
+        .aptitude-position:hover { transform: scale(1.04); border-color: #fff; }
+        .aptitude-position.level-0 { opacity: .42; background: rgba(15,23,42,.28); }
+        .aptitude-position.level-1 { opacity: .78; background: rgba(245,158,11,.72); color: #111827; }
+        .aptitude-position.level-2 { opacity: 1; background: #facc15; color: #111827; border: 2px solid #fff; }
+        .aptitude-readonly .aptitude-position { cursor: default; }
+        .aptitude-readonly .aptitude-position:hover { transform: none; }
+        .aptitude-legend { display:flex; gap:10px; flex-wrap:wrap; font-size:.72rem; color:var(--text-muted); margin-top:6px; }
+        .aptitude-legend span { display:inline-flex; align-items:center; gap:4px; }
+        .aptitude-legend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+        @media (max-width: 520px) {
+            .aptitude-pitch { min-height: 190px; }
+            .aptitude-position { font-size: .65rem; min-height: 24px; }
+        }
+
+        /* 選手詳細モーダル (経歴タイムライン表示) スタイル */
+        .detail-timeline {
+            position: relative;
+            padding-left: 20px;
+            margin-top: 12px;
+            border-left: 2px solid var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -26px;
+            top: 4px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--accent-purple);
+            border: 2px solid var(--bg-card);
+        }
+
+        .timeline-club {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .timeline-period {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px dashed var(--border-color);
+        }
+
+        .empty-state i { font-size: 3rem; margin-bottom: 16px; color: var(--border-color); }
+        .hidden { display: none !important; }
+
+        /* トースト通知 */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--accent-green);
+            border-left: 4px solid var(--accent-green);
+            padding: 12px 18px;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.25s ease forwards;
+            pointer-events: auto;
+        }
+
+        .toast.error {
+            border-color: var(--accent-danger);
+            border-left-color: var(--accent-danger);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- ヘッダー -->
+        <header>
+            <div class="logo">
+                <i class="fa-solid fa-futbol"></i>
+                <span>Squad & Tag Manager</span>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="exportFullData()"><i class="fa-solid fa-download"></i> 全JSON出力</button>
+                <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> JSON読込</button>
+                <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importFullData(event)">
+            </div>
+        </header>
+
+        <!-- メイン画面切り替えタブ -->
+        <div class="main-tabs">
+            <button id="tabPlayersBtn" class="tab-btn active" onclick="switchMainTab('players')">
+                <i class="fa-solid fa-users"></i> 選手＆スカッド管理
+            </button>
+            <button id="tabFormationBtn" class="tab-btn" onclick="switchMainTab('formation')">
+                <i class="fa-solid fa-border-all"></i> フォーメーション
+            </button>
+            <button id="tabMasterBtn" class="tab-btn" onclick="switchMainTab('master')">
+                <i class="fa-solid fa-sitemap"></i> クラブ・昇降格マスタ設定
+            </button>
+        </div>
+
+        <!-- Tab 1: 選手＆スカッド管理画面 -->
+        <div id="playersSection">
+            <!-- スカッドタグ切替・管理バー -->
+            <div class="squad-bar">
+                <div class="squad-selector">
+                    <label for="squadSelect"><i class="fa-solid fa-tags"></i> 表示スカッド:</label>
+                    <select id="squadSelect" onchange="switchSquad(this.value)"></select>
+                    <button class="btn btn-secondary btn-icon" onclick="openSquadModal('create')" title="新規スカッドタグ追加"><i class="fa-solid fa-plus"></i></button>
+                    <button class="btn btn-secondary btn-icon" onclick="openSquadModal('rename')" title="スカッド名を変更"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-danger btn-icon" onclick="deleteSquad()" title="現在のスカッドを削除"><i class="fa-solid fa-trash"></i></button>
+                </div>
+                <div class="squad-actions-right">
+                    <button class="btn btn-secondary" onclick="openCsvExportModal()" title="選手データをCSV形式でダウンロード"><i class="fa-solid fa-file-csv"></i> CSVエクスポート</button>
+                    <button class="btn btn-blue" onclick="document.getElementById('importCsvFile').click()" title="CSVファイルから選手を一括読込"><i class="fa-solid fa-file-import"></i> CSVインポート</button>
+                    <input type="file" id="importCsvFile" accept=".csv,text/csv" style="display: none;" onchange="importPlayersCSV(event)">
+                    <button class="btn btn-primary" onclick="openPlayerModal('create')"><i class="fa-solid fa-user-plus"></i> 選手を登録</button>
+                </div>
+            </div>
+
+            <!-- 検索・フィルター・ソート・表示切替 -->
+            <div class="controls-bar">
+                <div class="search-filter-group">
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="searchInput" placeholder="選手名, 国籍, クラブ, 過去所属, リーグ..." oninput="renderPlayers()">
+                    </div>
+                    <select id="positionFilter" class="filter-select" onchange="renderPlayers()">
+                        <option value="">すべてのポジション</option>
+                        <option value="FW">FW</option>
+                        <option value="MF">MF</option>
+                        <option value="DF">DF</option>
+                        <option value="GK">GK</option>
+                    </select>
+                    <select id="sortSelect" class="filter-select" onchange="renderPlayers()">
+                        <option value="default">並び替え: 登録順</option>
+                        <option value="age-asc">年齢: 若い順 (昇順)</option>
+                        <option value="age-desc">年齢: 高い順 (降順)</option>
+                        <option value="height-asc">身長: 低い順 (昇順)</option>
+                        <option value="height-desc">身長: 高い順 (降順)</option>
+                        <option value="position-asc">ポジション: FW → MF → DF → GK (昇順)</option>
+                        <option value="position-desc">ポジション: GK → DF → MF → FW (降順)</option>
+                    </select>
+                </div>
+                <span id="playerCount" class="player-count">表示中: 0名</span>
+                <div class="view-toggle">
+                    <button id="viewCardBtn" class="view-btn active" onclick="switchView('card')" title="カード表示"><i class="fa-solid fa-border-all"></i></button>
+                    <button id="viewTableBtn" class="view-btn" onclick="switchView('table')" title="行（表）表示"><i class="fa-solid fa-list"></i></button>
+                </div>
+            </div>
+
+            <!-- 選手一覧コンテンツエリア -->
+            <div id="playerListContainer"></div>
+        </div>
+
+        <!-- Tab 2: フォーメーション配置画面 -->
+        <div id="formationSection" class="hidden">
+            <div class="formation-container">
+                <!-- ピッチボードエリア -->
+                <div class="pitch-card">
+                    <div class="pitch-controls">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label for="formationSquadSelect" style="font-weight: 600;"><i class="fa-solid fa-tags"></i> 対象スカッド:</label>
+                            <select id="formationSquadSelect" class="filter-select" onchange="switchFormationSquad(this.value)"></select>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <select id="presetSelect" class="filter-select">
+                                <option value="4-3-3">プリセット: 4-3-3</option>
+                                <option value="4-4-2">プリセット: 4-4-2</option>
+                                <option value="4-2-3-1">プリセット: 4-2-3-1</option>
+                                <option value="4-1-2-3">プリセット: 4-1-2-3</option>
+                                <option value="4-1-3-2">プリセット: 4-1-3-2</option>
+                                <option value="4-1-4-1">プリセット: 4-1-4-1</option>
+                                <option value="4-2-1-3">プリセット: 4-2-1-3</option>
+                                <option value="4-2-2-2">プリセット: 4-2-2-2</option>
+                                <option value="4-2-4">プリセット: 4-2-4</option>
+                                <option value="4-3-1-2">プリセット: 4-3-1-2</option>
+                                <option value="4-3-2-1">プリセット: 4-3-2-1</option>
+                                <option value="3-5-2">プリセット: 3-5-2</option>
+                                <option value="3-4-3">プリセット: 3-4-3</option>
+                                <option value="3-1-3-3">プリセット: 3-1-3-3</option>
+                                <option value="3-1-4-2">プリセット: 3-1-4-2</option>
+                                <option value="3-2-3-2">プリセット: 3-2-3-2</option>
+                                <option value="3-2-4-1">プリセット: 3-2-4-1</option>
+                                <option value="5-1-2-2">プリセット: 5-1-2-2</option>
+                                <option value="5-2-1-2">プリセット: 5-2-1-2</option>
+                                <option value="5-4-1">プリセット: 5-4-1</option>
+                            </select>
+                            <button class="btn btn-purple" onclick="applyPresetFormation()"><i class="fa-solid fa-wand-magic-sparkles"></i> 枠生成</button>
+                            <button class="btn btn-secondary" onclick="clearFormation()"><i class="fa-solid fa-rotate-left"></i> クリア</button>
+                        </div>
+                    </div>
+
+                    <!-- メインフォーメーション -->
+                    <div id="soccerPitch" class="soccer-pitch" ondragover="handlePitchDragOver(event)" ondrop="handlePitchDrop(event)">
+                        <div class="pitch-line pitch-center-line"></div>
+                        <div class="pitch-line pitch-center-circle"></div>
+                        <div class="pitch-line pitch-penalty-area-top"></div>
+                        <div class="pitch-line pitch-penalty-area-bottom"></div>
+                        <div id="pitchPlayersContainer"></div>
+                    </div>
+                </div>
+
+                <!-- バックアップ専用フォーメーション -->
+                <div class="pitch-card backup-pitch-card">
+                    <div class="pitch-controls">
+                        <h3 style="font-size:1rem;"><i class="fa-solid fa-people-arrows-left-right"></i> バックアップ配置</h3>
+                        <span style="font-size:.68rem;color:var(--text-muted);">ベンチ選手を対応するポジションへドラッグ</span>
+                    </div>
+                    <div id="backupSoccerPitch" class="soccer-pitch" ondragover="handlePitchDragOver(event)" ondrop="handlePitchDrop(event)">
+                        <div class="pitch-line pitch-center-line"></div>
+                        <div class="pitch-line pitch-center-circle"></div>
+                        <div class="pitch-line pitch-penalty-area-top"></div>
+                        <div class="pitch-line pitch-penalty-area-bottom"></div>
+                        <div id="backupPitchPlayersContainer"></div>
+                    </div>
+                </div>
+
+                <!-- 右サイド：ベンチ選手候補リスト -->
+                <div class="bench-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 style="font-size: 1.1rem;"><i class="fa-solid fa-users-line"></i> ベンチ・未配置選手</h3>
+                        <span id="benchCountBadge" class="badge badge-MF">0名</span>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);">
+                        ベンチの選手をピッチ上の固定ポジション枠へドラッグ。枠同士の入れ替えもできます。
+                    </p>
+                    <div id="benchList" class="bench-list" ondragover="handleBenchDragOver(event)" ondrop="handleBenchDrop(event)"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: クラブ・昇降格マスタ設定画面 -->
+        <div id="masterSection" class="hidden">
+            <div class="master-management">
+                <div class="master-header">
+                    <div>
+                        <h2><i class="fa-solid fa-shield-halved"></i> クラブ＆リーグ階層マスタ管理</h2>
+                        <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px;">
+                            地域・リーグの階層を開閉できます。クラブの追加・編集・削除や、昇降格（移動）を行えます。
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-purple" onclick="openClubModal('create')"><i class="fa-solid fa-plus"></i> クラブ追加</button>
+                        <button class="btn btn-secondary" onclick="openLeagueModal('create')"><i class="fa-solid fa-trophy"></i> リーグ追加</button>
+                        <button class="btn btn-secondary" onclick="exportClubsMasterCSV()"><i class="fa-solid fa-file-csv"></i> クラブCSVエクスポート</button>
+                        <button class="btn btn-blue" onclick="document.getElementById('importClubCsvFile').click()"><i class="fa-solid fa-file-import"></i> クラブCSVインポート</button>
+                        <input type="file" id="importClubCsvFile" accept=".csv,text/csv" style="display: none;" onchange="importClubsMasterCSV(event)">
+                        <button class="btn btn-secondary" onclick="exportClubsMasterJSON()"><i class="fa-solid fa-file-export"></i> クラブJSON単体出力</button>
+                    </div>
+                </div>
+
+                <div class="master-toolbar">
+                    <button class="btn btn-secondary btn-sm" onclick="toggleAllMasterDetails(true)"><i class="fa-solid fa-folder-open"></i> すべて展開</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleAllMasterDetails(false)"><i class="fa-solid fa-folder"></i> すべて折り畳む</button>
+                </div>
+
+                <div id="masterHierarchyContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- トースト通知エリア -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- CSVエクスポート選択 Modal -->
+    <div id="csvExportModal" class="modal-overlay">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-csv" style="color: var(--accent-green);"></i> 選手CSVエクスポート</h3>
+                <button class="close-btn" onclick="closeCsvExportModal()">&times;</button>
+            </div>
+            <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 16px;">
+                Excel等で文字化けしないUTF-8 (BOM付き) 形式で出力します。出力対象を選択してください。
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" style="justify-content: center; padding: 12px;" onclick="exportPlayersCSV('all')">
+                    <i class="fa-solid fa-users"></i> 登録済みの全選手を出力 (<span id="csvExportAllCount">0</span>名)
+                </button>
+                <button class="btn btn-secondary" style="justify-content: center; padding: 12px;" onclick="exportPlayersCSV('filtered')">
+                    <i class="fa-solid fa-filter"></i> 現在表示・絞り込み中の選手のみ出力 (<span id="csvExportFilteredCount">0</span>名)
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCsvExportModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSVインポート確認 Modal -->
+    <div id="csvImportConfirmModal" class="modal-overlay">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import" style="color: var(--accent-blue);"></i> 選手CSVインポート確認</h3>
+                <button class="close-btn" onclick="closeCsvImportConfirmModal()">&times;</button>
+            </div>
+            <div id="csvImportSummary" style="font-size: 0.875rem; color: var(--text-main); background: var(--bg-main); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+            </div>
+            <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 12px;">
+                取り込み方法を選択してください：
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" style="justify-content: center; padding: 10px;" onclick="executeCsvImport('append')">
+                    <i class="fa-solid fa-user-plus"></i> 既存の選手データに新規追加する
+                </button>
+                <button class="btn btn-blue" style="justify-content: center; padding: 10px;" onclick="executeCsvImport('upsert')">
+                    <i class="fa-solid fa-arrows-rotate"></i> 同名の選手は上書きし、新規選手は追加する
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCsvImportConfirmModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- クラブCSVインポート確認 Modal -->
+    <div id="clubCsvImportConfirmModal" class="modal-overlay">
+        <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-import" style="color: var(--accent-blue);"></i> クラブマスタCSVインポート確認</h3>
+                <button class="close-btn" onclick="closeClubCsvImportConfirmModal()">&times;</button>
+            </div>
+            <div id="clubCsvImportSummary" style="font-size: 0.875rem; color: var(--text-main); background: var(--bg-main); padding: 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+            </div>
+            <p style="font-size: 0.825rem; color: var(--text-muted); margin-bottom: 12px;">
+                取り込み方法を選択してください：
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <button class="btn btn-primary" style="justify-content: center; padding: 10px;" onclick="executeClubCsvImport('merge')">
+                    <i class="fa-solid fa-code-merge"></i> 既存マスタに追加・統合する
+                </button>
+                <button class="btn btn-danger" style="justify-content: center; padding: 10px;" onclick="executeClubCsvImport('replace')">
+                    <i class="fa-solid fa-arrows-rotate"></i> 既存マスタを置き換える
+                </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeClubCsvImportConfirmModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 汎用確認 Modal (confirm代替) -->
+    <div id="customConfirmModal" class="modal-overlay">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 id="customConfirmTitle">確認</h3>
+                <button class="close-btn" onclick="resolveCustomConfirm(false)">&times;</button>
+            </div>
+            <p id="customConfirmMessage" style="font-size: 0.9rem; color: var(--text-main); white-space: pre-line; margin-bottom: 20px;"></p>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="resolveCustomConfirm(false)">キャンセル</button>
+                <button type="button" id="customConfirmOkBtn" class="btn btn-danger" onclick="resolveCustomConfirm(true)">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 汎用プロンプト Modal (prompt代替) -->
+    <div id="customPromptModal" class="modal-overlay">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 id="customPromptTitle">入力</h3>
+                <button class="close-btn" onclick="resolveCustomPrompt(null)">&times;</button>
+            </div>
+            <form onsubmit="event.preventDefault(); resolveCustomPrompt(document.getElementById('customPromptInput').value);">
+                <p id="customPromptMessage" style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 12px;"></p>
+                <div class="form-group">
+                    <input type="text" id="customPromptInput" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="resolveCustomPrompt(null)">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">決定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 選手 登録・編集 Modal -->
+    <div id="playerModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="playerModalTitle">選手登録</h3>
+                <button class="close-btn" onclick="closePlayerModal()">&times;</button>
+            </div>
+            <form id="playerForm" onsubmit="handlePlayerSubmit(event)">
+                <input type="hidden" id="playerId">
+                
+                <div class="form-group">
+                    <label>選手名 <span class="required">*</span></label>
+                    <input type="text" id="playerName" class="form-control" required placeholder="例: 久保 建英">
+                </div>
+
+                <div class="form-group">
+                    <label>所属スカッドタグ (複数選択可)</label>
+                    <div id="squadTagCheckboxes" class="checkbox-group"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>ポジション（大分類） <span class="required">*</span></label>
+                        <select id="playerPosition" class="form-control" required>
+                            <option value="FW">FW</option>
+                            <option value="MF">MF</option>
+                            <option value="DF">DF</option>
+                            <option value="GK">GK</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>詳細ポジション</label>
+                        <select id="playerDetailPosition" class="form-control">
+                            <option value="">未設定</option>
+                            <option value="GK">GK</option>
+                            <option value="CB">CB</option>
+                            <option value="LSB">LSB</option>
+                            <option value="RSB">RSB</option>
+                            <option value="DMF">DMF</option>
+                            <option value="CMF">CMF</option>
+                            <option value="OMF">OMF</option>
+                            <option value="LMF">LMF</option>
+                            <option value="RMF">RMF</option>
+                            <option value="ST">ST</option>
+                            <option value="CF">CF</option>
+                            <option value="LWG">LWG</option>
+                            <option value="RWG">RWG</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>ポジション適正（クリックで切替：未設定 → 準適正 → 本適正）</label>
+                    <div id="playerAptitudePitch" class="aptitude-pitch"></div>
+                    <div class="aptitude-legend">
+                        <span><i style="background:rgba(15,23,42,.5);border:1px solid #94a3b8"></i>適正なし</span>
+                        <span><i style="background:rgba(245,158,11,.85)"></i>準適正</span>
+                        <span><i style="background:#facc15"></i>本適正</span>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>利き足 <span class="required">*</span></label>
+                        <select id="playerFoot" class="form-control" required>
+                            <option value="右足">右足</option>
+                            <option value="左足">左足</option>
+                            <option value="両足">両足</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>生年月日 <span class="required">*</span></label>
+                        <input type="date" id="playerBirthdate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>身長 (cm)</label>
+                        <input type="number" id="playerHeight" class="form-control" placeholder="例: 180" min="100" max="230">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>国籍</label>
+                    <input type="text" id="playerNationality" list="nationalityList" class="form-control" placeholder="選択または入力 (例: 日本)" autocomplete="off">
+                    <datalist id="nationalityList"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label>現所属地域</label>
+                    <select id="playerRegion" class="form-control" onchange="updateLeagueSelect()"></select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>現所属リーグ</label>
+                        <select id="playerLeague" class="form-control" onchange="updateDivisionSelect()"></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>現所属ディビジョン</label>
+                        <select id="playerDivision" class="form-control" onchange="updateClubSelect()"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>現所属クラブ</label>
+                        <select id="playerClub" class="form-control"></select>
+                    </div>
+                </div>
+
+                <!-- 動的追加可能な過去所属クラブ領域 -->
+                <div class="form-group" style="margin-top: 20px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="margin-bottom: 0;"><i class="fa-solid fa-history"></i> 過去所属クラブ（経歴）</label>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addPastClubInput()"><i class="fa-solid fa-plus"></i> クラブを追加</button>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+                        ※一覧画面には表示されず、選手カード/行をフォーカス・クリックした際に確認できます。
+                    </p>
+                    <div id="pastClubsContainer"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closePlayerModal()">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 選手詳細表示 Modal (フォーカス/クリック時に表示) -->
+    <div id="playerDetailModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="detailPlayerPosBadge" class="badge">FW</span>
+                    <h3 id="detailPlayerName" style="font-size: 1.3rem;">選手名</h3>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="detailEditBtn" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen-to-square"></i> 編集する</button>
+                    <button class="close-btn" onclick="closePlayerDetailModal()">&times;</button>
+                </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div style="background-color: var(--bg-main); padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.875rem;">
+                        <div><strong style="color:var(--text-muted);">国籍:</strong> <span id="detailPlayerNat">-</span></div>
+                        <div><strong style="color:var(--text-muted);">年齢:</strong> <span id="detailPlayerAge">-</span></div>
+                        <div><strong style="color:var(--text-muted);">生年月日:</strong> <span id="detailPlayerBirth">-</span></div>
+                        <div><strong style="color:var(--text-muted);">身長 / 利き足:</strong> <span id="detailPlayerPhysical">-</span></div>
+                        <div style="grid-column: span 2;"><strong style="color:var(--text-muted);">現所属:</strong> <span id="detailPlayerCurrentClub" style="color:var(--accent-green); font-weight:700;">-</span></div>
+                    </div>
+                    <div style="margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap;" id="detailPlayerTags"></div>
+                </div>
+
+                <div>
+                    <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--accent-green);">ポジション適正</h4>
+                    <div id="detailPlayerAptitudePitch" class="aptitude-pitch aptitude-readonly"></div>
+                    <div class="aptitude-legend">
+                        <span><i style="background:rgba(15,23,42,.5);border:1px solid #94a3b8"></i>適正なし</span>
+                        <span><i style="background:rgba(245,158,11,.85)"></i>準適正</span>
+                        <span><i style="background:#facc15"></i>本適正</span>
+                    </div>
+                </div>
+                <div>
+                    <h4 style="font-size: 0.95rem; margin-bottom: 8px; color: var(--accent-purple); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-timeline"></i> 過去所属クラブ経歴
+                    </h4>
+                    <div id="detailPastClubsTimeline"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closePlayerDetailModal()">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- スカッド作成・編集 Modal -->
+    <div id="squadModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="squadModalTitle">スカッドタグ作成</h3>
+                <button class="close-btn" onclick="closeSquadModal()">&times;</button>
+            </div>
+            <form id="squadForm" onsubmit="handleSquadSubmit(event)">
+                <input type="hidden" id="squadMode">
+                <div class="form-group">
+                    <label>スカッド名 <span class="required">*</span></label>
+                    <input type="text" id="squadNameInput" class="form-control" required placeholder="例: 日本代表 Aチーム">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeSquadModal()">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">決定</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- クラブ 追加・編集 Modal -->
+    <div id="clubModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="clubModalTitle">クラブ情報の管理</h3>
+                <button class="close-btn" onclick="closeClubModal()">&times;</button>
+            </div>
+            <form id="clubForm" onsubmit="handleClubSubmit(event)">
+                <input type="hidden" id="clubMode">
+                <input type="hidden" id="originalClubRegion">
+                <input type="hidden" id="originalClubLeague">
+                <input type="hidden" id="originalClubDivision">
+                <input type="hidden" id="originalClubName">
+
+                <div class="form-group">
+                    <label>所属地域 <span class="required">*</span></label>
+                    <select id="modalClubRegion" class="form-control" required onchange="updateModalClubLeagueSelect()"></select>
+                </div>
+
+                <div class="form-group">
+                    <label>所属リーグ（昇降格移動） <span class="required">*</span></label>
+                    <select id="modalClubLeague" class="form-control" required onchange="updateModalClubDivisionSelect()"></select>
+                </div>
+
+                <div class="form-group">
+                    <label>所属ディビジョン <span class="required">*</span></label>
+                    <select id="modalClubDivision" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>クラブ名 <span class="required">*</span></label>
+                    <input type="text" id="modalClubName" class="form-control" required placeholder="例: レアル・マドリード">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeClubModal()">キャンセル</button>
+                    <button type="submit" class="btn btn-purple">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- リーグ 追加 Modal -->
+    <div id="leagueModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>新規リーグ追加</h3>
+                <button class="close-btn" onclick="closeLeagueModal()">&times;</button>
+            </div>
+            <form id="leagueForm" onsubmit="handleLeagueSubmit(event)">
+                <div class="form-group">
+                    <label>対象地域 <span class="required">*</span></label>
+                    <select id="modalLeagueRegion" class="form-control" required></select>
+                </div>
+                <div class="form-group">
+                    <label>新しいリーグ名 <span class="required">*</span></label>
+                    <input type="text" id="modalLeagueName" class="form-control" required placeholder="例: プレミアリーグ2">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeLeagueModal()">キャンセル</button>
+                    <button type="submit" class="btn btn-primary">追加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. 初期データ & 設定
+           ========================================================================== */
+
+        // 事前定義された国籍・代表地域一覧（予測変換・選択候補用）
+        const NATIONALITIES = [
+            // 主要・人気国（上位表示）
+            "日本", "韓国", "イングランド", "スペイン", "ドイツ", "フランス", "イタリア",
+            "ブラジル", "アルゼンチン", "ポルトガル", "オランダ", "ベルギー", "クロアチア",
+            "ウルグアイ", "コロンビア", "アメリカ", "メキシコ", "モロッコ", "セネガル",
+            "ナイジェリア", "オーストラリア", "イラン", "サウジアラビア",
+            // アジア・オセアニア
+            "中国", "北朝鮮", "台湾", "香港", "タイ", "ベトナム", "インドネシア",
+            "マレーシア", "シンガポール", "フィリピン", "ミャンマー", "カンボジア",
+            "ラオス", "インド", "ウズベキスタン", "カタール", "UAE", "イラク",
+            "ヨルダン", "オマーン", "バーレーン", "クウェート", "シリア", "レバノン",
+            "パレスチナ", "タジキスタン", "キルギス", "トルクメニスタン",
+            "ニュージーランド", "フィジー", "パプアニューギニア", "タヒチ",
+            // ヨーロッパ
+            "スコットランド", "ウェールズ", "北アイルランド", "アイルランド",
+            "スイス", "オーストリア", "ポーランド", "チェコ", "スロバキア", "ハンガリー",
+            "デンマーク", "スウェーデン", "ノルウェー", "フィンランド", "アイスランド",
+            "セルビア", "スロベニア", "ボスニア・ヘルツェゴビナ", "モンテネグロ",
+            "北マケドニア", "アルバニア", "コソボ", "ギリシャ", "トルコ", "ルーマニア",
+            "ブルガリア", "ウクライナ", "ロシア", "ジョージア", "アルメニア",
+            "アゼルバイジャン", "カザフスタン", "イスラエル", "キプロス", "ルクセンブルク",
+            "エストニア", "ラトビア", "リトアニア", "ベラルーシ", "モルドバ", "マルタ",
+            "アンドラ", "サンマリノ", "リヒテンシュタイン", "ジブラルタル", "フェロー諸島",
+            // 南米
+            "チリ", "ペルー", "エクアドル", "パラグアイ", "ボリビア", "ベネズエラ",
+            // 北中米カリブ海
+            "カナダ", "コスタリカ", "パナマ", "ジャマイカ", "ホンジュラス",
+            "エルサルバドル", "グアテマラ", "トリニダード・トバゴ", "ハイチ",
+            "キュラソー", "スリナム", "キューバ", "ドミニカ共和国",
+            // アフリカ
+            "エジプト", "アルジェリア", "チュニジア", "ガーナ", "コートジボワール",
+            "カメルーン", "マリ", "ブルキナファソ", "ギニア", "コンゴ民主共和国",
+            "コンゴ共和国", "南アフリカ", "アンゴラ", "ザンビア", "ジンバブエ",
+            "ガボン", "赤道ギニア", "カーボベルデ", "ガンビア", "モーリタニア",
+            "ベナン", "トーゴ", "ニジェール", "ウガンダ", "ケニア", "タンザニア",
+            "モザンビーク", "ナミビア", "マダガスカル", "コモロ", "リビア", "スーダン"
+        ];
+
+        function initNationalityDatalist() {
+            const datalist = document.getElementById('nationalityList');
+            if (!datalist) return;
+            datalist.innerHTML = NATIONALITIES
+                .map(nat => `<option value="${escapeHTML(nat)}">`)
+                .join('');
+        }
+
+        const DEFAULT_CLUB_HIERARCHY = {
+            "ヨーロッパ": {
+                "イングランドリーグ": { "1部": ["マンチェスター・シティ", "アーセナル", "リヴァプール", "チェルシー"] },
+                "スペインリーグ": { "1部": ["レアル・マドリード", "バルセロナ", "アトレティコ・マドリード", "ソシエダ"] },
+                "ドイツリーグ": { "1部": ["バイエルン・ミュンヘン", "ドルトムント", "レヴァークーゼン", "シュトゥットガルト"] },
+                "イタリアリーグ": { "1部": ["インテル", "ACミラン", "ユヴェントス", "ローマ"] }
+            },
+            "南米": {
+                "ブラジルリーグ": { "1部": ["フラメンゴ", "パルメイラス", "サンパウロ", "サントス"] },
+                "アルゼンチンリーグ": { "1部": ["ボカ・ジュニオルス", "リーベル・プレート", "ラシン・クルブ", "インデペンディエンテ"] }
+            },
+            "北中米": {
+                "アメリカリーグ": { "1部": ["インテル・マイアミ", "LAギャラクシー", "LAFC", "シアトル・サウンダーズ"] },
+                "メキシコリーグ": { "1部": ["クラブ・アメリカ", "モンテレイ", "ティグレス", "チーバス"] }
+            },
+            "アジア・オセアニア": {
+                "日本リーグ": { "1部": ["ヴィッセル神戸", "横浜F・マリノス", "川崎フロンターレ", "浦和レッズ"] },
+                "サウジアラビアリーグ": { "1部": ["アル・ヒラル", "アル・ナスル", "アル・イティハド", "アル・アハリ"] }
+            },
+            "アフリカ": {
+                "エジプトリーグ": { "1部": ["アル・アハリ", "ザマレク"] },
+                "その他リーグ": { "1部": ["サンダウンズ", "ラジャ・カサブランカ"] }
+            }
+        };
+
+        const PRESET_FORMATIONS = {
+            "4-3-3": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 50, y: 55 },
+                { pos: 'CMF', x: 32, y: 42 },
+                { pos: 'CMF', x: 68, y: 42 },
+                { pos: 'LWG', x: 20, y: 20 },
+                { pos: 'CF',  x: 50, y: 15 },
+                { pos: 'RWG', x: 80, y: 20 }
+            ],
+            "4-4-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'LMF', x: 18, y: 45 },
+                { pos: 'CMF', x: 38, y: 48 },
+                { pos: 'CMF', x: 62, y: 48 },
+                { pos: 'RMF', x: 82, y: 45 },
+                { pos: 'CF',  x: 35, y: 20 },
+                { pos: 'CF',  x: 65, y: 20 }
+            ],
+            "4-2-3-1": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 38, y: 55 },
+                { pos: 'DMF', x: 62, y: 55 },
+                { pos: 'LMF', x: 20, y: 35 },
+                { pos: 'OMF', x: 50, y: 32 },
+                { pos: 'RMF', x: 80, y: 35 },
+                { pos: 'CF',  x: 50, y: 15 }
+            ],
+            "4-1-2-3": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 50, y: 56 },
+                { pos: 'CMF', x: 32, y: 40 },
+                { pos: 'CMF', x: 68, y: 40 },
+                { pos: 'LWG', x: 20, y: 20 },
+                { pos: 'CF',  x: 50, y: 15 },
+                { pos: 'RWG', x: 80, y: 20 }
+            ],
+            "4-1-3-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 50, y: 56 },
+                { pos: 'LMF', x: 20, y: 38 },
+                { pos: 'OMF', x: 50, y: 36 },
+                { pos: 'RMF', x: 80, y: 38 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "4-1-4-1": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 50, y: 56 },
+                { pos: 'LMF', x: 16, y: 38 },
+                { pos: 'CMF', x: 38, y: 40 },
+                { pos: 'CMF', x: 62, y: 40 },
+                { pos: 'RMF', x: 84, y: 38 },
+                { pos: 'CF',  x: 50, y: 16 }
+            ],
+            "4-2-1-3": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 36, y: 55 },
+                { pos: 'DMF', x: 64, y: 55 },
+                { pos: 'OMF', x: 50, y: 37 },
+                { pos: 'LWG', x: 20, y: 20 },
+                { pos: 'CF',  x: 50, y: 15 },
+                { pos: 'RWG', x: 80, y: 20 }
+            ],
+            "4-2-2-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'DMF', x: 36, y: 54 },
+                { pos: 'DMF', x: 64, y: 54 },
+                { pos: 'OMF', x: 28, y: 35 },
+                { pos: 'OMF', x: 72, y: 35 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "4-2-4": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'CMF', x: 36, y: 50 },
+                { pos: 'CMF', x: 64, y: 50 },
+                { pos: 'LWG', x: 16, y: 24 },
+                { pos: 'CF',  x: 38, y: 18 },
+                { pos: 'CF',  x: 62, y: 18 },
+                { pos: 'RWG', x: 84, y: 24 }
+            ],
+            "4-3-1-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'CMF', x: 26, y: 48 },
+                { pos: 'DMF', x: 50, y: 53 },
+                { pos: 'CMF', x: 74, y: 48 },
+                { pos: 'OMF', x: 50, y: 34 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "4-3-2-1": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LB', x: 15, y: 68 },
+                { pos: 'CB', x: 38, y: 72 },
+                { pos: 'CB', x: 62, y: 72 },
+                { pos: 'RB', x: 85, y: 68 },
+                { pos: 'CMF', x: 26, y: 48 },
+                { pos: 'DMF', x: 50, y: 53 },
+                { pos: 'CMF', x: 74, y: 48 },
+                { pos: 'OMF', x: 34, y: 32 },
+                { pos: 'OMF', x: 66, y: 32 },
+                { pos: 'CF',  x: 50, y: 16 }
+            ],
+            "3-5-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'LWB', x: 12, y: 48 },
+                { pos: 'DMF', x: 35, y: 56 },
+                { pos: 'DMF', x: 65, y: 56 },
+                { pos: 'RWB', x: 88, y: 48 },
+                { pos: 'OMF', x: 50, y: 36 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "3-4-3": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'LMF', x: 14, y: 46 },
+                { pos: 'CMF', x: 38, y: 50 },
+                { pos: 'CMF', x: 62, y: 50 },
+                { pos: 'RMF', x: 86, y: 46 },
+                { pos: 'LWG', x: 22, y: 22 },
+                { pos: 'CF',  x: 50, y: 16 },
+                { pos: 'RWG', x: 78, y: 22 }
+            ],
+            "3-1-3-3": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'DMF', x: 50, y: 57 },
+                { pos: 'LMF', x: 20, y: 40 },
+                { pos: 'OMF', x: 50, y: 38 },
+                { pos: 'RMF', x: 80, y: 40 },
+                { pos: 'LWG', x: 22, y: 20 },
+                { pos: 'CF',  x: 50, y: 15 },
+                { pos: 'RWG', x: 78, y: 20 }
+            ],
+            "3-1-4-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'DMF', x: 50, y: 57 },
+                { pos: 'LMF', x: 14, y: 40 },
+                { pos: 'CMF', x: 38, y: 42 },
+                { pos: 'CMF', x: 62, y: 42 },
+                { pos: 'RMF', x: 86, y: 40 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "3-2-3-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'DMF', x: 36, y: 56 },
+                { pos: 'DMF', x: 64, y: 56 },
+                { pos: 'LMF', x: 18, y: 38 },
+                { pos: 'OMF', x: 50, y: 36 },
+                { pos: 'RMF', x: 82, y: 38 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "3-2-4-1": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'CB', x: 25, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 75, y: 72 },
+                { pos: 'DMF', x: 36, y: 56 },
+                { pos: 'DMF', x: 64, y: 56 },
+                { pos: 'LMF', x: 14, y: 36 },
+                { pos: 'OMF', x: 38, y: 34 },
+                { pos: 'OMF', x: 62, y: 34 },
+                { pos: 'RMF', x: 86, y: 36 },
+                { pos: 'CF',  x: 50, y: 16 }
+            ],
+            "5-1-2-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LWB', x: 12, y: 64 },
+                { pos: 'CB', x: 30, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 70, y: 72 },
+                { pos: 'RWB', x: 88, y: 64 },
+                { pos: 'DMF', x: 50, y: 54 },
+                { pos: 'CMF', x: 34, y: 38 },
+                { pos: 'CMF', x: 66, y: 38 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "5-2-1-2": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LWB', x: 12, y: 64 },
+                { pos: 'CB', x: 30, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 70, y: 72 },
+                { pos: 'RWB', x: 88, y: 64 },
+                { pos: 'DMF', x: 36, y: 52 },
+                { pos: 'DMF', x: 64, y: 52 },
+                { pos: 'OMF', x: 50, y: 35 },
+                { pos: 'CF',  x: 35, y: 18 },
+                { pos: 'CF',  x: 65, y: 18 }
+            ],
+            "5-4-1": [
+                { pos: 'GK', x: 50, y: 88 },
+                { pos: 'LWB', x: 12, y: 64 },
+                { pos: 'CB', x: 30, y: 72 },
+                { pos: 'CB', x: 50, y: 75 },
+                { pos: 'CB', x: 70, y: 72 },
+                { pos: 'RWB', x: 88, y: 64 },
+                { pos: 'LMF', x: 18, y: 42 },
+                { pos: 'CMF', x: 39, y: 45 },
+                { pos: 'CMF', x: 61, y: 45 },
+                { pos: 'RMF', x: 82, y: 42 },
+                { pos: 'CF',  x: 50, y: 18 }
+            ]
+        };
+
+        let state = {
+            squads: [],            
+            activeSquadId: 'ALL',  
+            players: [],           
+            viewMode: 'card',
+            clubHierarchy: JSON.parse(JSON.stringify(DEFAULT_CLUB_HIERARCHY)),
+            formationPositions: [] 
+        };
+
+        const STORAGE_KEY = 'soccer_squad_manager_full_data_v6';
+
+        /* ==========================================================================
+           2. ユーティリティ & カスタムダイアログ (alert / confirm / prompt 代替)
+           ========================================================================== */
+
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${isError ? 'error' : ''}`;
+            toast.innerHTML = `
+                <i class="fa-solid ${isError ? 'fa-circle-exclamation' : 'fa-circle-check'}" style="color: ${isError ? 'var(--accent-danger)' : 'var(--accent-green)'};"></i>
+                <span>${escapeHTML(message)}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        let confirmResolver = null;
+        function showConfirmModal(message, title = '確認', isDanger = true) {
+            return new Promise(resolve => {
+                confirmResolver = resolve;
+                document.getElementById('customConfirmTitle').textContent = title;
+                document.getElementById('customConfirmMessage').textContent = message;
+                const okBtn = document.getElementById('customConfirmOkBtn');
+                okBtn.className = isDanger ? 'btn btn-danger' : 'btn btn-primary';
+                document.getElementById('customConfirmModal').classList.add('active');
+            });
+        }
+
+        function resolveCustomConfirm(result) {
+            document.getElementById('customConfirmModal').classList.remove('active');
+            if (confirmResolver) {
+                confirmResolver(result);
+                confirmResolver = null;
+            }
+        }
+
+        let promptResolver = null;
+        function showPromptModal(message, title = '入力', placeholder = '') {
+            return new Promise(resolve => {
+                promptResolver = resolve;
+                document.getElementById('customPromptTitle').textContent = title;
+                document.getElementById('customPromptMessage').textContent = message;
+                const input = document.getElementById('customPromptInput');
+                input.value = '';
+                input.placeholder = placeholder;
+                document.getElementById('customPromptModal').classList.add('active');
+                setTimeout(() => input.focus(), 50);
+            });
+        }
+
+        function resolveCustomPrompt(value) {
+            document.getElementById('customPromptModal').classList.remove('active');
+            if (promptResolver) {
+                promptResolver(value);
+                promptResolver = null;
+            }
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function calculateAge(birthdateStr) {
+            if (!birthdateStr) return '不明';
+            const birthDate = new Date(birthdateStr);
+            const today = new Date();
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            return isNaN(age) ? '不明' : age;
+        }
+
+        function switchMainTab(tabName) {
+            const playersSection = document.getElementById('playersSection');
+            const formationSection = document.getElementById('formationSection');
+            const masterSection = document.getElementById('masterSection');
+
+            const tabPlayersBtn = document.getElementById('tabPlayersBtn');
+            const tabFormationBtn = document.getElementById('tabFormationBtn');
+            const tabMasterBtn = document.getElementById('tabMasterBtn');
+
+            playersSection.classList.add('hidden');
+            formationSection.classList.add('hidden');
+            masterSection.classList.add('hidden');
+
+            tabPlayersBtn.classList.remove('active');
+            tabFormationBtn.classList.remove('active');
+            tabMasterBtn.classList.remove('active');
+
+            if (tabName === 'players') {
+                playersSection.classList.remove('hidden');
+                tabPlayersBtn.classList.add('active');
+                renderPlayers();
+            } else if (tabName === 'formation') {
+                formationSection.classList.remove('hidden');
+                tabFormationBtn.classList.add('active');
+                renderFormationSelects();
+                renderFormationPitch();
+            } else {
+                masterSection.classList.remove('hidden');
+                tabMasterBtn.classList.add('active');
+                renderMasterHierarchy();
+            }
+        }
+
+        /* ==========================================================================
+           3. データ永続化 (LocalStorage & 旧データ互換変換)
+           ========================================================================== */
+
+        function loadData() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            if (data) {
+                try {
+                    state = JSON.parse(data);
+                    normalizeState();
+                } catch (e) {
+                    console.error("データの読み込みに失敗しました", e);
+                    initDefaultData();
+                }
+            } else {
+                initDefaultData();
+            }
+        }
+
+        function normalizeState() {
+            if (!state.clubHierarchy) {
+                state.clubHierarchy = JSON.parse(JSON.stringify(DEFAULT_CLUB_HIERARCHY));
+            } else {
+                const leagueRename = {
+                    "プレミアリーグ": "イングランドリーグ",
+                    "ラ・リーガ": "スペインリーグ",
+                    "ブンデスリーガ": "ドイツリーグ",
+                    "セリエA": "イタリアリーグ",
+                    "カンピオナート・ブラジレイロ": "ブラジルリーグ",
+                    "スーペルリーガ（アルゼンチン）": "アルゼンチンリーグ",
+                    "MLS": "アメリカリーグ",
+                    "リーガMX": "メキシコリーグ",
+                    "J1リーグ": "日本リーグ",
+                    "サウジ・プロフェッショナルリーグ": "サウジアラビアリーグ",
+                    "エジプト・プレミアリーグ": "エジプトリーグ"
+                };
+                Object.keys(state.clubHierarchy).forEach(region => {
+                    const leagues = state.clubHierarchy[region] || {};
+                    Object.keys(leagues).forEach(oldLeague => {
+                        const league = leagueRename[oldLeague] || oldLeague;
+                        if (league !== oldLeague && !leagues[league]) {
+                            leagues[league] = leagues[oldLeague];
+                            delete leagues[oldLeague];
+                        }
+                        if (Array.isArray(leagues[league])) {
+                            leagues[league] = { "1部": leagues[league] };
+                        }
+                    });
+                });
+                if (Array.isArray(state.players)) {
+                    const leagueRename = { "プレミアリーグ": "イングランドリーグ", "ラ・リーガ": "スペインリーグ", "ブンデスリーガ": "ドイツリーグ", "セリエA": "イタリアリーグ", "J1リーグ": "日本リーグ" };
+                    state.players.forEach(p => { if (leagueRename[p.league]) p.league = leagueRename[p.league]; });
+                }
+            }
+            if (!Array.isArray(state.squads)) {
+                state.squads = [];
+            }
+            if (Array.isArray(state.players)) {
+                state.players.forEach(p => {
+                    if (!p.squadIds) {
+                        p.squadIds = p.squadId ? [p.squadId] : [];
+                    }
+                    if (!Array.isArray(p.pastClubs)) {
+                        p.pastClubs = [];
+                    }
+                    if (!p.positionAptitudes || typeof p.positionAptitudes !== 'object') {
+                        p.positionAptitudes = {};
+                        if (p.detailPosition) p.positionAptitudes[p.detailPosition] = 2;
+                    }
+                    if (!p.division && p.club) p.division = "1部";
+                });
+            }
+            if (!state.formationBySquad || typeof state.formationBySquad !== 'object' || Array.isArray(state.formationBySquad)) {
+                state.formationBySquad = {};
+            }
+            // 旧バージョンの共通配置は、従来の表示対象スカッドに引き継ぐ
+            if (Array.isArray(state.formationPositions) && state.formationPositions.length > 0) {
+                const legacyKey = state.activeSquadId || 'ALL';
+                if (!state.formationBySquad[legacyKey]) {
+                    const legacyPlayers = state.formationPositions
+                        .map(node => node.playerId || null).filter(Boolean);
+                    const migrationPreset = PRESET_FORMATIONS['4-3-3'];
+                    state.formationBySquad[legacyKey] = {
+                        presetName: '4-3-3',
+                        positions: migrationPreset.map((slot, index) => ({
+                            id: 'migrated_slot_' + index,
+                            playerId: legacyPlayers[index] || null,
+                            defaultPos: slot.pos, x: slot.x, y: slot.y
+                        }))
+                    };
+                }
+            }
+            delete state.formationPositions;
+            Object.keys(state.formationBySquad).forEach(key => {
+                const saved = state.formationBySquad[key];
+                if (Array.isArray(saved)) state.formationBySquad[key] = { presetName: '', positions: saved };
+                else if (!saved || !Array.isArray(saved.positions)) state.formationBySquad[key] = { presetName: '', positions: [] };
+                if (state.formationBySquad[key] && Array.isArray(state.formationBySquad[key].positions)) {
+                    state.formationBySquad[key].positions.forEach(node => {
+                        if (!Array.isArray(node.backupPlayerIds)) node.backupPlayerIds = [];
+                    });
+                }
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function initDefaultData() {
+            const squad1 = 'squad_japan';
+            const squad2 = 'squad_a_team';
+
+            state = {
+                squads: [
+                    { id: squad1, name: '日本代表' },
+                    { id: squad2, name: 'Aチーム主力' }
+                ],
+                activeSquadId: 'ALL',
+                viewMode: 'card',
+                clubHierarchy: JSON.parse(JSON.stringify(DEFAULT_CLUB_HIERARCHY)),
+                players: [
+                    {
+                        id: 'p1',
+                        squadIds: [squad1, squad2],
+                        name: '久保 建英',
+                        position: 'FW',
+                        nationality: '日本',
+                        region: 'ヨーロッパ',
+                        league: 'スペインリーグ',
+                        division: '1部',
+                        club: 'ソシエダ',
+                        height: 173,
+                        birthdate: '2001-06-04',
+                        foot: '左足',
+                        pastClubs: [
+                            { clubName: 'FCバルセロナ 下部組織', period: '2011 - 2015' },
+                            { clubName: 'FC東京', period: '2016 - 2019' },
+                            { clubName: '横浜F・マリノス (期限付き)', period: '2018' },
+                            { clubName: 'レアル・マドリード', period: '2019 - 2022' },
+                            { clubName: 'マジョルカ (期限付き)', period: '2019 - 2020, 2021 - 2022' },
+                            { clubName: 'ビジャレアル / ヘタフェ (期限付き)', period: '2020 - 2021' }
+                        ]
+                    },
+                    {
+                        id: 'p2',
+                        squadIds: [squad1],
+                        name: '遠藤 航',
+                        position: 'MF',
+                        nationality: '日本',
+                        region: 'ヨーロッパ',
+                        league: 'イングランドリーグ',
+                        division: '1部',
+                        club: 'リヴァプール',
+                        height: 178,
+                        birthdate: '1993-02-09',
+                        foot: '右足',
+                        pastClubs: [
+                            { clubName: '湘南ベルマーレ', period: '2010 - 2015' },
+                            { clubName: '浦和レッズ', period: '2016 - 2018' },
+                            { clubName: 'シント＝トロイデン', period: '2018 - 2020' },
+                            { clubName: 'シュトゥットガルト', period: '2019 - 2023' }
+                        ]
+                    }
+                ]
+            };
+            saveData();
+        }
+
+        /* ==========================================================================
+           4. スカッド（タグ）管理
+           ========================================================================== */
+
+        function renderSquadSelect() {
+            const select = document.getElementById('squadSelect');
+            select.innerHTML = '<option value="ALL">🌟 全ての選手</option>';
+            
+            state.squads.forEach(squad => {
+                const option = document.createElement('option');
+                option.value = squad.id;
+                option.textContent = `🏷️ ${squad.name}`;
+                if (squad.id === state.activeSquadId) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+
+        function switchSquad(squadId) {
+            state.activeSquadId = squadId;
+            saveData();
+            renderPlayers();
+        }
+
+        function openSquadModal(mode) {
+            document.getElementById('squadMode').value = mode;
+            const titleEl = document.getElementById('squadModalTitle');
+            const inputEl = document.getElementById('squadNameInput');
+
+            if (mode === 'create') {
+                titleEl.textContent = '新規スカッドタグ作成';
+                inputEl.value = '';
+            } else {
+                if (state.activeSquadId === 'ALL') {
+                    showToast('「全ての選手」表示中は名前変更ができません。特定のスカッドタグを選択してください。', true);
+                    return;
+                }
+                titleEl.textContent = 'スカッドタグ名の変更';
+                const currentSquad = state.squads.find(s => s.id === state.activeSquadId);
+                inputEl.value = currentSquad ? currentSquad.name : '';
+            }
+            document.getElementById('squadModal').classList.add('active');
+        }
+
+        function closeSquadModal() {
+            document.getElementById('squadModal').classList.remove('active');
+        }
+
+        function handleSquadSubmit(e) {
+            e.preventDefault();
+            const mode = document.getElementById('squadMode').value;
+            const name = document.getElementById('squadNameInput').value.trim();
+
+            if (!name) return;
+
+            if (mode === 'create') {
+                const newId = 'squad_' + Date.now();
+                state.squads.push({ id: newId, name: name });
+                state.activeSquadId = newId;
+            } else {
+                const currentSquad = state.squads.find(s => s.id === state.activeSquadId);
+                if (currentSquad) {
+                    currentSquad.name = name;
+                }
+            }
+
+            saveData();
+            renderSquadSelect();
+            renderPlayers();
+            closeSquadModal();
+        }
+
+        async function deleteSquad() {
+            if (state.activeSquadId === 'ALL') {
+                showToast('「全ての選手」表示は削除できません。', true);
+                return;
+            }
+
+            const currentSquad = state.squads.find(s => s.id === state.activeSquadId);
+            if (!currentSquad) return;
+
+            const confirmed = await showConfirmModal(
+                `スカッドタグ「${currentSquad.name}」を削除してもよろしいですか？\n※選手データ自体は削除されず、タグのみ解除されます。`,
+                'スカッドタグ削除'
+            );
+            if (confirmed) {
+                state.players.forEach(p => {
+                    p.squadIds = (p.squadIds || []).filter(id => id !== state.activeSquadId);
+                });
+
+                state.squads = state.squads.filter(s => s.id !== state.activeSquadId);
+                state.activeSquadId = 'ALL';
+
+                saveData();
+                renderSquadSelect();
+                renderPlayers();
+                showToast(`スカッド「${currentSquad.name}」を削除しました。`);
+            }
+        }
+
+        /* ==========================================================================
+           5. 選手管理機能 (CRUD, 過去所属クラブオートコンプリート & 詳細モーダル)
+           ========================================================================== */
+
+        function renderSquadTagCheckboxes(selectedSquadIds = []) {
+            const container = document.getElementById('squadTagCheckboxes');
+            if (state.squads.length === 0) {
+                container.innerHTML = '<span style="font-size:0.8rem; color:var(--text-muted);">登録されているスカッドタグがありません。</span>';
+                return;
+            }
+
+            let html = '';
+            state.squads.forEach(squad => {
+                const isChecked = selectedSquadIds.includes(squad.id) ? 'checked' : '';
+                html += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="playerSquadTags" value="${squad.id}" ${isChecked}>
+                        <span>${escapeHTML(squad.name)}</span>
+                    </label>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function initRegionSelect() {
+            const regionSelect = document.getElementById('playerRegion');
+            regionSelect.innerHTML = '<option value="">未選択</option>';
+            Object.keys(state.clubHierarchy).forEach(region => {
+                regionSelect.innerHTML += `<option value="${escapeHTML(region)}">${escapeHTML(region)}</option>`;
+            });
+            updateLeagueSelect();
+        }
+
+        function updateLeagueSelect() {
+            const region = document.getElementById('playerRegion').value;
+            const leagueSelect = document.getElementById('playerLeague');
+            leagueSelect.innerHTML = '<option value="">未選択</option>';
+            if (region && state.clubHierarchy[region]) {
+                Object.keys(state.clubHierarchy[region]).forEach(league => {
+                    leagueSelect.innerHTML += `<option value="${escapeHTML(league)}">${escapeHTML(league)}</option>`;
+                });
+            }
+            updateDivisionSelect();
+        }
+
+        function updateDivisionSelect() {
+            const region = document.getElementById('playerRegion').value;
+            const league = document.getElementById('playerLeague').value;
+            const divisionSelect = document.getElementById('playerDivision');
+            divisionSelect.innerHTML = '<option value="">未選択</option>';
+            const divisions = region && league && state.clubHierarchy[region] ? state.clubHierarchy[region][league] : null;
+            if (divisions) Object.keys(divisions).forEach(division => {
+                divisionSelect.innerHTML += `<option value="${escapeHTML(division)}">${escapeHTML(division)}</option>`;
+            });
+            updateClubSelect();
+        }
+
+        function updateClubSelect() {
+            const region = document.getElementById('playerRegion').value;
+            const league = document.getElementById('playerLeague').value;
+            const division = document.getElementById('playerDivision').value;
+            const clubSelect = document.getElementById('playerClub');
+            clubSelect.innerHTML = '<option value="">未選択</option>';
+            const clubs = region && league && division && state.clubHierarchy[region] && state.clubHierarchy[region][league]
+                ? state.clubHierarchy[region][league][division] : [];
+            (clubs || []).forEach(club => {
+                clubSelect.innerHTML += `<option value="${escapeHTML(club)}">${escapeHTML(club)}</option>`;
+            });
+        }
+
+        function getAllMasterClubNames() {
+            const names = [];
+            Object.keys(state.clubHierarchy || {}).forEach(region => {
+                Object.keys(state.clubHierarchy[region] || {}).forEach(league => {
+                    Object.keys(state.clubHierarchy[region][league] || {}).forEach(division => {
+                        (state.clubHierarchy[region][league][division] || []).forEach(club => {
+                            if (!names.includes(club)) names.push(club);
+                        });
+                    });
+                });
+            });
+            return names;
+        }
+
+        /* 過去所属クラブの動的フォーム入力制御 (オートコンプリート機能付き) */
+        function addPastClubInput(clubName = '', period = '', transferType = 'permanent') {
+            const container = document.getElementById('pastClubsContainer');
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'past-club-item';
+            itemDiv.innerHTML = `
+                <div class="autocomplete-wrapper">
+                    <input type="text" class="form-control past-club-name" placeholder="過去のクラブ名 (例: FC東京)" value="${escapeHTML(clubName)}" autocomplete="off">
+                    <div class="autocomplete-suggestions"></div>
+                </div>
+                <input type="text" class="form-control past-club-period" placeholder="期間 (例: 2016-2019)" value="${escapeHTML(period)}" style="flex: 1;">
+                <select class="form-control past-club-type" title="移籍区分">
+                    <option value="permanent">通常移籍</option>
+                    <option value="loan">ローン移籍</option>
+                </select>
+                <button type="button" class="btn btn-danger btn-icon btn-sm" onclick="this.parentElement.remove()" title="削除"><i class="fa-solid fa-times"></i></button>
+            `;
+            itemDiv.querySelector('.past-club-type').value = transferType === 'loan' ? 'loan' : 'permanent';
+            container.appendChild(itemDiv);
+
+            const inputEl = itemDiv.querySelector('.past-club-name');
+            const suggestBox = itemDiv.querySelector('.autocomplete-suggestions');
+
+            inputEl.addEventListener('input', () => {
+                const query = inputEl.value.trim().toLowerCase();
+                suggestBox.innerHTML = '';
+
+                if (!query) {
+                    suggestBox.style.display = 'none';
+                    return;
+                }
+
+                const allClubs = getAllMasterClubNames();
+                const matched = allClubs.filter(c => c.toLowerCase().includes(query));
+
+                if (matched.length === 0) {
+                    suggestBox.style.display = 'none';
+                    return;
+                }
+
+                matched.forEach(matchName => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.textContent = matchName;
+                    div.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        inputEl.value = matchName;
+                        suggestBox.style.display = 'none';
+                    });
+                    suggestBox.appendChild(div);
+                });
+
+                suggestBox.style.display = 'block';
+            });
+
+            inputEl.addEventListener('blur', () => {
+                setTimeout(() => {
+                    suggestBox.style.display = 'none';
+                }, 200);
+            });
+
+            inputEl.addEventListener('focus', () => {
+                if (inputEl.value.trim()) {
+                    inputEl.dispatchEvent(new Event('input'));
+                }
+            });
+        }
+
+        const APTITUDE_LANES = [
+            ['LSB', 'LMF', 'LWG'],
+            ['GK', 'CB', 'DMF', 'CMF', 'OMF', 'ST', 'CF'],
+            ['RSB', 'RMF', 'RWG']
+        ];
+
+        function renderAptitudePitch(containerId, aptitudes, editable) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = '';
+            APTITUDE_LANES.forEach((lane, laneIndex) => {
+                const laneEl = document.createElement('div');
+                laneEl.className = 'aptitude-lane';
+                lane.forEach(pos => {
+                    const level = Number(aptitudes[pos] || 0);
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'aptitude-position level-' + (level >= 2 ? 2 : level === 1 ? 1 : 0);
+                    button.textContent = pos;
+                    button.title = pos + '：' + (level >= 2 ? '本適正' : level === 1 ? '準適正' : '適正なし');
+                    button.setAttribute('aria-label', button.title);
+                    if (editable) {
+                        button.addEventListener('click', () => {
+                            const current = Number(window.editingPlayerAptitudes[pos] || 0);
+                            const next = (current + 1) % 3;
+                            if (next === 0) delete window.editingPlayerAptitudes[pos];
+                            else window.editingPlayerAptitudes[pos] = next;
+                            renderAptitudePitch(containerId, window.editingPlayerAptitudes, true);
+                        });
+                    } else {
+                        button.disabled = true;
+                    }
+                    laneEl.appendChild(button);
+                });
+                container.appendChild(laneEl);
+            });
+        }
+
+        function openPlayerModal(mode, playerId = null) {
+            const form = document.getElementById('playerForm');
+            form.reset();
+            document.getElementById('pastClubsContainer').innerHTML = '';
+            initRegionSelect();
+            window.editingPlayerAptitudes = {};
+
+            if (mode === 'create') {
+                document.getElementById('playerModalTitle').textContent = '選手を登録';
+                document.getElementById('playerId').value = '';
+                
+                document.getElementById('playerBirthdate').value = '2000-01-01';
+                document.getElementById('playerHeight').value = 180;
+
+                const initialTags = (state.activeSquadId !== 'ALL') ? [state.activeSquadId] : [];
+                renderSquadTagCheckboxes(initialTags);
+            } else if (mode === 'edit') {
+                document.getElementById('playerModalTitle').textContent = '選手情報の編集';
+                const player = state.players.find(p => p.id === playerId);
+                if (!player) return;
+
+                document.getElementById('playerId').value = player.id;
+                window.editingPlayerAptitudes = Object.assign({}, player.positionAptitudes || {});
+                if (!Object.keys(window.editingPlayerAptitudes).length && player.detailPosition) window.editingPlayerAptitudes[player.detailPosition] = 2;
+                document.getElementById('playerName').value = player.name;
+                document.getElementById('playerPosition').value = player.position;
+                document.getElementById('playerDetailPosition').value = player.detailPosition || '';
+                document.getElementById('playerFoot').value = player.foot;
+                document.getElementById('playerBirthdate').value = player.birthdate || '2000-01-01';
+                document.getElementById('playerHeight').value = player.height || 180;
+                document.getElementById('playerNationality').value = player.nationality || '';
+
+                renderSquadTagCheckboxes(player.squadIds || []);
+
+                document.getElementById('playerRegion').value = player.region || '';
+                updateLeagueSelect();
+                document.getElementById('playerLeague').value = player.league || '';
+                updateDivisionSelect();
+                document.getElementById('playerDivision').value = player.division || (player.club ? '1部' : '');
+                updateClubSelect();
+                document.getElementById('playerClub').value = player.club || '';
+
+                if (Array.isArray(player.pastClubs) && player.pastClubs.length > 0) {
+                    player.pastClubs.forEach(item => {
+                        addPastClubInput(item.clubName, item.period, item.transferType);
+                    });
+                }
+            }
+
+            renderAptitudePitch('playerAptitudePitch', window.editingPlayerAptitudes, true);
+            document.getElementById('playerModal').classList.add('active');
+        }
+
+        function closePlayerModal() {
+            document.getElementById('playerModal').classList.remove('active');
+        }
+
+        function handlePlayerSubmit(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('playerId').value;
+            
+            const checkedSquadIds = Array.from(document.querySelectorAll('input[name="playerSquadTags"]:checked'))
+                .map(cb => cb.value);
+
+            const pastClubs = [];
+            const pastItems = document.querySelectorAll('.past-club-item');
+            pastItems.forEach(item => {
+                const cName = item.querySelector('.past-club-name').value.trim();
+                const pPeriod = item.querySelector('.past-club-period').value.trim();
+                const transferType = item.querySelector('.past-club-type').value;
+                if (cName) {
+                    pastClubs.push({ clubName: cName, period: pPeriod, transferType: transferType });
+                }
+            });
+
+            const playerData = {
+                id: id || 'player_' + Date.now(),
+                squadIds: checkedSquadIds,
+                name: document.getElementById('playerName').value.trim(),
+                position: document.getElementById('playerPosition').value,
+                detailPosition: document.getElementById('playerDetailPosition').value,
+                positionAptitudes: Object.assign({}, window.editingPlayerAptitudes || {}),
+                foot: document.getElementById('playerFoot').value,
+                birthdate: document.getElementById('playerBirthdate').value,
+                height: document.getElementById('playerHeight').value ? Number(document.getElementById('playerHeight').value) : null,
+                nationality: document.getElementById('playerNationality').value.trim(),
+                region: document.getElementById('playerRegion').value,
+                league: document.getElementById('playerLeague').value,
+                division: document.getElementById('playerDivision').value,
+                club: document.getElementById('playerClub').value,
+                pastClubs: pastClubs
+            };
+
+            if (id) {
+                const index = state.players.findIndex(p => p.id === id);
+                if (index !== -1) state.players[index] = playerData;
+            } else {
+                state.players.push(playerData);
+            }
+
+            saveData();
+            renderPlayers();
+            closePlayerModal();
+            showToast(id ? '選手情報を更新しました。' : '選手を登録しました。');
+        }
+
+        async function deletePlayer(id) {
+            const player = state.players.find(p => p.id === id);
+            if (!player) return;
+            const confirmed = await showConfirmModal(`「${player.name}」選手を削除しますか？`, '選手削除');
+            if (confirmed) {
+                state.players = state.players.filter(p => p.id !== id);
+                Object.keys(state.formationBySquad || {}).forEach(key => {
+                    state.formationBySquad[key].positions =
+                        state.formationBySquad[key].positions.filter(node => node.playerId !== id);
+                    state.formationBySquad[key].positions.forEach(node => {
+                        node.backupPlayerIds = (node.backupPlayerIds || []).filter(playerId => playerId !== id);
+                    });
+                });
+                saveData();
+                renderPlayers();
+                showToast(`「${player.name}」を削除しました。`);
+            }
+        }
+
+        /* 選手詳細モーダル (フォーカス/クリック時の過去経歴閲覧) */
+        function openPlayerDetailModal(playerId) {
+            const player = state.players.find(p => p.id === playerId);
+            if (!player) return;
+
+            document.getElementById('detailPlayerName').textContent = player.name;
+            const posBadge = document.getElementById('detailPlayerPosBadge');
+            posBadge.textContent = player.position;
+            posBadge.className = `badge badge-${player.position}`;
+
+            document.getElementById('detailPlayerNat').textContent = player.nationality || '未設定';
+            document.getElementById('detailPlayerAge').textContent = `${calculateAge(player.birthdate)}歳`;
+            document.getElementById('detailPlayerBirth').textContent = player.birthdate || '-';
+            document.getElementById('detailPlayerPhysical').textContent = `${player.height ? player.height + 'cm' : '-'} / ${player.foot}`;
+            document.getElementById('detailPlayerCurrentClub').textContent = player.club ? `${player.region || ''} ＞ ${player.league || ''} ＞ ${player.division || ''} ＞ ${player.club}` : '所属なし';
+            const aptitude = Object.assign({}, player.positionAptitudes || {});
+            if (!Object.keys(aptitude).length && player.detailPosition) aptitude[player.detailPosition] = 2;
+            renderAptitudePitch('detailPlayerAptitudePitch', aptitude, false);
+
+            const tagsContainer = document.getElementById('detailPlayerTags');
+            let tagsHtml = '';
+            if (player.squadIds && player.squadIds.length > 0) {
+                player.squadIds.forEach(sqId => {
+                    const sq = state.squads.find(s => s.id === sqId);
+                    if (sq) tagsHtml += `<span class="squad-tag"><i class="fa-solid fa-tag"></i> ${escapeHTML(sq.name)}</span>`;
+                });
+            } else {
+                tagsHtml = '<span style="font-size:0.75rem; color:var(--text-muted);">所属スカッドなし</span>';
+            }
+            tagsContainer.innerHTML = tagsHtml;
+
+            const timelineContainer = document.getElementById('detailPastClubsTimeline');
+            if (Array.isArray(player.pastClubs) && player.pastClubs.length > 0) {
+                let timelineHtml = '<div class="detail-timeline">';
+                player.pastClubs.forEach(item => {
+                    timelineHtml += `
+                        <div class="timeline-item">
+                            <div class="timeline-club">${escapeHTML(item.clubName)}<span class="timeline-transfer-type${item.transferType === 'loan' ? ' loan' : ''}">${item.transferType === 'loan' ? 'ローン移籍' : '通常移籍'}</span></div>
+                            <div class="timeline-period">${escapeHTML(item.period || '期間未設定')}</div>
+                        </div>
+                    `;
+                });
+                timelineHtml += '</div>';
+                timelineContainer.innerHTML = timelineHtml;
+            } else {
+                timelineContainer.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); padding:10px 0;">登録されている過去所属クラブはありません。</div>';
+            }
+
+            document.getElementById('detailEditBtn').onclick = () => {
+                closePlayerDetailModal();
+                openPlayerModal('edit', player.id);
+            };
+
+            document.getElementById('playerDetailModal').classList.add('active');
+        }
+
+        function closePlayerDetailModal() {
+            document.getElementById('playerDetailModal').classList.remove('active');
+        }
+
+        /* ==========================================================================
+           6. 描画・ビュー切替 & 検索・フィルター・ソート
+           ========================================================================== */
+
+        function switchView(mode) {
+            state.viewMode = mode;
+            document.getElementById('viewCardBtn').classList.toggle('active', mode === 'card');
+            document.getElementById('viewTableBtn').classList.toggle('active', mode === 'table');
+            saveData();
+            renderPlayers();
+        }
+
+        function getFilteredPlayers() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+            const position = document.getElementById('positionFilter').value;
+            const sortMode = document.getElementById('sortSelect').value;
+
+            let result = state.players.filter(player => {
+                if (state.activeSquadId !== 'ALL') {
+                    if (!player.squadIds || !player.squadIds.includes(state.activeSquadId)) {
+                        return false;
+                    }
+                }
+
+                if (position && player.position !== position) return false;
+
+                if (keyword) {
+                    const pastClubsStr = (player.pastClubs || []).map(c => c.clubName).join(' ');
+                    const targetStr = [
+                        player.name,
+                        player.nationality,
+                        player.club,
+                        player.league,
+                        player.region,
+                        pastClubsStr
+                    ].join(' ').toLowerCase();
+                    
+                    if (!targetStr.includes(keyword)) return false;
+                }
+
+                return true;
+            });
+
+            result.sort((a, b) => {
+                if (sortMode === 'age-asc') {
+                    if (!a.birthdate) return 1;
+                    if (!b.birthdate) return -1;
+                    return b.birthdate.localeCompare(a.birthdate);
+                } else if (sortMode === 'age-desc') {
+                    if (!a.birthdate) return 1;
+                    if (!b.birthdate) return -1;
+                    return a.birthdate.localeCompare(b.birthdate);
+                } else if (sortMode === 'height-asc') {
+                    if (a.height === null || a.height === undefined) return 1;
+                    if (b.height === null || b.height === undefined) return -1;
+                    return a.height - b.height;
+                } else if (sortMode === 'height-desc') {
+                    if (a.height === null || a.height === undefined) return 1;
+                    if (b.height === null || b.height === undefined) return -1;
+                    return b.height - a.height;
+                } else if (sortMode === 'position-asc' || sortMode === 'position-desc') {
+                    const positionOrder = { 'FW': 0, 'MF': 1, 'DF': 2, 'GK': 3 };
+                    const aOrder = positionOrder[a.position] !== undefined ? positionOrder[a.position] : 99;
+                    const bOrder = positionOrder[b.position] !== undefined ? positionOrder[b.position] : 99;
+                    return sortMode === 'position-asc'
+                        ? aOrder - bOrder
+                        : bOrder - aOrder;
+                }
+                return 0;
+            });
+
+            return result;
+        }
+
+        function renderPlayers() {
+            const container = document.getElementById('playerListContainer');
+            const players = getFilteredPlayers();
+            const countElement = document.getElementById('playerCount');
+            if (countElement) {
+                countElement.textContent = `表示中: ${players.length}名`;
+            }
+
+            if (players.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa-solid fa-user-slash"></i>
+                        <p>該当する選手データが見つかりません。</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (state.viewMode === 'card') {
+                renderGridView(container, players);
+            } else {
+                renderTableView(container, players);
+            }
+        }
+
+        function renderGridView(container, players) {
+            let html = '<div class="grid-view">';
+            players.forEach(p => {
+                const age = calculateAge(p.birthdate);
+                const heightStr = p.height ? `${p.height} cm` : '-';
+                const clubStr = p.club ? `${p.club}` : '所属なし';
+                const natStr = p.nationality ? p.nationality : '未設定';
+
+                let tagBadgesHtml = '';
+                if (p.squadIds && p.squadIds.length > 0) {
+                    p.squadIds.forEach(sqId => {
+                        const sq = state.squads.find(s => s.id === sqId);
+                        if (sq) {
+                            tagBadgesHtml += `<span class="squad-tag"><i class="fa-solid fa-tag"></i> ${escapeHTML(sq.name)}</span>`;
+                        }
+                    });
+                } else {
+                    tagBadgesHtml = '<span style="font-size:0.75rem; color:var(--text-muted);">所属スカッドなし</span>';
+                }
+
+                html += `
+                    <div class="player-card" tabindex="0" onclick="openPlayerDetailModal('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' ') { openPlayerDetailModal('${p.id}'); event.preventDefault(); }">
+                        <div>
+                            <div class="card-header">
+                                <div class="player-name">${escapeHTML(p.name)}</div>
+                                <span>
+                                    <span class="badge badge-${escapeHTML(p.position)}">${escapeHTML(p.position)}</span>
+                                    ${p.detailPosition ? `<span class="badge badge-${escapeHTML(p.position)}" style="margin-left:4px; opacity:.85;">${escapeHTML(p.detailPosition)}</span>` : ''}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div><i class="fa-solid fa-earth-americas"></i> ${escapeHTML(natStr)}</div>
+                                <div><i class="fa-solid fa-shield-halved"></i> ${escapeHTML(clubStr)}</div>
+                                <div><i class="fa-solid fa-cake-candles"></i> ${age}歳</div>
+                                <div><i class="fa-solid fa-ruler-vertical"></i> ${heightStr} / ${escapeHTML(p.foot)}</div>
+                                <div style="margin-top: 4px; align-items: flex-start;">
+                                    <i class="fa-solid fa-tags" style="margin-top: 4px;"></i>
+                                    <div class="squad-tags-container">${tagBadgesHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-actions" onclick="event.stopPropagation()">
+                            <button class="btn btn-secondary btn-icon" onclick="openPlayerModal('edit', '${p.id}')" title="編集"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn btn-danger btn-icon" onclick="deletePlayer('${p.id}')" title="削除"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTableView(container, players) {
+            let html = `
+                <div class="table-view">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>詳細Pos</th>
+                                <th>選手名</th>
+                                <th>所属スカッドタグ</th>
+                                <th>年齢</th>
+                                <th>国籍</th>
+                                <th>所属クラブ</th>
+                                <th>身長</th>
+                                <th>利き足</th>
+                                <th style="text-align: right;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            players.forEach(p => {
+                const age = calculateAge(p.birthdate);
+                const heightStr = p.height ? `${p.height}cm` : '-';
+                const clubStr = p.club ? `${p.club}` : '-';
+                const natStr = p.nationality ? p.nationality : '-';
+
+                let tagBadgesHtml = '';
+                if (p.squadIds && p.squadIds.length > 0) {
+                    p.squadIds.forEach(sqId => {
+                        const sq = state.squads.find(s => s.id === sqId);
+                        if (sq) {
+                            tagBadgesHtml += `<span class="squad-tag" style="margin-right:4px;"><i class="fa-solid fa-tag"></i> ${escapeHTML(sq.name)}</span>`;
+                        }
+                    });
+                } else {
+                    tagBadgesHtml = '-';
+                }
+
+                html += `
+                    <tr class="clickable-row" tabindex="0" onclick="openPlayerDetailModal('${p.id}')" onkeydown="if(event.key==='Enter'||event.key===' ') { openPlayerDetailModal('${p.id}'); event.preventDefault(); }">
+                        <td><span class="badge badge-${escapeHTML(p.position)}">${escapeHTML(p.position)}</span></td>
+                        <td>${p.detailPosition ? `<span class="badge badge-${escapeHTML(p.position)}">${escapeHTML(p.detailPosition)}</span>` : '-'}</td>
+                        <td style="font-weight: 600;">${escapeHTML(p.name)}</td>
+                        <td>${tagBadgesHtml}</td>
+                        <td>${age}歳</td>
+                        <td>${escapeHTML(natStr)}</td>
+                        <td>${escapeHTML(clubStr)}</td>
+                        <td>${heightStr}</td>
+                        <td>${escapeHTML(p.foot)}</td>
+                        <td style="text-align: right;" onclick="event.stopPropagation()">
+                            <button class="btn btn-secondary btn-icon" style="padding: 4px 8px;" onclick="openPlayerModal('edit', '${p.id}')" title="編集"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button class="btn btn-danger btn-icon" style="padding: 4px 8px;" onclick="deletePlayer('${p.id}')" title="削除"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        /* ==========================================================================
+           7. フォーメーション画面ロジック
+           ========================================================================== */
+
+        let draggedData = null;
+
+        function getCurrentFormation() {
+            if (!state.formationBySquad) state.formationBySquad = {};
+            const key = state.activeSquadId || 'ALL';
+            if (!state.formationBySquad[key]) state.formationBySquad[key] = { presetName: '', positions: [] };
+            return state.formationBySquad[key];
+        }
+
+        function getCurrentFormationPositions() {
+            return getCurrentFormation().positions;
+        }
+
+        function renderFormationSelects() {
+            const select = document.getElementById('formationSquadSelect');
+            select.innerHTML = '<option value="ALL">🌟 全ての選手</option>';
+            state.squads.forEach(squad => {
+                const option = document.createElement('option');
+                option.value = squad.id;
+                option.textContent = `🏷️ ${squad.name}`;
+                if (squad.id === state.activeSquadId) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function switchFormationSquad(squadId) {
+            state.activeSquadId = squadId;
+            saveData();
+            renderSquadSelect();
+            renderFormationPitch();
+        }
+
+        function getFormationEligiblePlayers() {
+            return state.players.filter(p => {
+                if (state.activeSquadId !== 'ALL') return p.squadIds && p.squadIds.includes(state.activeSquadId);
+                return true;
+            });
+        }
+
+        function renderFormationPitch() {
+            const pitchContainer = document.getElementById('pitchPlayersContainer');
+            const backupPitchContainer = document.getElementById('backupPitchPlayersContainer');
+            const benchContainer = document.getElementById('benchList');
+            const benchBadge = document.getElementById('benchCountBadge');
+            const formation = getCurrentFormation();
+            const positions = formation.positions;
+
+            pitchContainer.innerHTML = '';
+            backupPitchContainer.innerHTML = '';
+            benchContainer.innerHTML = '';
+
+            const presetSelect = document.getElementById('presetSelect');
+            if (formation.presetName && PRESET_FORMATIONS[formation.presetName]) presetSelect.value = formation.presetName;
+
+            const eligiblePlayers = getFormationEligiblePlayers();
+            const eligibleIds = new Set(eligiblePlayers.map(p => p.id));
+            const placedPlayerIds = new Set();
+
+            positions.forEach((node, index) => {
+                if (node.playerId && eligibleIds.has(node.playerId)) placedPlayerIds.add(node.playerId);
+                if (!Array.isArray(node.backupPlayerIds)) node.backupPlayerIds = [];
+                node.backupPlayerIds = node.backupPlayerIds.filter(id => eligibleIds.has(id));
+                node.backupPlayerIds.forEach(id => placedPlayerIds.add(id));
+                const player = node.playerId && eligibleIds.has(node.playerId)
+                    ? state.players.find(p => p.id === node.playerId) : null;
+
+                const nodeEl = document.createElement('div');
+                nodeEl.className = 'pitch-player-node slot-drop-target' + (player ? ' has-player' : '');
+                nodeEl.style.left = `${node.x}%`;
+                nodeEl.style.top = `${node.y}%`;
+                nodeEl.title = player
+                    ? `${node.defaultPos || 'ポジション枠'}：${player.name}（ドラッグで枠を入れ替え）`
+                    : `${node.defaultPos || 'ポジション枠'}：未配置（ベンチから選手をドラッグ）`;
+                nodeEl.setAttribute('draggable', player ? 'true' : 'false');
+
+                nodeEl.addEventListener('dragstart', (e) => {
+                    if (!node.playerId || !eligibleIds.has(node.playerId)) { e.preventDefault(); return; }
+                    draggedData = { type: 'slot', slotIndex: index };
+                    nodeEl.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+                });
+                nodeEl.addEventListener('dragend', () => nodeEl.classList.remove('dragging'));
+                nodeEl.addEventListener('dragover', (e) => { e.preventDefault(); nodeEl.classList.add('drag-over'); });
+                nodeEl.addEventListener('dragleave', () => nodeEl.classList.remove('drag-over'));
+                nodeEl.addEventListener('drop', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    nodeEl.classList.remove('drag-over');
+                    handleFormationSlotDrop(index);
+                });
+                if (player) {
+                    nodeEl.addEventListener('click', (e) => {
+                        if (e.target.closest('.node-remove-btn')) return;
+                        openPlayerDetailModal(player.id);
+                    });
+                    nodeEl.title += '（クリックで適正を確認）';
+                }
+
+                const iconContent = player
+                    ? `<span class="badge badge-${escapeHTML(player.position)}">${escapeHTML(player.detailPosition || player.position)}</span>`
+                    : `<span style="font-size:0.75rem;">${escapeHTML(node.defaultPos || '枠')}</span>`;
+                const labelName = player ? escapeHTML(player.name) : '未配置';
+                nodeEl.innerHTML = `
+                    <div class="player-icon-circle ${!player ? 'empty' : ''}">
+                        ${iconContent}
+                        ${player ? `<div class="node-remove-btn" onclick="event.stopPropagation(); removePlayerFromNode('${node.id}')"><i class="fa-solid fa-xmark"></i></div>` : ''}
+                    </div>
+                    <div class="player-label-name">${labelName}</div>`;
+                pitchContainer.appendChild(nodeEl);
+            });
+
+            positions.forEach((node, index) => {
+                const backupNode = document.createElement('div');
+                backupNode.className = 'backup-pitch-node';
+                backupNode.style.left = `${node.x}%`;
+                backupNode.style.top = `${node.y}%`;
+                const backupPlayers = (node.backupPlayerIds || [])
+                    .map(id => state.players.find(p => p.id === id))
+                    .filter(p => p && eligibleIds.has(p.id));
+                backupNode.title = `${node.defaultPos || 'ポジション枠'} のバックアップ選手`;
+                backupNode.innerHTML = backupPlayers.length
+                    ? backupPlayers.map(bp => `<div class="backup-pitch-player" draggable="true" data-player-id="${escapeHTML(bp.id)}" title="${escapeHTML(bp.name)}（ドラッグで移動）"><span class="backup-pos">${escapeHTML(bp.detailPosition || bp.position)}</span><span>${escapeHTML(bp.name)}</span><span class="slot-backup-remove" onclick="event.stopPropagation(); removeBackupPlayer(${index}, '${bp.id}')" title="バックアップ解除"><i class="fa-solid fa-xmark"></i></span></div>`).join('')
+                    : `<div class="backup-pitch-empty">${escapeHTML(node.defaultPos || '枠')}<br>＋配置</div>`;
+                backupNode.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    backupNode.classList.add('drag-over');
+                });
+                backupNode.addEventListener('dragleave', () => backupNode.classList.remove('drag-over'));
+                backupNode.addEventListener('drop', e => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    backupNode.classList.remove('drag-over');
+                    handleBackupDrop(index);
+                });
+                backupNode.querySelectorAll('.backup-pitch-player').forEach(backupEl => {
+                    backupEl.addEventListener('click', e => {
+                        e.stopPropagation();
+                        openPlayerDetailModal(backupEl.getAttribute('data-player-id'));
+                    });
+                    backupEl.addEventListener('dragstart', e => {
+                        draggedData = { type: 'backup', playerId: backupEl.getAttribute('data-player-id'), slotIndex: index };
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+                    });
+                });
+                backupPitchContainer.appendChild(backupNode);
+            });
+
+            const unplacedPlayers = eligiblePlayers.filter(p => !placedPlayerIds.has(p.id));
+            benchBadge.textContent = `${unplacedPlayers.length}名`;
+            if (unplacedPlayers.length === 0) {
+                benchContainer.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:20px;">ベンチに選手はいません。</div>';
+            } else {
+                unplacedPlayers.forEach(p => {
+                    const item = document.createElement('div');
+                    item.className = 'bench-item';
+                    item.title = 'クリックで選手情報・ポジション適正を確認';
+                    item.addEventListener('click', () => openPlayerDetailModal(p.id));
+                    item.setAttribute('draggable', 'true');
+                    item.addEventListener('dragstart', (e) => {
+                        draggedData = { type: 'bench', playerId: p.id };
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+                    });
+                    item.innerHTML = `
+                        <div class="bench-item-info">
+                            <span class="badge badge-${escapeHTML(p.position)}">${escapeHTML(p.position)}</span>
+                            <span style="font-weight: 600; font-size:0.9rem;">${escapeHTML(p.name)}</span>
+                        </div>`;
+                    benchContainer.appendChild(item);
+                });
+            }
+        }
+
+        function handlePitchDragOver(e) { e.preventDefault(); }
+
+        // ピッチ上の自由な位置へのドロップは禁止。必ず既存の枠にドロップする
+        function handlePitchDrop(e) { e.preventDefault(); }
+
+        function handleFormationSlotDrop(targetIndex) {
+            if (!draggedData) return;
+            const positions = getCurrentFormationPositions();
+            const target = positions[targetIndex];
+            if (!target) { draggedData = null; return; }
+
+            if (draggedData.type === 'bench') {
+                const playerId = draggedData.playerId;
+                const alreadyPlaced = positions.findIndex((p, i) => p.playerId === playerId && i !== targetIndex);
+                if (alreadyPlaced !== -1) positions[alreadyPlaced].playerId = null;
+                // 枠が埋まっていた場合、元の選手はベンチに戻る
+                target.playerId = playerId;
+            } else if (draggedData.type === 'backup') {
+                const source = positions[draggedData.slotIndex];
+                if (source) source.backupPlayerIds = (source.backupPlayerIds || []).filter(id => id !== draggedData.playerId);
+                const alreadyPlaced = positions.findIndex((p, i) => p.playerId === draggedData.playerId && i !== targetIndex);
+                if (alreadyPlaced !== -1) positions[alreadyPlaced].playerId = null;
+                target.playerId = draggedData.playerId;
+            } else if (draggedData.type === 'slot') {
+                const sourceIndex = draggedData.slotIndex;
+                if (sourceIndex !== targetIndex && positions[sourceIndex]) {
+                    const temp = target.playerId;
+                    target.playerId = positions[sourceIndex].playerId;
+                    positions[sourceIndex].playerId = temp;
+                }
+            }
+            draggedData = null;
+            saveData();
+            renderFormationPitch();
+        }
+
+        function handleBackupDrop(targetIndex) {
+            if (!draggedData || (draggedData.type !== 'bench' && draggedData.type !== 'backup')) return;
+            const positions = getCurrentFormationPositions();
+            const target = positions[targetIndex];
+            if (!target) { draggedData = null; return; }
+            const playerId = draggedData.playerId;
+            if (target.playerId === playerId) { draggedData = null; return; }
+            // 同じ選手を複数ポジションのバックアップに重複登録しない
+            positions.forEach(node => {
+                node.backupPlayerIds = (node.backupPlayerIds || []).filter(id => id !== playerId);
+            });
+            if (draggedData.type === 'backup') {
+                const source = positions[draggedData.slotIndex];
+                if (source) source.backupPlayerIds = (source.backupPlayerIds || []).filter(id => id !== playerId);
+            }
+            if (!target.backupPlayerIds) target.backupPlayerIds = [];
+            target.backupPlayerIds.push(playerId);
+            draggedData = null;
+            saveData();
+            renderFormationPitch();
+        }
+
+        function removeBackupPlayer(slotIndex, playerId) {
+            const node = getCurrentFormationPositions()[slotIndex];
+            if (!node) return;
+            node.backupPlayerIds = (node.backupPlayerIds || []).filter(id => id !== playerId);
+            saveData();
+            renderFormationPitch();
+        }
+
+        function handleBenchDragOver(e) { e.preventDefault(); }
+
+        function handleBenchDrop(e) {
+            e.preventDefault();
+            if (draggedData && draggedData.type === 'slot') {
+                const node = getCurrentFormationPositions()[draggedData.slotIndex];
+                if (node) removePlayerFromNode(node.id);
+            } else if (draggedData && draggedData.type === 'backup') {
+                const node = getCurrentFormationPositions()[draggedData.slotIndex];
+                if (node) {
+                    node.backupPlayerIds = (node.backupPlayerIds || []).filter(id => id !== draggedData.playerId);
+                    saveData();
+                    renderFormationPitch();
+                }
+            }
+            draggedData = null;
+        }
+
+        function removePlayerFromNode(nodeId) {
+            const node = getCurrentFormationPositions().find(n => n.id === nodeId);
+            if (node) {
+                node.playerId = null;
+                saveData();
+                renderFormationPitch();
+            }
+        }
+
+        function applyPresetFormation() {
+            const presetName = document.getElementById('presetSelect').value;
+            const preset = PRESET_FORMATIONS[presetName];
+            if (!preset) return;
+
+            const current = getCurrentFormation();
+            const assignments = {};
+            const backupAssignments = {};
+            current.positions.forEach(node => {
+                if (node.playerId) {
+                    if (!assignments[node.defaultPos]) assignments[node.defaultPos] = [];
+                    assignments[node.defaultPos].push(node.playerId);
+                }
+                if (node.backupPlayerIds && node.backupPlayerIds.length) {
+                    if (!backupAssignments[node.defaultPos]) backupAssignments[node.defaultPos] = [];
+                    backupAssignments[node.defaultPos] = backupAssignments[node.defaultPos].concat(node.backupPlayerIds);
+                }
+            });
+
+            current.presetName = presetName;
+            current.positions = preset.map((p, idx) => ({
+                id: 'slot_' + idx + '_' + Date.now(),
+                playerId: assignments[p.pos] && assignments[p.pos].length ? assignments[p.pos].shift() : null,
+                backupPlayerIds: backupAssignments[p.pos] || [],
+                defaultPos: p.pos, x: p.x, y: p.y
+            }));
+            saveData();
+            renderFormationPitch();
+            showToast(`${presetName} の固定ポジション枠を生成しました。選手を枠にはめ込んでください。`);
+        }
+
+        async function clearFormation() {
+            const confirmed = await showConfirmModal('現在のスカッドのフォーメーション枠と配置をリセットしますか？', 'フォーメーションクリア');
+            if (confirmed) {
+                const current = getCurrentFormation();
+                current.presetName = '';
+                current.positions = [];
+                saveData();
+                renderFormationPitch();
+                showToast('現在のスカッドのフォーメーションをクリアしました。');
+            }
+        }
+
+        /* ========================================================================
+           8. クラブ・階層マスタ管理機能
+           ========================================================================== */
+
+        function renderMasterHierarchy() {
+            const container = document.getElementById('masterHierarchyContainer');
+            const hierarchy = state.clubHierarchy || {};
+            let html = '';
+            const regions = Object.keys(hierarchy);
+            if (!regions.length) {
+                container.innerHTML = '<div class="empty-state">登録されているマスタデータがありません。</div>';
+                return;
+            }
+            regions.forEach(region => {
+                const leagues = Object.keys(hierarchy[region] || {});
+                let total = 0;
+                leagues.forEach(league => Object.keys(hierarchy[region][league] || {}).forEach(div => total += (hierarchy[region][league][div] || []).length));
+                html += `<details class="region-details" open><summary><div class="summary-title"><i class="fa-solid fa-chevron-right summary-arrow"></i><span><i class="fa-solid fa-globe"></i> ${escapeHTML(region)}</span><span style="font-size:.8rem;color:var(--text-muted)">(${leagues.length} リーグ / ${total} クラブ)</span></div></summary><div class="region-content">`;
+                leagues.forEach(league => {
+                    const divisions = hierarchy[region][league] || {};
+                    html += `<details class="league-details" open><summary><div class="summary-title"><i class="fa-solid fa-chevron-right summary-arrow"></i><span><i class="fa-solid fa-trophy" style="color:var(--accent-yellow)"></i> ${escapeHTML(league)}</span></div><span><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); addDivision('${escapeHTML(region)}','${escapeHTML(league)}')">＋ ディビジョン追加</button></span></summary><div class="league-content">`;
+                    Object.keys(divisions).forEach(division => {
+                        const clubs = divisions[division] || [];
+                        html += `<details class="league-details" open><summary><div class="summary-title"><i class="fa-solid fa-chevron-right summary-arrow"></i><span><i class="fa-solid fa-layer-group" style="color:var(--accent-green)"></i> ${escapeHTML(division)}</span><span style="font-size:.75rem;color:var(--text-muted)">(${clubs.length} クラブ)</span></div><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); openClubModal('create','${escapeHTML(region)}','${escapeHTML(league)}','', '${escapeHTML(division)}')">＋ クラブ追加</button></summary><div class="league-content"><ul class="club-list">`;
+                        clubs.forEach(club => {
+                            html += `<li class="club-item"><span class="club-name">${escapeHTML(club)}</span><div class="club-actions"><button class="btn btn-secondary btn-sm" onclick="openClubModal('edit','${escapeHTML(region)}','${escapeHTML(league)}','${escapeHTML(club)}','${escapeHTML(division)}')" title="編集・昇降格"><i class="fa-solid fa-pen-to-square"></i></button><button class="btn btn-danger btn-sm" onclick="deleteClubMaster('${escapeHTML(region)}','${escapeHTML(league)}','${escapeHTML(division)}','${escapeHTML(club)}')"><i class="fa-solid fa-trash"></i></button></div></li>`;
+                        });
+                        if (!clubs.length) html += '<li style="color:var(--text-muted)">(所属クラブなし)</li>';
+                        html += '</ul></div></details>';
+                    });
+                    html += '</div></details>';
+                });
+                html += '</div></details>';
+            });
+            container.innerHTML = html;
+        }
+
+        function toggleAllMasterDetails(isOpen) {
+            const container = document.getElementById('masterHierarchyContainer');
+            if (container) container.querySelectorAll('details').forEach(el => el.open = isOpen);
+        }
+
+        function openClubModal(mode, region = '', league = '', clubName = '', division = '') {
+            document.getElementById('clubMode').value = mode;
+            document.getElementById('originalClubRegion').value = region;
+            document.getElementById('originalClubLeague').value = league;
+            document.getElementById('originalClubDivision').value = division;
+            document.getElementById('originalClubName').value = clubName;
+            const rs = document.getElementById('modalClubRegion');
+            rs.innerHTML = Object.keys(state.clubHierarchy).map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+            if (region) rs.value = region;
+            updateModalClubLeagueSelect();
+            if (league) document.getElementById('modalClubLeague').value = league;
+            updateModalClubDivisionSelect();
+            if (division) document.getElementById('modalClubDivision').value = division;
+            document.getElementById('clubModalTitle').textContent = mode === 'create' ? '新規クラブの追加' : 'クラブ情報の編集 / 所属変更';
+            document.getElementById('modalClubName').value = mode === 'create' ? '' : clubName;
+            document.getElementById('clubModal').classList.add('active');
+        }
+
+        function updateModalClubLeagueSelect() {
+            const region = document.getElementById('modalClubRegion').value;
+            const select = document.getElementById('modalClubLeague');
+            select.innerHTML = '';
+            Object.keys(state.clubHierarchy[region] || {}).forEach(l => select.innerHTML += `<option value="${escapeHTML(l)}">${escapeHTML(l)}</option>`);
+            updateModalClubDivisionSelect();
+        }
+
+        function updateModalClubDivisionSelect() {
+            const region = document.getElementById('modalClubRegion').value;
+            const league = document.getElementById('modalClubLeague').value;
+            const select = document.getElementById('modalClubDivision');
+            select.innerHTML = '';
+            const divisions = state.clubHierarchy[region] && state.clubHierarchy[region][league] || {};
+            Object.keys(divisions).forEach(d => select.innerHTML += `<option value="${escapeHTML(d)}">${escapeHTML(d)}</option>`);
+        }
+
+        function closeClubModal() { document.getElementById('clubModal').classList.remove('active'); }
+
+        function handleClubSubmit(e) {
+            e.preventDefault();
+            const mode = document.getElementById('clubMode').value;
+            const oldRegion = document.getElementById('originalClubRegion').value;
+            const oldLeague = document.getElementById('originalClubLeague').value;
+            const oldDivision = document.getElementById('originalClubDivision').value;
+            const oldName = document.getElementById('originalClubName').value;
+            const region = document.getElementById('modalClubRegion').value;
+            const league = document.getElementById('modalClubLeague').value;
+            const division = document.getElementById('modalClubDivision').value;
+            const name = document.getElementById('modalClubName').value.trim();
+            if (!name || !division) return;
+            if (mode === 'edit') {
+                const oldList = state.clubHierarchy[oldRegion][oldLeague][oldDivision];
+                const idx = oldList.indexOf(oldName);
+                if (idx >= 0) oldList.splice(idx, 1);
+                state.players.forEach(p => {
+                    if (p.region === oldRegion && p.league === oldLeague && (p.division || '1部') === oldDivision && p.club === oldName) {
+                        p.region = region; p.league = league; p.division = division; p.club = name;
+                    }
+                });
+            }
+            const list = state.clubHierarchy[region][league][division];
+            if (!list.includes(name)) list.push(name);
+            saveData(); renderMasterHierarchy(); closeClubModal();
+            showToast('クラブ情報を保存しました。');
+        }
+
+        async function deleteClubMaster(region, league, division, clubName) {
+            const confirmed = await showConfirmModal(`クラブ「${clubName}」をマスタデータから削除しますか？`, 'クラブ削除');
+            if (confirmed) {
+                const list = state.clubHierarchy[region][league][division];
+                const index = list.indexOf(clubName);
+                if (index !== -1) list.splice(index, 1);
+                saveData(); renderMasterHierarchy();
+                showToast(`「${clubName}」を削除しました。`);
+            }
+        }
+
+        function openLeagueModal() {
+            const select = document.getElementById('modalLeagueRegion');
+            select.innerHTML = Object.keys(state.clubHierarchy).map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+            document.getElementById('modalLeagueName').value = '';
+            document.getElementById('leagueModal').classList.add('active');
+        }
+        function closeLeagueModal() { document.getElementById('leagueModal').classList.remove('active'); }
+        function handleLeagueSubmit(e) {
+            e.preventDefault();
+            const region = document.getElementById('modalLeagueRegion').value;
+            const name = document.getElementById('modalLeagueName').value.trim();
+            if (!region || !name) return;
+            if (!state.clubHierarchy[region][name]) state.clubHierarchy[region][name] = { "1部": [] };
+            saveData(); renderMasterHierarchy(); closeLeagueModal();
+            showToast(`リーグ「${name}」を追加しました。`);
+        }
+
+        async function addDivision(region, league) {
+            const name = await showPromptModal(`「${league}」に追加するディビジョン名を入力してください`, 'ディビジョン追加', '例: 2部');
+            if (!name || !name.trim()) return;
+            if (!state.clubHierarchy[region][league][name.trim()]) state.clubHierarchy[region][league][name.trim()] = [];
+            saveData(); renderMasterHierarchy();
+            showToast(`ディビジョン「${name.trim()}」を追加しました。`);
+        }
+
+        /* ==========================================================================
+           9. 選手単体 CSV インポート・エクスポート機能
+           ========================================================================== */
+
+        const CSV_HEADERS = [
+            '選手名',
+            'ポジション',
+            '利き足',
+            '生年月日',
+            '身長',
+            '国籍',
+            '現所属地域',
+            '現所属リーグ',
+            '現所属ディビジョン',
+            '現所属クラブ',
+            '所属スカッドタグ',
+            '過去所属クラブ',
+            '詳細ポジション',
+            '過去所属クラブ移籍区分'
+        ];
+
+        // CSV値エスケープ (カンマ・改行・ダブルクォート対応)
+        function escapeCSVField(value) {
+            if (value === null || value === undefined) return '';
+            const str = String(value);
+            if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        // CSVエクスポート選択モーダルを開く
+        function openCsvExportModal() {
+            const allCount = state.players.length;
+            const filteredCount = getFilteredPlayers().length;
+            if (allCount === 0) {
+                showToast('エクスポートする選手データがありません。', true);
+                return;
+            }
+            document.getElementById('csvExportAllCount').textContent = allCount;
+            document.getElementById('csvExportFilteredCount').textContent = filteredCount;
+            document.getElementById('csvExportModal').classList.add('active');
+        }
+
+        function closeCsvExportModal() {
+            document.getElementById('csvExportModal').classList.remove('active');
+        }
+
+        // 選手単体CSVエクスポート実行
+        function exportPlayersCSV(scope = 'all') {
+            closeCsvExportModal();
+            const targetPlayers = scope === 'filtered' ? getFilteredPlayers() : state.players;
+
+            if (!targetPlayers || targetPlayers.length === 0) {
+                showToast('出力対象の選手が0名です。', true);
+                return;
+            }
+
+            const rows = [CSV_HEADERS.map(escapeCSVField).join(',')];
+
+            targetPlayers.forEach(player => {
+                // スカッドIDをスカッド名に変換して ';' 区切りに結合
+                const squadNames = (player.squadIds || [])
+                    .map(sqId => {
+                        const sq = state.squads.find(s => s.id === sqId);
+                        return sq ? sq.name : '';
+                    })
+                    .filter(Boolean)
+                    .join(';');
+
+                // 過去所属クラブを "クラブ名(期間)" の ';' 区切りに結合
+                const pastClubsStr = (player.pastClubs || [])
+                    .map(pc => {
+                        if (!pc.clubName) return '';
+                        return pc.period ? `${pc.clubName}(${pc.period})` : pc.clubName;
+                    })
+                    .filter(Boolean)
+                    .join(';');
+
+                const rowValues = [
+                    player.name || '',
+                    player.position || 'FW',
+                    player.foot || '右足',
+                    player.birthdate || '',
+                    player.height !== null && player.height !== undefined ? player.height : '',
+                    player.nationality || '',
+                    player.region || '',
+                    player.league || '',
+                    player.division || '',
+                    player.club || '',
+                    squadNames,
+                    pastClubsStr,
+                    player.detailPosition || '',
+                    (player.pastClubs || []).map(pc => pc.transferType === 'loan' ? 'ローン' : '通常').join(';')
+                ];
+
+                rows.push(rowValues.map(escapeCSVField).join(','));
+            });
+
+            // Excel文字化け対策のUTF-8 BOM付きでBlob生成
+            const csvContent = '\uFEFF' + rows.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadAnchor = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const suffix = scope === 'filtered' ? '_filtered' : '';
+            downloadAnchor.setAttribute('href', url);
+            downloadAnchor.setAttribute('download', `players${suffix}_${dateStr}.csv`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            URL.revokeObjectURL(url);
+
+            showToast(`${targetPlayers.length}名の選手データをCSV出力しました。`);
+        }
+
+        // RFC4180準拠 CSVパーサー (BOM除去、ダブルクォート内カンマ/改行対応)
+        function parseCSV(text) {
+            // 先頭のUTF-8 BOMを除去
+            const cleanText = text.replace(/^\uFEFF/, '');
+            const rows = [];
+            let currentRow = [];
+            let currentField = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < cleanText.length; i++) {
+                const char = cleanText[i];
+                const nextChar = cleanText[i + 1];
+
+                if (inQuotes) {
+                    if (char === '"') {
+                        if (nextChar === '"') {
+                            currentField += '"';
+                            i++; // エスケープされた引用符をスキップ
+                        } else {
+                            inQuotes = false;
+                        }
+                    } else {
+                        currentField += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        currentRow.push(currentField);
+                        currentField = '';
+                    } else if (char === '\r') {
+                        if (nextChar === '\n') {
+                            i++;
+                        }
+                        currentRow.push(currentField);
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    } else if (char === '\n') {
+                        currentRow.push(currentField);
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    } else {
+                        currentField += char;
+                    }
+                }
+            }
+
+            if (currentField !== '' || currentRow.length > 0) {
+                currentRow.push(currentField);
+                rows.push(currentRow);
+            }
+
+            // 完全な空行を除外
+            return rows.filter(row => row.some(cell => cell.trim() !== ''));
+        }
+
+        // 過去所属クラブ文字列 ("クラブ名(期間);...") のパース
+        function parsePastClubsString(str) {
+            if (!str || !str.trim()) return [];
+            return str.split(';')
+                .map(part => part.trim())
+                .filter(Boolean)
+                .map(entry => {
+                    // 末尾の括弧ペアを期間として抽出 例: "FC東京(2016 - 2019)" -> clubName: "FC東京", period: "2016 - 2019"
+                    const match = entry.match(/^(.+?)\(([^()]*)\)$/);
+                    if (match) {
+                        return {
+                            clubName: match[1].trim(),
+                            period: match[2].trim()
+                        };
+                    }
+                    return {
+                        clubName: entry,
+                        period: ''
+                    };
+                });
+        }
+
+        // インポート一時保持データ
+        let pendingCsvImportPlayers = [];
+
+        // CSVインポートファイル選択ハンドラ
+        function importPlayersCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const rows = parseCSV(e.target.result);
+                    if (rows.length < 2) {
+                        showToast('CSVにインポート可能なデータ行が見つかりませんでした。', true);
+                        return;
+                    }
+
+                    // 1行目はヘッダーとしてスキップし、2行目以降をパース
+                    const dataRows = rows.slice(1);
+                    const validPositions = ['FW', 'MF', 'DF', 'GK'];
+                    const validFeet = ['右足', '左足', '両足'];
+                    const parsedRecords = [];
+
+                    dataRows.forEach((cols, index) => {
+                        const name = (cols[0] || '').trim();
+                        if (!name) return; // 選手名が空の行はスキップ
+
+                        const rawPos = (cols[1] || '').trim().toUpperCase();
+                        const position = validPositions.includes(rawPos) ? rawPos : 'FW';
+
+                        const rawFoot = (cols[2] || '').trim();
+                        const foot = validFeet.includes(rawFoot) ? rawFoot : '右足';
+
+                        // 生年月日フォーマット正規化 (YYYY/MM/DD -> YYYY-MM-DD)
+                        let birthdate = (cols[3] || '').trim().replace(/\//g, '-');
+                        if (birthdate && !/^\d{4}-\d{1,2}-\d{1,2}$/.test(birthdate)) {
+                            birthdate = '';
+                        } else if (birthdate) {
+                            const parts = birthdate.split('-');
+                            birthdate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                        }
+
+                        const heightStr = (cols[4] || '').trim();
+                        const heightNum = heightStr !== '' && !isNaN(Number(heightStr)) ? Number(heightStr) : null;
+
+                        const nationality = (cols[5] || '').trim();
+                        const region = (cols[6] || '').trim();
+                        const league = (cols[7] || '').trim();
+                        const division = (cols[8] || '').trim();
+                        const club = (cols[9] || '').trim();
+                        const squadTagsRaw = (cols[10] || '').trim();
+                        const pastClubsRaw = (cols[11] || '').trim();
+                        const validDetailPositions = ['GK', 'CB', 'LSB', 'RSB', 'DMF', 'CMF', 'OMF', 'LMF', 'RML', 'ST', 'CF', 'LWG', 'RWG'];
+                        const rawDetailPosition = (cols[12] || '').trim().toUpperCase();
+                        const detailPosition = validDetailPositions.includes(rawDetailPosition) ? rawDetailPosition : '';
+
+                        const squadNames = squadTagsRaw
+                            ? squadTagsRaw.split(';').map(s => s.trim()).filter(Boolean)
+                            : [];
+
+                        const pastClubs = parsePastClubsString(pastClubsRaw);
+                        const pastClubTypesRaw = (cols[13] || '').trim();
+                        if (pastClubTypesRaw) {
+                            const pastClubTypes = pastClubTypesRaw.split(';').map(v => v.trim());
+                            pastClubs.forEach((item, pastIndex) => {
+                                item.transferType = pastClubTypes[pastIndex] === 'ローン' || pastClubTypes[pastIndex] === 'loan' ? 'loan' : 'permanent';
+                            });
+                        }
+
+                        parsedRecords.push({
+                            name,
+                            position,
+                            detailPosition,
+                            foot,
+                            birthdate,
+                            height: heightNum,
+                            nationality,
+                            region,
+                            league,
+                            division,
+                            club,
+                            squadNames,
+                            pastClubs,
+                            rowIndex: index + 2
+                        });
+                    });
+
+                    if (parsedRecords.length === 0) {
+                        showToast('有効な選手データが見つかりませんでした。', true);
+                        return;
+                    }
+
+                    pendingCsvImportPlayers = parsedRecords;
+
+                    // 新規作成されるスカッドタグや重複選手数の集計
+                    const existingSquadNames = new Set(state.squads.map(s => s.name));
+                    const newSquadNames = new Set();
+                    let duplicateCount = 0;
+
+                    parsedRecords.forEach(rec => {
+                        rec.squadNames.forEach(sqName => {
+                            if (!existingSquadNames.has(sqName)) {
+                                newSquadNames.add(sqName);
+                            }
+                        });
+                        if (state.players.some(p => p.name === rec.name)) {
+                            duplicateCount++;
+                        }
+                    });
+
+                    let summaryHtml = `
+                        <div style="margin-bottom: 6px;"><strong>対象ファイル:</strong> ${escapeHTML(file.name)}</div>
+                        <div style="margin-bottom: 6px;"><strong>読込選手数:</strong> <span style="color:var(--accent-green); font-weight:700;">${parsedRecords.length}名</span></div>
+                        <div style="margin-bottom: 6px;"><strong>既存データとの同名選手:</strong> ${duplicateCount}名</div>
+                    `;
+                    if (newSquadNames.size > 0) {
+                        summaryHtml += `<div><strong>自動作成される新規スカッドタグ:</strong> <span style="color:#c084fc;">${escapeHTML(Array.from(newSquadNames).join(', '))}</span></div>`;
+                    }
+
+                    document.getElementById('csvImportSummary').innerHTML = summaryHtml;
+                    document.getElementById('csvImportConfirmModal').classList.add('active');
+                } catch (err) {
+                    console.error('CSVインポートエラー:', err);
+                    showToast('CSVファイルの解析に失敗しました。ファイル形式を確認してください。', true);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+            event.target.value = '';
+        }
+
+        function closeCsvImportConfirmModal() {
+            document.getElementById('csvImportConfirmModal').classList.remove('active');
+            pendingCsvImportPlayers = [];
+        }
+
+        // CSVインポート確定実行 ('append' = 全件新規追加, 'upsert' = 同名は上書き)
+        function executeCsvImport(mode) {
+            if (!pendingCsvImportPlayers || pendingCsvImportPlayers.length === 0) {
+                closeCsvImportConfirmModal();
+                return;
+            }
+
+            let addedCount = 0;
+            let updatedCount = 0;
+
+            pendingCsvImportPlayers.forEach((rec, idx) => {
+                // スカッド名のID解決（未存在なら自動作成）
+                const resolvedSquadIds = [];
+                rec.squadNames.forEach(sqName => {
+                    let squadObj = state.squads.find(s => s.name === sqName);
+                    if (!squadObj) {
+                        squadObj = {
+                            id: 'squad_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                            name: sqName
+                        };
+                        state.squads.push(squadObj);
+                    }
+                    if (!resolvedSquadIds.includes(squadObj.id)) {
+                        resolvedSquadIds.push(squadObj.id);
+                    }
+                });
+
+                const existingIndex = mode === 'upsert'
+                    ? state.players.findIndex(p => p.name === rec.name)
+                    : -1;
+
+                if (existingIndex !== -1) {
+                    // 上書き更新
+                    const existing = state.players[existingIndex];
+                    state.players[existingIndex] = {
+                        ...existing,
+                        squadIds: resolvedSquadIds,
+                        name: rec.name,
+                        position: rec.position,
+                        detailPosition: rec.detailPosition || '',
+                        foot: rec.foot,
+                        birthdate: rec.birthdate || existing.birthdate || '',
+                        height: rec.height !== null ? rec.height : existing.height,
+                        nationality: rec.nationality,
+                        region: rec.region,
+                        league: rec.league,
+                        division: rec.division,
+                        club: rec.club,
+                        pastClubs: rec.pastClubs
+                    };
+                    updatedCount++;
+                } else {
+                    // 新規追加
+                    state.players.push({
+                        id: 'player_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
+                        squadIds: resolvedSquadIds,
+                        name: rec.name,
+                        position: rec.position,
+                        detailPosition: rec.detailPosition || '',
+                        foot: rec.foot,
+                        birthdate: rec.birthdate || '',
+                        height: rec.height,
+                        nationality: rec.nationality,
+                        region: rec.region,
+                        league: rec.league,
+                        division: rec.division,
+                        club: rec.club,
+                        pastClubs: rec.pastClubs
+                    });
+                    addedCount++;
+                }
+            });
+
+            closeCsvImportConfirmModal();
+            saveData();
+            renderSquadSelect();
+            renderPlayers();
+
+            const msgParts = [];
+            if (addedCount > 0) msgParts.push(`${addedCount}名を追加`);
+            if (updatedCount > 0) msgParts.push(`${updatedCount}名を上書き`);
+            showToast(`CSVインポート完了: ${msgParts.join('、')}しました。`);
+        }
+
+        /* ==========================================================================
+           9.5. クラブ単体 CSV インポート・エクスポート機能
+           ========================================================================== */
+
+        const CLUB_CSV_HEADERS = [
+            '地域',
+            'リーグ',
+            'ディビジョン',
+            'クラブ名'
+        ];
+
+        // クラブマスタ単体CSVエクスポート実行
+        function exportClubsMasterCSV() {
+            const hierarchy = state.clubHierarchy || {};
+            const regions = Object.keys(hierarchy);
+
+            if (regions.length === 0) {
+                showToast('エクスポートするクラブマスタデータがありません。', true);
+                return;
+            }
+
+            const rows = [CLUB_CSV_HEADERS.map(escapeCSVField).join(',')];
+            let exportedClubCount = 0;
+
+            regions.forEach(region => {
+                const leagues = hierarchy[region] || {};
+                Object.keys(leagues).forEach(league => {
+                    const divisions = leagues[league] || {};
+                    Object.keys(divisions).forEach(division => {
+                        const clubs = divisions[division] || [];
+                        if (clubs.length === 0) {
+                            // クラブ未登録のディビジョンも空クラブ名として階層保持のため出力
+                            rows.push([region, league, division, ''].map(escapeCSVField).join(','));
+                        } else {
+                            clubs.forEach(club => {
+                                rows.push([region, league, division, club].map(escapeCSVField).join(','));
+                                exportedClubCount++;
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Excel文字化け対策のUTF-8 BOM付きでBlob生成
+            const csvContent = '\uFEFF' + rows.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const downloadAnchor = document.createElement('a');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            downloadAnchor.setAttribute('href', url);
+            downloadAnchor.setAttribute('download', `clubs_master_${dateStr}.csv`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            URL.revokeObjectURL(url);
+
+            showToast(`${exportedClubCount}クラブのマスタデータをCSV出力しました。`);
+        }
+
+        // クラブCSVインポート一時保持データ
+        let pendingClubCsvRecords = [];
+
+        // クラブCSVインポートファイル選択ハンドラ
+        function importClubsMasterCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const rows = parseCSV(e.target.result);
+                    if (rows.length < 2) {
+                        showToast('CSVにインポート可能なデータ行が見つかりませんでした。', true);
+                        return;
+                    }
+
+                    // 1行目はヘッダーとしてスキップし、2行目以降をパース
+                    const dataRows = rows.slice(1);
+                    const parsedRecords = [];
+
+                    dataRows.forEach(cols => {
+                        const region = (cols[0] || '').trim();
+                        const league = (cols[1] || '').trim();
+                        const division = (cols[2] || '').trim();
+                        const clubName = (cols[3] || '').trim();
+
+                        // 必須列（地域・リーグ・ディビジョン）のいずれかが空の場合はスキップ
+                        if (!region || !league || !division) return;
+
+                        parsedRecords.push({
+                            region,
+                            league,
+                            division,
+                            clubName
+                        });
+                    });
+
+                    if (parsedRecords.length === 0) {
+                        showToast('有効なクラブ階層データ（地域・リーグ・ディビジョン）が見つかりませんでした。', true);
+                        return;
+                    }
+
+                    pendingClubCsvRecords = parsedRecords;
+
+                    // 統計情報の集計（クラブ数、新規作成される地域・リーグ・ディビジョン数）
+                    const existingHierarchy = state.clubHierarchy || {};
+                    const newRegions = new Set();
+                    const newLeagues = new Set();
+                    const newDivisions = new Set();
+                    let clubRowCount = 0;
+
+                    parsedRecords.forEach(rec => {
+                        if (rec.clubName) clubRowCount++;
+
+                        if (!existingHierarchy[rec.region]) {
+                            newRegions.add(rec.region);
+                        }
+                        if (!existingHierarchy[rec.region] || !existingHierarchy[rec.region][rec.league]) {
+                            newLeagues.add(`${rec.region} > ${rec.league}`);
+                        }
+                        if (!existingHierarchy[rec.region] || !existingHierarchy[rec.region][rec.league] || !existingHierarchy[rec.region][rec.league][rec.division]) {
+                            newDivisions.add(`${rec.region} > ${rec.league} > ${rec.division}`);
+                        }
+                    });
+
+                    let summaryHtml = `
+                        <div style="margin-bottom: 6px;"><strong>対象ファイル:</strong> ${escapeHTML(file.name)}</div>
+                        <div style="margin-bottom: 6px;"><strong>有効行数:</strong> ${parsedRecords.length}行（うちクラブ指定: <span style="color:var(--accent-green); font-weight:700;">${clubRowCount}件</span>）</div>
+                        <div style="margin-bottom: 4px;"><strong>新規作成される階層（統合時）:</strong></div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: 8px;">
+                            地域: +${newRegions.size} / リーグ: +${newLeagues.size} / ディビジョン: +${newDivisions.size}
+                        </div>
+                    `;
+
+                    document.getElementById('clubCsvImportSummary').innerHTML = summaryHtml;
+                    document.getElementById('clubCsvImportConfirmModal').classList.add('active');
+                } catch (err) {
+                    console.error('クラブCSVインポートエラー:', err);
+                    showToast('CSVファイルの解析に失敗しました。ファイル形式を確認してください。', true);
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+            event.target.value = '';
+        }
+
+        function closeClubCsvImportConfirmModal() {
+            document.getElementById('clubCsvImportConfirmModal').classList.remove('active');
+            pendingClubCsvRecords = [];
+        }
+
+        // クラブCSVインポート確定実行 ('merge' = 既存マスタに統合, 'replace' = 既存マスタを置換)
+        function executeClubCsvImport(mode) {
+            if (!pendingClubCsvRecords || pendingClubCsvRecords.length === 0) {
+                closeClubCsvImportConfirmModal();
+                return;
+            }
+
+            const targetHierarchy = mode === 'replace'
+                ? {}
+                : JSON.parse(JSON.stringify(state.clubHierarchy || {}));
+
+            let addedClubsCount = 0;
+            let skippedDuplicatesCount = 0;
+
+            pendingClubCsvRecords.forEach(rec => {
+                if (!targetHierarchy[rec.region]) {
+                    targetHierarchy[rec.region] = {};
+                }
+                if (!targetHierarchy[rec.region][rec.league]) {
+                    targetHierarchy[rec.region][rec.league] = {};
+                }
+                if (!targetHierarchy[rec.region][rec.league][rec.division]) {
+                    targetHierarchy[rec.region][rec.league][rec.division] = [];
+                }
+
+                if (rec.clubName) {
+                    const clubList = targetHierarchy[rec.region][rec.league][rec.division];
+                    if (!clubList.includes(rec.clubName)) {
+                        clubList.push(rec.clubName);
+                        addedClubsCount++;
+                    } else {
+                        skippedDuplicatesCount++;
+                    }
+                }
+            });
+
+            state.clubHierarchy = targetHierarchy;
+            closeClubCsvImportConfirmModal();
+            saveData();
+            renderMasterHierarchy();
+
+            if (mode === 'replace') {
+                showToast(`クラブマスタを置換しました（計${addedClubsCount}クラブ登録）。`);
+            } else {
+                const skipMsg = skippedDuplicatesCount > 0 ? `（重複スキップ: ${skippedDuplicatesCount}件）` : '';
+                showToast(`クラブマスタに統合しました（新規追加: ${addedClubsCount}クラブ）${skipMsg}。`);
+            }
+        }
+
+        /* ==========================================================================
+           10. JSON 入出力
+           ========================================================================== */
+
+        function exportFullData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `squad_tag_data_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('全JSONデータを出力しました。');
+        }
+
+        function exportClubsMasterJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.clubHierarchy, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `clubs_master_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('クラブマスタJSONを出力しました。');
+        }
+
+        function importFullData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+
+                    if (imported && imported.squads && imported.players) {
+                        const confirmed = await showConfirmModal('全データを読み込んで復元しますか？\n※現在のデータは上書きされます。', '全JSONデータ読込', false);
+                        if (confirmed) {
+                            state = imported;
+                            normalizeState();
+                            saveData();
+                            renderSquadSelect();
+                            renderPlayers();
+                            renderMasterHierarchy();
+                            renderFormationSelects();
+                            renderFormationPitch();
+                            showToast('全データの読み込みが完了しました。');
+                        }
+                    } else if (typeof imported === 'object' && !imported.squads) {
+                        const confirmed = await showConfirmModal('クラブ・階層マスタデータを更新しますか？', 'クラブマスタ読込', false);
+                        if (confirmed) {
+                            state.clubHierarchy = imported;
+                            normalizeState();
+                            saveData();
+                            renderMasterHierarchy();
+                            showToast('クラブマスタデータの更新が完了しました。');
+                        }
+                    } else {
+                        showToast('認識できないJSON形式です。', true);
+                    }
+                } catch (err) {
+                    showToast('JSONファイルの解析に失敗しました。', true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        /* ==========================================================================
+           11. 初期化
+           ========================================================================== */
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initNationalityDatalist();
+            loadData();
+            renderSquadSelect();
+            renderPlayers();
+            renderMasterHierarchy();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,2290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>グルメログ - 個人用 食べ歩き・訪問記録管理</title>
+  <style>
+    :root {
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-hover: #e2e8f0;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --border-subtle: #e2e8f0;
+      --accent-color: #ea580c;
+      --accent-hover: #c2410c;
+      --accent-soft: #ffedd5;
+      --accent-text: #9a3412;
+      --visited-bg: #dcfce7;
+      --visited-text: #166534;
+      --want-bg: #dbeafe;
+      --want-text: #1e40af;
+      --danger-color: #dc2626;
+      --danger-hover: #b91c1c;
+      --danger-soft: #fee2e2;
+      --warning-color: #d97706;
+      --star-active: #f59e0b;
+      --star-inactive: #cbd5e1;
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.16);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0f172a;
+      --bg-surface: #1e293b;
+      --bg-subtle: #0f172a;
+      --bg-hover: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border-color: #475569;
+      --border-subtle: #334155;
+      --accent-color: #f97316;
+      --accent-hover: #fb923c;
+      --accent-soft: rgba(249, 115, 22, 0.18);
+      --accent-text: #fdba74;
+      --visited-bg: rgba(34, 197, 94, 0.18);
+      --visited-text: #86efac;
+      --want-bg: rgba(59, 130, 246, 0.2);
+      --want-text: #93c5fd;
+      --danger-color: #ef4444;
+      --danger-hover: #f87171;
+      --danger-soft: rgba(239, 68, 68, 0.2);
+      --warning-color: #fbbf24;
+      --star-active: #fbbf24;
+      --star-inactive: #475569;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.6);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.55;
+      font-feature-settings: "palt";
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Header */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .header-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background-color: var(--accent-color);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 13px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, transform 0.05s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background-color: var(--bg-hover);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background-color: var(--danger-color);
+      border-color: var(--danger-color);
+      color: #ffffff;
+    }
+
+    .btn-danger:hover {
+      background-color: var(--danger-hover);
+      border-color: var(--danger-hover);
+    }
+
+    .btn-danger-outline {
+      color: var(--danger-color);
+      border-color: var(--danger-color);
+      background-color: transparent;
+    }
+
+    .btn-danger-outline:hover {
+      background-color: var(--danger-soft);
+    }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+    }
+
+    .btn-icon-only {
+      padding: 8px;
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 20px 16px 64px;
+    }
+
+    /* Alert Banner */
+    .alert-banner {
+      display: none;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      border-radius: var(--radius-md);
+      background-color: var(--danger-soft);
+      border: 1px solid var(--danger-color);
+      color: var(--danger-color);
+      font-size: 0.9rem;
+    }
+
+    .alert-banner.visible {
+      display: flex;
+    }
+
+    /* Stats Bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 720px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.2;
+    }
+
+    .stat-sub {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-left: 4px;
+      font-weight: 500;
+    }
+
+    /* Filter & Control Panel */
+    .controls-panel {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1 1 280px;
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .input, .select, .textarea {
+      width: 100%;
+      padding: 8px 12px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .search-box .input {
+      padding-left: 36px;
+    }
+
+    .input:focus, .select:focus, .textarea:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    .filters-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+
+    .filter-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Welcome Guide */
+    .welcome-card {
+      background-color: var(--bg-surface);
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 28px 24px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .welcome-card h2 {
+      margin: 0 0 8px;
+      font-size: 1.3rem;
+    }
+
+    .welcome-card p {
+      margin: 0 auto 20px;
+      max-width: 600px;
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      max-width: 820px;
+      margin: 0 auto 24px;
+      text-align: left;
+    }
+
+    @media (max-width: 720px) {
+      .steps-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step-item {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+    }
+
+    .step-num {
+      display: inline-block;
+      background-color: var(--accent-soft);
+      color: var(--accent-text);
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+    }
+
+    .step-item h3 {
+      margin: 0 0 4px;
+      font-size: 0.95rem;
+    }
+
+    .step-item p {
+      margin: 0;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .welcome-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    /* Shop Cards Grid */
+    .shops-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 16px;
+    }
+
+    .shop-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .shop-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--border-color);
+    }
+
+    .shop-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .shop-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+    }
+
+    .badge-want {
+      background-color: var(--want-bg);
+      color: var(--want-text);
+    }
+
+    .badge-visited {
+      background-color: var(--visited-bg);
+      color: var(--visited-text);
+    }
+
+    .badge-genre {
+      background-color: var(--bg-subtle);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      font-weight: 600;
+    }
+
+    .fav-btn {
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      color: var(--star-inactive);
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .fav-btn:hover {
+      background-color: var(--bg-subtle);
+      transform: scale(1.1);
+    }
+
+    .fav-btn.active {
+      color: var(--star-active);
+    }
+
+    .shop-name {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .shop-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+
+    .meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .rating-stars {
+      color: var(--star-active);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .rating-unrated {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .shop-memo {
+      margin: 0;
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      background-color: var(--bg-primary);
+      padding: 9px 11px;
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 110px;
+      overflow-y: auto;
+    }
+
+    .shop-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .tag-chip {
+      font-size: 0.74rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background-color: var(--accent-soft);
+      color: var(--accent-text);
+      font-weight: 600;
+    }
+
+    .shop-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .shop-url-area {
+      font-size: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 55%;
+    }
+
+    .shop-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .shop-link:hover {
+      text-decoration: underline;
+    }
+
+    .shop-invalid-url {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .empty-search {
+      text-align: center;
+      padding: 40px 16px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+    }
+
+    /* Data Management Footer */
+    .data-tools-section {
+      margin-top: 36px;
+      padding: 18px 20px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .data-tools-info h3 {
+      margin: 0 0 2px;
+      font-size: 0.95rem;
+    }
+
+    .data-tools-info p {
+      margin: 0;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .data-tools-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background-color: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-dialog {
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+    }
+
+    .modal-close:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      background-color: var(--bg-primary);
+    }
+
+    /* Form Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 560px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-label {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .required-mark {
+      color: var(--danger-color);
+      margin-left: 3px;
+    }
+
+    .form-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .form-error {
+      font-size: 0.8rem;
+      color: var(--danger-color);
+      font-weight: 600;
+      display: none;
+    }
+
+    .form-error.visible {
+      display: block;
+    }
+
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .checkbox-label input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--accent-color);
+    }
+
+    /* Radio Option Cards for Import */
+    .radio-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .radio-card:hover {
+      background-color: var(--bg-primary);
+    }
+
+    .radio-card input {
+      margin-top: 3px;
+      accent-color: var(--accent-color);
+    }
+
+    .radio-card-title {
+      font-weight: 700;
+      font-size: 0.92rem;
+      display: block;
+    }
+
+    .radio-card-desc {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Help Modal Content */
+    .help-section {
+      margin-bottom: 18px;
+    }
+
+    .help-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .help-section h3 {
+      margin: 0 0 6px;
+      font-size: 0.98rem;
+      color: var(--accent-color);
+    }
+
+    .help-section p, .help-section ul {
+      margin: 0;
+      font-size: 0.87rem;
+      color: var(--text-secondary);
+    }
+
+    .help-section ul {
+      padding-left: 20px;
+    }
+
+    .help-section li {
+      margin-bottom: 4px;
+    }
+
+    .help-callout {
+      background-color: var(--accent-soft);
+      color: var(--accent-text);
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.83rem;
+      margin-top: 8px;
+      font-weight: 600;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background-color: var(--text-primary);
+      color: var(--bg-surface);
+      padding: 11px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.86rem;
+      font-weight: 600;
+      box-shadow: var(--shadow-lg);
+      pointer-events: auto;
+      animation: slideIn 0.2s ease-out;
+    }
+
+    .toast.error {
+      background-color: var(--danger-color);
+      color: #ffffff;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+            <path d="M7 2v20"/>
+            <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">グルメログ</h1>
+          <span class="brand-sub">個人用 食べ歩き・訪問記録管理</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button type="button" class="btn btn-primary" id="btn-open-add">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          お店を登録
+        </button>
+        <button type="button" class="btn" id="btn-open-help">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          ？ 使い方
+        </button>
+        <button type="button" class="btn btn-icon-only" id="btn-toggle-theme" title="ダークモード／ライトモード切替" aria-label="テーマ切替">
+          <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg id="icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Storage Warning Banner -->
+    <div class="alert-banner" id="storage-alert" role="alert">
+      <div id="storage-alert-text"></div>
+      <button type="button" class="btn btn-sm" id="btn-alert-export">JSONでバックアップ保存</button>
+    </div>
+
+    <!-- Summary Stats -->
+    <section class="stats-grid" aria-label="統計サマリー">
+      <div class="stat-card">
+        <div class="stat-label">全店舗数</div>
+        <div class="stat-value tabular-nums"><span id="stat-total">0</span><span class="stat-sub">軒</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">行きたい</div>
+        <div class="stat-value tabular-nums"><span id="stat-want">0</span><span class="stat-sub">軒</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">行った</div>
+        <div class="stat-value tabular-nums"><span id="stat-visited">0</span><span class="stat-sub">軒</span></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">平均評価</div>
+        <div class="stat-value tabular-nums"><span id="stat-avg-rating">-</span><span class="stat-sub" id="stat-rated-count"></span></div>
+      </div>
+    </section>
+
+    <!-- Search & Filter Panel -->
+    <section class="controls-panel" aria-label="検索・絞り込み・並び替え">
+      <div class="search-row">
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="search" id="filter-keyword" class="input" placeholder="店名・ジャンル・エリア・タグ・メモを検索...">
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <div class="filter-group">
+          <label for="filter-status">ステータス</label>
+          <select id="filter-status" class="select">
+            <option value="all">すべて</option>
+            <option value="want">行きたい</option>
+            <option value="visited">行った</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-favorite">お気に入り</label>
+          <select id="filter-favorite" class="select">
+            <option value="all">すべて</option>
+            <option value="only">★ お気に入りのみ</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-genre">ジャンル</label>
+          <select id="filter-genre" class="select">
+            <option value="all">すべてのジャンル</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filter-area">エリア／最寄駅</label>
+          <select id="filter-area" class="select">
+            <option value="all">すべてのエリア</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="sort-by">並び替え</label>
+          <select id="sort-by" class="select">
+            <option value="createdDesc">新着順</option>
+            <option value="updatedDesc">更新順</option>
+            <option value="ratingDesc">評価が高い順</option>
+            <option value="visitedDesc">訪問日が新しい順</option>
+            <option value="nameAsc">店名順（五十音）</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-footer">
+        <div class="tabular-nums">表示件数: <strong id="visible-count">0</strong> 件</div>
+        <button type="button" class="btn btn-sm" id="btn-reset-filters">条件をリセット</button>
+      </div>
+    </section>
+
+    <!-- Welcome Guide (shown when 0 records exist) -->
+    <section class="welcome-card" id="welcome-guide" style="display:none;">
+      <h2>ようこそ「グルメログ」へ</h2>
+      <p>気になるお店や訪問済みの名店をブラウザだけで手軽にストックできる個人用管理帳です。外部サーバーへデータは送信されず、すべてお使いのブラウザ内に保存されます。</p>
+      <div class="steps-grid">
+        <div class="step-item">
+          <span class="step-num">STEP 1</span>
+          <h3>お店を登録する</h3>
+          <p>「お店を登録」から店名・ステータス（行きたい／行った）・エリア・評価・メモを記録します。</p>
+        </div>
+        <div class="step-item">
+          <span class="step-num">STEP 2</span>
+          <h3>検索・絞り込みで探す</h3>
+          <p>エリアやジャンル、タグ、お気に入り（★）で絞り込み、今日行くお店をすぐに見つけられます。</p>
+        </div>
+        <div class="step-item">
+          <span class="step-num">STEP 3</span>
+          <h3>JSONでバックアップ</h3>
+          <p>画面下部の「JSONエクスポート」でデータをファイル保存し、別端末への移行や万一の保護ができます。</p>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button type="button" class="btn btn-primary" id="btn-welcome-add">最初のお店を登録する</button>
+        <button type="button" class="btn" id="btn-load-sample">サンプルデータを入れて試す（5件）</button>
+      </div>
+    </section>
+
+    <!-- Shop Cards List -->
+    <section id="shops-list" class="shops-grid" aria-label="店舗一覧"></section>
+
+    <!-- Empty Search Result -->
+    <div id="empty-search" class="empty-search" style="display:none;">
+      <p>条件に一致するお店が見つかりませんでした。</p>
+      <button type="button" class="btn btn-sm" id="btn-empty-reset">検索・フィルタ条件をリセット</button>
+    </div>
+
+    <!-- Data Management Footer -->
+    <section class="data-tools-section" aria-label="データ管理">
+      <div class="data-tools-info">
+        <h3>データ管理・バックアップ</h3>
+        <p>データはブラウザの localStorage に自動保存されます。定期的なJSONバックアップをおすすめします。</p>
+      </div>
+      <div class="data-tools-buttons">
+        <button type="button" class="btn btn-sm" id="btn-export-json">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          JSONエクスポート
+        </button>
+        <button type="button" class="btn btn-sm" id="btn-import-json">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          JSONインポート
+        </button>
+        <input type="file" id="file-import-input" accept=".json,application/json" style="display:none;">
+        <button type="button" class="btn btn-sm btn-danger-outline" id="btn-delete-all">全データ削除</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add / Edit Shop Modal -->
+  <div class="modal-backdrop" id="shop-modal" role="dialog" aria-modal="true" aria-labelledby="shop-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="shop-modal-title">お店を登録</h2>
+        <button type="button" class="modal-close" data-close-modal="shop-modal" aria-label="閉じる">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <form id="shop-form" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="field-id">
+          <div class="form-grid">
+            <div class="form-group full">
+              <label class="form-label" for="field-name">店名<span class="required-mark">*</span></label>
+              <input type="text" id="field-name" class="input" placeholder="例: 麺屋 まるよし" required>
+              <span class="form-error" id="error-name">店名を入力してください（空白のみは不可）。</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-status">ステータス</label>
+              <select id="field-status" class="select">
+                <option value="want">行きたい</option>
+                <option value="visited">行った</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-rating">評価</label>
+              <select id="field-rating" class="select">
+                <option value="">未評価</option>
+                <option value="5">★★★★★ (5 - 最高)</option>
+                <option value="4">★★★★☆ (4 - とても良い)</option>
+                <option value="3">★★★☆☆ (3 - 良い)</option>
+                <option value="2">★★☆☆☆ (2 - まあまあ)</option>
+                <option value="1">★☆☆☆☆ (1 - 好みに合わず)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-genre">ジャンル（選択または自由入力）</label>
+              <input type="text" id="field-genre" class="input" list="genre-presets" placeholder="例: ラーメン、カフェ">
+              <datalist id="genre-presets"></datalist>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-area">エリア／最寄駅</label>
+              <input type="text" id="field-area" class="input" list="area-presets" placeholder="例: 渋谷、新宿西口">
+              <datalist id="area-presets"></datalist>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-budget">予算帯の目安</label>
+              <input type="text" id="field-budget" class="input" list="budget-presets" placeholder="例: ¥1,000〜¥2,999">
+              <datalist id="budget-presets">
+                <option value="〜¥1,000"></option>
+                <option value="¥1,000〜¥2,999"></option>
+                <option value="¥3,000〜¥5,999"></option>
+                <option value="¥6,000〜¥9,999"></option>
+                <option value="¥10,000〜"></option>
+              </datalist>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="field-visited-date">訪問日</label>
+              <input type="date" id="field-visited-date" class="input">
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="field-url">参考URL（地図・食べログ・公式サイトなど）</label>
+              <input type="url" id="field-url" class="input" placeholder="https://...">
+              <span class="form-hint">※ http:// または https:// で始まるURLのみリンクとして表示されます。</span>
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="field-tags">タグ（カンマ区切り）</label>
+              <input type="text" id="field-tags" class="input" placeholder="例: ランチ, 一人OK, 予約必須, テラス席">
+              <span class="form-hint">※ カンマ（, または 、）区切りで複数登録できます。</span>
+            </div>
+
+            <div class="form-group full">
+              <label class="checkbox-label">
+                <input type="checkbox" id="field-favorite">
+                <span>★ お気に入りに登録する</span>
+              </label>
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="field-memo">詳細メモ</label>
+              <textarea id="field-memo" class="textarea" rows="3" placeholder="注文したメニュー、味の感想、混雑具合、定休日や注意点など"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-close-modal="shop-modal">キャンセル</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-shop">保存する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JSON Import Mode Modal -->
+  <div class="modal-backdrop" id="import-modal" role="dialog" aria-modal="true" aria-labelledby="import-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="import-modal-title">JSONインポート方法の選択</h2>
+        <button type="button" class="modal-close" data-close-modal="import-modal" aria-label="閉じる">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="import-summary-text" style="margin-top:0; font-size:0.9rem;"></p>
+
+        <label class="radio-card">
+          <input type="radio" name="import-mode" value="merge" checked>
+          <div>
+            <span class="radio-card-title">追記マージ（おすすめ）</span>
+            <span class="radio-card-desc">現在登録されている店舗データを保持したまま、読み込んだデータを追加します（IDが重複する場合は新しいIDを自動採番して両方残します）。</span>
+          </div>
+        </label>
+
+        <label class="radio-card">
+          <input type="radio" name="import-mode" value="overwrite">
+          <div>
+            <span class="radio-card-title" style="color:var(--danger-color);">上書き置換</span>
+            <span class="radio-card-desc">現在の店舗データをすべて破棄し、JSONファイルの内容に完全に置き換えます。</span>
+          </div>
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-close-modal="import-modal">キャンセル</button>
+        <button type="button" class="btn btn-primary" id="btn-confirm-import">インポートを実行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Tutorial Modal -->
+  <div class="modal-backdrop" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 class="modal-title" id="help-modal-title">グルメログの使い方</h2>
+        <button type="button" class="modal-close" data-close-modal="help-modal" aria-label="閉じる">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="help-section">
+          <h3>1. 基本操作（登録・編集・お気に入り・削除）</h3>
+          <ul>
+            <li><strong>登録・編集</strong>: 右上の「お店を登録」から新規追加、各カードの「編集」から内容を更新できます。「行きたい」から「行った」への変更や評価の追記も編集から行えます。</li>
+            <li><strong>お気に入り（★）</strong>: カード右上の星アイコンをクリックするとワンクリックで切り替え・即時保存されます。</li>
+            <li><strong>削除</strong>: カードの「削除」で個別削除、ページ下部の「全データ削除」で全件クリアが可能です。</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>2. 検索・絞り込み・並び替えのコツ</h3>
+          <ul>
+            <li>検索ボックスは<strong>店名・ジャンル・エリア・タグ・詳細メモ</strong>を横断して検索します。「テラス席」「一人OK」などのタグを付けておくと便利です。</li>
+            <li>「行きたい」＋「エリア指定」で絞り込めば、外出先で候補店を素早くピックアップできます。</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>3. JSONバックアップと復元／統合</h3>
+          <ul>
+            <li><strong>JSONエクスポート</strong>: 現在の全店舗データを整形済みJSONファイルとしてPC・スマホに保存します。</li>
+            <li><strong>JSONインポート</strong>: 保存したJSONを読み込みます。既存データを残して追加する<strong>「追記マージ」</strong>と、丸ごと入れ替える<strong>「上書き置換」</strong>を選択できます。</li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>4. データの保存場所に関する重要なご注意</h3>
+          <p>このアプリはサーバー通信を行わず、お使いのブラウザ内の領域（<code>localStorage</code>）にデータを保存します。</p>
+          <div class="help-callout">
+            ブラウザの履歴・キャッシュ（サイトデータ）を削除した場合や、別のブラウザ・別端末から開いた場合はデータが引き継がれません。定期的に「JSONエクスポート」でバックアップを保存してください。
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-close-modal="help-modal">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'gourmet_log_shops_v1';
+      const THEME_KEY = 'gourmet_log_theme_v1';
+      const APP_IDENTIFIER = 'gourmet-log-standalone';
+      const SCHEMA_VERSION = 1;
+
+      const GENRE_PRESETS = [
+        '和食', '寿司', 'ラーメン', 'うどん・そば', '焼肉・ホルモン', '焼鳥・串焼き',
+        '居酒屋', 'イタリアン', 'フレンチ', '中華料理', '韓国料理', 'カレー',
+        'カフェ・喫茶', 'スイーツ・パン', 'バー', 'その他'
+      ];
+
+      let shops = [];
+      let pendingImportRecords = null;
+      let searchDebounceTimer = null;
+
+      // DOM References
+      const els = {
+        statTotal: document.getElementById('stat-total'),
+        statWant: document.getElementById('stat-want'),
+        statVisited: document.getElementById('stat-visited'),
+        statAvgRating: document.getElementById('stat-avg-rating'),
+        statRatedCount: document.getElementById('stat-rated-count'),
+        filterKeyword: document.getElementById('filter-keyword'),
+        filterStatus: document.getElementById('filter-status'),
+        filterFavorite: document.getElementById('filter-favorite'),
+        filterGenre: document.getElementById('filter-genre'),
+        filterArea: document.getElementById('filter-area'),
+        sortBy: document.getElementById('sort-by'),
+        visibleCount: document.getElementById('visible-count'),
+        welcomeGuide: document.getElementById('welcome-guide'),
+        shopsList: document.getElementById('shops-list'),
+        emptySearch: document.getElementById('empty-search'),
+        storageAlert: document.getElementById('storage-alert'),
+        storageAlertText: document.getElementById('storage-alert-text'),
+        shopModal: document.getElementById('shop-modal'),
+        shopModalTitle: document.getElementById('shop-modal-title'),
+        shopForm: document.getElementById('shop-form'),
+        fieldId: document.getElementById('field-id'),
+        fieldName: document.getElementById('field-name'),
+        errorName: document.getElementById('error-name'),
+        fieldStatus: document.getElementById('field-status'),
+        fieldRating: document.getElementById('field-rating'),
+        fieldGenre: document.getElementById('field-genre'),
+        fieldArea: document.getElementById('field-area'),
+        fieldBudget: document.getElementById('field-budget'),
+        fieldVisitedDate: document.getElementById('field-visited-date'),
+        fieldUrl: document.getElementById('field-url'),
+        fieldTags: document.getElementById('field-tags'),
+        fieldFavorite: document.getElementById('field-favorite'),
+        fieldMemo: document.getElementById('field-memo'),
+        genrePresets: document.getElementById('genre-presets'),
+        areaPresets: document.getElementById('area-presets'),
+        importModal: document.getElementById('import-modal'),
+        importSummaryText: document.getElementById('import-summary-text'),
+        fileImportInput: document.getElementById('file-import-input'),
+        helpModal: document.getElementById('help-modal'),
+        iconMoon: document.getElementById('icon-moon'),
+        iconSun: document.getElementById('icon-sun'),
+        toastContainer: document.getElementById('toast-container')
+      };
+
+      // Utilities
+      function generateId() {
+        const rand = Math.random().toString(36).substring(2, 8);
+        return `shop_${Date.now()}_${rand}`;
+      }
+
+      function showToast(message, isError = false) {
+        const toast = document.createElement('div');
+        toast.className = isError ? 'toast error' : 'toast';
+        toast.textContent = message;
+        els.toastContainer.appendChild(toast);
+        setTimeout(() => {
+          toast.remove();
+        }, 3800);
+      }
+
+      function showStorageWarning(reason) {
+        els.storageAlertText.textContent = `ブラウザへの自動保存に失敗しました（${reason}）。現在のデータはメモリ上にあるため、ページを閉じる前にJSONエクスポートで退避してください。`;
+        els.storageAlert.classList.add('visible');
+      }
+
+      function clearStorageWarning() {
+        els.storageAlert.classList.remove('visible');
+      }
+
+      function isSafeHttpUrl(urlStr) {
+        if (typeof urlStr !== 'string') return false;
+        const trimmed = urlStr.trim();
+        if (!trimmed) return false;
+        try {
+          const parsed = new URL(trimmed);
+          return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+        } catch {
+          return false;
+        }
+      }
+
+      function parseTagsInput(raw) {
+        if (Array.isArray(raw)) {
+          const cleaned = raw
+            .filter(t => typeof t === 'string')
+            .map(t => t.trim())
+            .filter(Boolean);
+          return Array.from(new Set(cleaned));
+        }
+        if (typeof raw !== 'string') return [];
+        const parts = raw.split(/[,、]/).map(s => s.trim()).filter(Boolean);
+        return Array.from(new Set(parts));
+      }
+
+      function normalizeRecord(raw, forceNewId = false) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+        if (typeof raw.name !== 'string' || raw.name.trim() === '') return null;
+
+        const nowIso = new Date().toISOString();
+        const status = raw.status === 'visited' ? 'visited' : 'want';
+
+        let rating = null;
+        if (raw.rating !== null && raw.rating !== undefined && raw.rating !== '') {
+          const num = Number(raw.rating);
+          if (Number.isFinite(num)) {
+            rating = Math.min(5, Math.max(1, Math.round(num)));
+          }
+        }
+
+        let visitedDate = '';
+        if (typeof raw.visitedDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.visitedDate.trim())) {
+          visitedDate = raw.visitedDate.trim();
+        }
+
+        const id = (!forceNewId && typeof raw.id === 'string' && raw.id.trim() !== '')
+          ? raw.id.trim()
+          : generateId();
+
+        return {
+          id,
+          name: raw.name.trim(),
+          status,
+          genre: typeof raw.genre === 'string' ? raw.genre.trim() : '',
+          area: typeof raw.area === 'string' ? raw.area.trim() : '',
+          budget: typeof raw.budget === 'string' ? raw.budget.trim() : '',
+          rating,
+          visitedDate,
+          url: typeof raw.url === 'string' ? raw.url.trim() : '',
+          tags: parseTagsInput(raw.tags),
+          favorite: Boolean(raw.favorite),
+          memo: typeof raw.memo === 'string' ? raw.memo : '',
+          createdAt: typeof raw.createdAt === 'string' && raw.createdAt.trim() ? raw.createdAt.trim() : nowIso,
+          updatedAt: typeof raw.updatedAt === 'string' && raw.updatedAt.trim() ? raw.updatedAt.trim() : nowIso
+        };
+      }
+
+      // Theme Management
+      function applyTheme(theme) {
+        const isDark = theme === 'dark';
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        els.iconMoon.style.display = isDark ? 'none' : 'block';
+        els.iconSun.style.display = isDark ? 'block' : 'none';
+      }
+
+      function initTheme() {
+        let savedTheme = null;
+        try {
+          savedTheme = localStorage.getItem(THEME_KEY);
+        } catch {
+          // Ignore storage read error
+        }
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          applyTheme(savedTheme);
+        } else {
+          const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          applyTheme(prefersDark ? 'dark' : 'light');
+        }
+      }
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        try {
+          localStorage.setItem(THEME_KEY, next);
+        } catch {
+          showToast('テーマ設定の保存に失敗しました（ブラウザ制限）', true);
+        }
+      }
+
+      // Persistence
+      function saveShopsToStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(shops));
+          clearStorageWarning();
+          return true;
+        } catch (err) {
+          const msg = err && err.name === 'QuotaExceededError'
+            ? '保存容量の上限を超過しました'
+            : 'プライベートブラウズ等の制限により保存できません';
+          showStorageWarning(msg);
+          showToast('localStorageへの保存に失敗しました', true);
+          return false;
+        }
+      }
+
+      function loadShopsFromStorage() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            shops = [];
+            return;
+          }
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            shops = [];
+            return;
+          }
+          shops = parsed.map(item => normalizeRecord(item)).filter(Boolean);
+        } catch {
+          shops = [];
+          showStorageWarning('保存データの読み込みに失敗したか、アクセスが制限されています');
+        }
+      }
+
+      // Dynamic Select Options & Datalists
+      function updateFilterOptions() {
+        const currentGenre = els.filterGenre.value;
+        const currentArea = els.filterArea.value;
+
+        const genreSet = new Set(GENRE_PRESETS);
+        const areaSet = new Set();
+
+        shops.forEach(s => {
+          if (s.genre) genreSet.add(s.genre);
+          if (s.area) areaSet.add(s.area);
+        });
+
+        // Filter Genre dropdown
+        els.filterGenre.innerHTML = '';
+        const defaultGenreOpt = document.createElement('option');
+        defaultGenreOpt.value = 'all';
+        defaultGenreOpt.textContent = 'すべてのジャンル';
+        els.filterGenre.appendChild(defaultGenreOpt);
+
+        Array.from(genreSet).forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          opt.textContent = g;
+          els.filterGenre.appendChild(opt);
+        });
+        els.filterGenre.value = genreSet.has(currentGenre) ? currentGenre : 'all';
+
+        // Filter Area dropdown
+        els.filterArea.innerHTML = '';
+        const defaultAreaOpt = document.createElement('option');
+        defaultAreaOpt.value = 'all';
+        defaultAreaOpt.textContent = 'すべてのエリア';
+        els.filterArea.appendChild(defaultAreaOpt);
+
+        Array.from(areaSet).sort((a, b) => a.localeCompare(b, 'ja')).forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a;
+          opt.textContent = a;
+          els.filterArea.appendChild(opt);
+        });
+        els.filterArea.value = areaSet.has(currentArea) ? currentArea : 'all';
+
+        // Form datalists
+        els.genrePresets.innerHTML = '';
+        Array.from(genreSet).forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          els.genrePresets.appendChild(opt);
+        });
+
+        els.areaPresets.innerHTML = '';
+        Array.from(areaSet).sort((a, b) => a.localeCompare(b, 'ja')).forEach(a => {
+          const opt = document.createElement('option');
+          opt.value = a;
+          els.areaPresets.appendChild(opt);
+        });
+      }
+
+      // Stats Calculation
+      function renderStats() {
+        const total = shops.length;
+        const want = shops.filter(s => s.status === 'want').length;
+        const visited = shops.filter(s => s.status === 'visited').length;
+        const ratedShops = shops.filter(s => typeof s.rating === 'number' && s.rating >= 1 && s.rating <= 5);
+
+        els.statTotal.textContent = String(total);
+        els.statWant.textContent = String(want);
+        els.statVisited.textContent = String(visited);
+
+        if (ratedShops.length > 0) {
+          const sum = ratedShops.reduce((acc, s) => acc + s.rating, 0);
+          const avg = (sum / ratedShops.length).toFixed(2);
+          els.statAvgRating.textContent = avg;
+          els.statRatedCount.textContent = `(${ratedShops.length}件)`;
+        } else {
+          els.statAvgRating.textContent = '-';
+          els.statRatedCount.textContent = '';
+        }
+      }
+
+      // Filtering & Sorting
+      function getFilteredAndSortedShops() {
+        const keyword = els.filterKeyword.value.trim().toLowerCase();
+        const statusFilter = els.filterStatus.value;
+        const favFilter = els.filterFavorite.value;
+        const genreFilter = els.filterGenre.value;
+        const areaFilter = els.filterArea.value;
+        const sortBy = els.sortBy.value;
+
+        const filtered = shops.filter(shop => {
+          if (statusFilter !== 'all' && shop.status !== statusFilter) return false;
+          if (favFilter === 'only' && !shop.favorite) return false;
+          if (genreFilter !== 'all' && shop.genre !== genreFilter) return false;
+          if (areaFilter !== 'all' && shop.area !== areaFilter) return false;
+
+          if (keyword) {
+            const haystack = [
+              shop.name,
+              shop.genre,
+              shop.area,
+              shop.memo,
+              shop.tags.join(' ')
+            ].join('\n').toLowerCase();
+            if (!haystack.includes(keyword)) return false;
+          }
+          return true;
+        });
+
+        filtered.sort((a, b) => {
+          switch (sortBy) {
+            case 'updatedDesc':
+              return b.updatedAt.localeCompare(a.updatedAt);
+            case 'ratingDesc': {
+              const rA = a.rating === null ? -1 : a.rating;
+              const rB = b.rating === null ? -1 : b.rating;
+              if (rB !== rA) return rB - rA;
+              return b.createdAt.localeCompare(a.createdAt);
+            }
+            case 'visitedDesc': {
+              const dA = a.visitedDate || '';
+              const dB = b.visitedDate || '';
+              if (dA === '' && dB === '') return b.createdAt.localeCompare(a.createdAt);
+              if (dA === '') return 1;
+              if (dB === '') return -1;
+              if (dB !== dA) return dB.localeCompare(dA);
+              return b.createdAt.localeCompare(a.createdAt);
+            }
+            case 'nameAsc':
+              return a.name.localeCompare(b.name, 'ja');
+            case 'createdDesc':
+            default:
+              return b.createdAt.localeCompare(a.createdAt);
+          }
+        });
+
+        return filtered;
+      }
+
+      // Render Shop Card (Safe DOM Construction)
+      function createShopCard(shop) {
+        const card = document.createElement('article');
+        card.className = 'shop-card';
+
+        // Top section
+        const topWrap = document.createElement('div');
+
+        const headerRow = document.createElement('div');
+        headerRow.className = 'shop-card-top';
+
+        const leftHead = document.createElement('div');
+        const badges = document.createElement('div');
+        badges.className = 'shop-badges';
+
+        const statusBadge = document.createElement('span');
+        statusBadge.className = shop.status === 'visited' ? 'badge badge-visited' : 'badge badge-want';
+        statusBadge.textContent = shop.status === 'visited' ? '行った' : '行きたい';
+        badges.appendChild(statusBadge);
+
+        if (shop.genre) {
+          const genreBadge = document.createElement('span');
+          genreBadge.className = 'badge badge-genre';
+          genreBadge.textContent = shop.genre;
+          badges.appendChild(genreBadge);
+        }
+
+        leftHead.appendChild(badges);
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'shop-name';
+        titleEl.textContent = shop.name;
+        leftHead.appendChild(titleEl);
+
+        // Favorite toggle button
+        const favBtn = document.createElement('button');
+        favBtn.type = 'button';
+        favBtn.className = shop.favorite ? 'fav-btn active' : 'fav-btn';
+        favBtn.title = shop.favorite ? 'お気に入り解除' : 'お気に入りに追加';
+        favBtn.setAttribute('aria-label', favBtn.title);
+        favBtn.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="${shop.favorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+        favBtn.addEventListener('click', () => toggleFavorite(shop.id));
+
+        headerRow.appendChild(leftHead);
+        headerRow.appendChild(favBtn);
+        topWrap.appendChild(headerRow);
+
+        // Meta row (Area, Budget, Rating, Visited Date)
+        const metaRow = document.createElement('div');
+        metaRow.className = 'shop-meta tabular-nums';
+
+        const ratingItem = document.createElement('span');
+        ratingItem.className = 'meta-item';
+        if (typeof shop.rating === 'number') {
+          const starsSpan = document.createElement('span');
+          starsSpan.className = 'rating-stars';
+          starsSpan.textContent = '★'.repeat(shop.rating) + '☆'.repeat(5 - shop.rating);
+          ratingItem.appendChild(starsSpan);
+        } else {
+          const unratedSpan = document.createElement('span');
+          unratedSpan.className = 'rating-unrated';
+          unratedSpan.textContent = '未評価';
+          ratingItem.appendChild(unratedSpan);
+        }
+        metaRow.appendChild(ratingItem);
+
+        if (shop.area) {
+          const areaItem = document.createElement('span');
+          areaItem.className = 'meta-item';
+          areaItem.textContent = `📍 ${shop.area}`;
+          metaRow.appendChild(areaItem);
+        }
+
+        if (shop.budget) {
+          const budgetItem = document.createElement('span');
+          budgetItem.className = 'meta-item';
+          budgetItem.textContent = `💴 ${shop.budget}`;
+          metaRow.appendChild(budgetItem);
+        }
+
+        if (shop.visitedDate) {
+          const dateItem = document.createElement('span');
+          dateItem.className = 'meta-item';
+          dateItem.textContent = `📅 ${shop.visitedDate}`;
+          metaRow.appendChild(dateItem);
+        }
+
+        topWrap.appendChild(metaRow);
+        card.appendChild(topWrap);
+
+        // Memo
+        if (shop.memo) {
+          const memoEl = document.createElement('p');
+          memoEl.className = 'shop-memo';
+          memoEl.textContent = shop.memo;
+          card.appendChild(memoEl);
+        }
+
+        // Tags
+        if (shop.tags.length > 0) {
+          const tagsWrap = document.createElement('div');
+          tagsWrap.className = 'shop-tags';
+          shop.tags.forEach(tag => {
+            const chip = document.createElement('span');
+            chip.className = 'tag-chip';
+            chip.textContent = `#${tag}`;
+            tagsWrap.appendChild(chip);
+          });
+          card.appendChild(tagsWrap);
+        }
+
+        // Footer (URL + Edit/Delete)
+        const footer = document.createElement('div');
+        footer.className = 'shop-card-footer';
+
+        const urlArea = document.createElement('div');
+        urlArea.className = 'shop-url-area';
+        if (shop.url) {
+          if (isSafeHttpUrl(shop.url)) {
+            const link = document.createElement('a');
+            link.className = 'shop-link';
+            link.href = shop.url;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.textContent = '参考リンクを開く ↗';
+            urlArea.appendChild(link);
+          } else {
+            const invalidSpan = document.createElement('span');
+            invalidSpan.className = 'shop-invalid-url';
+            invalidSpan.textContent = `無効なURL形式: ${shop.url}`;
+            urlArea.appendChild(invalidSpan);
+          }
+        }
+        footer.appendChild(urlArea);
+
+        const actions = document.createElement('div');
+        actions.className = 'card-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-sm';
+        editBtn.textContent = '編集';
+        editBtn.addEventListener('click', () => openEditModal(shop.id));
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-sm btn-danger-outline';
+        delBtn.textContent = '削除';
+        delBtn.addEventListener('click', () => deleteShop(shop.id));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        footer.appendChild(actions);
+
+        card.appendChild(footer);
+        return card;
+      }
+
+      // Main Render
+      function renderAll() {
+        renderStats();
+        updateFilterOptions();
+
+        if (shops.length === 0) {
+          els.welcomeGuide.style.display = 'block';
+          els.shopsList.innerHTML = '';
+          els.emptySearch.style.display = 'none';
+          els.visibleCount.textContent = '0';
+          return;
+        }
+
+        els.welcomeGuide.style.display = 'none';
+        const filtered = getFilteredAndSortedShops();
+        els.visibleCount.textContent = String(filtered.length);
+
+        els.shopsList.innerHTML = '';
+        if (filtered.length === 0) {
+          els.emptySearch.style.display = 'block';
+        } else {
+          els.emptySearch.style.display = 'none';
+          const fragment = document.createDocumentFragment();
+          filtered.forEach(shop => {
+            fragment.appendChild(createShopCard(shop));
+          });
+          els.shopsList.appendChild(fragment);
+        }
+      }
+
+      // CRUD Operations
+      function openAddModal() {
+        els.shopModalTitle.textContent = 'お店を登録';
+        els.shopForm.reset();
+        els.fieldId.value = '';
+        els.fieldStatus.value = 'want';
+        els.fieldRating.value = '';
+        els.errorName.classList.remove('visible');
+        openModal('shop-modal');
+        els.fieldName.focus();
+      }
+
+      function openEditModal(id) {
+        const target = shops.find(s => s.id === id);
+        if (!target) return;
+
+        els.shopModalTitle.textContent = 'お店情報を編集';
+        els.errorName.classList.remove('visible');
+        els.fieldId.value = target.id;
+        els.fieldName.value = target.name;
+        els.fieldStatus.value = target.status;
+        els.fieldRating.value = target.rating !== null ? String(target.rating) : '';
+        els.fieldGenre.value = target.genre;
+        els.fieldArea.value = target.area;
+        els.fieldBudget.value = target.budget;
+        els.fieldVisitedDate.value = target.visitedDate;
+        els.fieldUrl.value = target.url;
+        els.fieldTags.value = target.tags.join(', ');
+        els.fieldFavorite.checked = target.favorite;
+        els.fieldMemo.value = target.memo;
+
+        openModal('shop-modal');
+        els.fieldName.focus();
+      }
+
+      function handleShopFormSubmit(e) {
+        e.preventDefault();
+        const nameVal = els.fieldName.value.trim();
+        if (!nameVal) {
+          els.errorName.classList.add('visible');
+          els.fieldName.focus();
+          return;
+        }
+        els.errorName.classList.remove('visible');
+
+        const editingId = els.fieldId.value;
+        const nowIso = new Date().toISOString();
+        const ratingRaw = els.fieldRating.value;
+        const ratingVal = ratingRaw ? Math.min(5, Math.max(1, parseInt(ratingRaw, 10))) : null;
+
+        const payload = {
+          name: nameVal,
+          status: els.fieldStatus.value === 'visited' ? 'visited' : 'want',
+          genre: els.fieldGenre.value.trim(),
+          area: els.fieldArea.value.trim(),
+          budget: els.fieldBudget.value.trim(),
+          rating: ratingVal,
+          visitedDate: els.fieldVisitedDate.value.trim(),
+          url: els.fieldUrl.value.trim(),
+          tags: parseTagsInput(els.fieldTags.value),
+          favorite: els.fieldFavorite.checked,
+          memo: els.fieldMemo.value,
+          updatedAt: nowIso
+        };
+
+        if (editingId) {
+          const idx = shops.findIndex(s => s.id === editingId);
+          if (idx !== -1) {
+            shops[idx] = { ...shops[idx], ...payload };
+            saveShopsToStorage();
+            renderAll();
+            closeModal('shop-modal');
+            showToast(`「${payload.name}」を更新しました`);
+          }
+        } else {
+          const newRecord = {
+            id: generateId(),
+            ...payload,
+            createdAt: nowIso
+          };
+          shops.unshift(newRecord);
+          saveShopsToStorage();
+          renderAll();
+          closeModal('shop-modal');
+          showToast(`「${payload.name}」を登録しました`);
+        }
+      }
+
+      function toggleFavorite(id) {
+        const target = shops.find(s => s.id === id);
+        if (!target) return;
+        target.favorite = !target.favorite;
+        target.updatedAt = new Date().toISOString();
+        saveShopsToStorage();
+        renderAll();
+      }
+
+      function deleteShop(id) {
+        const target = shops.find(s => s.id === id);
+        if (!target) return;
+        if (!window.confirm(`「${target.name}」を削除してもよろしいですか？\nこの操作は取り消せません。`)) {
+          return;
+        }
+        shops = shops.filter(s => s.id !== id);
+        saveShopsToStorage();
+        renderAll();
+        showToast(`「${target.name}」を削除しました`);
+      }
+
+      function deleteAllShops() {
+        if (shops.length === 0) {
+          showToast('削除するデータがありません');
+          return;
+        }
+        if (!window.confirm(`現在登録されている全 ${shops.length} 件の店舗データをすべて削除しますか？`)) {
+          return;
+        }
+        if (!window.confirm('【最終確認】本当にすべてのデータを完全に消去してよろしいですか？（JSONバックアップを取っていない場合は復元できません）')) {
+          return;
+        }
+        shops = [];
+        saveShopsToStorage();
+        renderAll();
+        showToast('すべての店舗データを削除しました');
+      }
+
+      // Sample Data
+      function loadSampleData() {
+        const now = Date.now();
+        const samples = [
+          {
+            id: generateId(),
+            name: '中華そば 琥珀堂',
+            status: 'visited',
+            genre: 'ラーメン',
+            area: '新宿西口',
+            budget: '¥1,000〜¥2,999',
+            rating: 5,
+            visitedDate: '2026-10-18',
+            url: 'https://example.com/kohakudo',
+            tags: ['醤油ラーメン', '一人OK', '行列店'],
+            favorite: true,
+            memo: '特製醤油そば（1,350円）を注文。鶏と魚介の澄んだスープが絶品。土曜11:30到着で20分待ち。',
+            createdAt: new Date(now - 86400000 * 10).toISOString(),
+            updatedAt: new Date(now - 86400000 * 10).toISOString()
+          },
+          {
+            id: generateId(),
+            name: 'Trattoria Verde（トラットリア ヴェルデ）',
+            status: 'visited',
+            genre: 'イタリアン',
+            area: '恵比寿',
+            budget: '¥3,000〜¥5,999',
+            rating: 4,
+            visitedDate: '2026-11-03',
+            url: 'https://example.com/trattoria-verde',
+            tags: ['パスタ', 'ランチ', '予約推奨'],
+            favorite: true,
+            memo: '休日ランチコース。前菜盛り合わせと自家製ボロネーゼが美味しい。店員さんの接客も丁寧。',
+            createdAt: new Date(now - 86400000 * 7).toISOString(),
+            updatedAt: new Date(now - 86400000 * 7).toISOString()
+          },
+          {
+            id: generateId(),
+            name: '喫茶 燈（ともしび）',
+            status: 'want',
+            genre: 'カフェ・喫茶',
+            area: '神保町',
+            budget: '〜¥1,000',
+            rating: null,
+            visitedDate: '',
+            url: 'https://example.com/kissa-tomoshibi',
+            tags: ['固めプリン', 'ハンドドリップ', '読書'],
+            favorite: false,
+            memo: 'レトロな純喫茶。昔ながらの固めプリンと深煎りブレンドが有名らしい。平日午後に訪問したい。',
+            createdAt: new Date(now - 86400000 * 4).toISOString(),
+            updatedAt: new Date(now - 86400000 * 4).toISOString()
+          },
+          {
+            id: generateId(),
+            name: '炭火焼鳥 匠庵',
+            status: 'want',
+            genre: '焼鳥・串焼き',
+            area: '渋谷',
+            budget: '¥6,000〜¥9,999',
+            rating: null,
+            visitedDate: '',
+            url: 'https://example.com/yakitori-shoan',
+            tags: ['カウンター席', '日本酒豊富', '予約必須'],
+            favorite: true,
+            memo: '白レバーとつくねが評判の焼鳥店。2週間前にはネット予約が必要とのこと。',
+            createdAt: new Date(now - 86400000 * 2).toISOString(),
+            updatedAt: new Date(now - 86400000 * 2).toISOString()
+          },
+          {
+            id: generateId(),
+            name: 'スパイスカリー 南風',
+            status: 'visited',
+            genre: 'カレー',
+            area: '下北沢',
+            budget: '¥1,000〜¥2,999',
+            rating: 4,
+            visitedDate: '2026-11-15',
+            url: '',
+            tags: ['あいがけカレー', 'スパイス', 'ランチ'],
+            favorite: false,
+            memo: 'チキンとポークビンダルーの2種あいがけ。副菜のアチャールが豊富で最後まで飽きない。',
+            createdAt: new Date(now - 86400000 * 1).toISOString(),
+            updatedAt: new Date(now - 86400000 * 1).toISOString()
+          }
+        ];
+
+        shops = samples;
+        saveShopsToStorage();
+        renderAll();
+        showToast('サンプルデータ（5件）を追加しました');
+      }
+
+      // JSON Export & Import
+      function exportJson() {
+        const exportObj = {
+          app: APP_IDENTIFIER,
+          version: SCHEMA_VERSION,
+          exportedAt: new Date().toISOString(),
+          count: shops.length,
+          shops
+        };
+
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const dateTag = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `gourmet-log-backup-${dateTag}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        showToast(`JSONファイルをエクスポートしました（${shops.length}件）`);
+      }
+
+      function handleFileSelected(e) {
+        const file = e.target.files && e.target.files[0];
+        // Reset input value so the same file can be selected again later
+        e.target.value = '';
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const text = String(reader.result || '').trim();
+            if (!text) {
+              throw new Error('ファイルが空です。');
+            }
+            const parsed = JSON.parse(text);
+            let rawArray = null;
+
+            if (Array.isArray(parsed)) {
+              rawArray = parsed;
+            } else if (parsed && typeof parsed === 'object' && Array.isArray(parsed.shops)) {
+              rawArray = parsed.shops;
+            } else {
+              throw new Error('想定されたJSON形式（店舗配列またはshopsプロパティを持つオブジェクト）ではありません。');
+            }
+
+            const validRecords = [];
+            let skippedCount = 0;
+
+            rawArray.forEach(item => {
+              const normalized = normalizeRecord(item, false);
+              if (normalized) {
+                validRecords.push(normalized);
+              } else {
+                skippedCount++;
+              }
+            });
+
+            if (validRecords.length === 0) {
+              throw new Error('インポート可能な有効な店舗レコードが含まれていませんでした（店名が空または形式不正）。');
+            }
+
+            pendingImportRecords = validRecords;
+            let summary = `ファイルから有効な店舗データ ${validRecords.length} 件を読み込みました。`;
+            if (skippedCount > 0) {
+              summary += `（形式不正の ${skippedCount} 件はスキップされました）`;
+            }
+            els.importSummaryText.textContent = summary;
+
+            // Default radio to merge
+            const mergeRadio = document.querySelector('input[name="import-mode"][value="merge"]');
+            if (mergeRadio) mergeRadio.checked = true;
+
+            openModal('import-modal');
+          } catch (err) {
+            pendingImportRecords = null;
+            showToast(`インポートエラー: ${err.message || 'JSONの解析に失敗しました'}`, true);
+          }
+        };
+
+        reader.onerror = () => {
+          pendingImportRecords = null;
+          showToast('ファイルの読み込み中にエラーが発生しました', true);
+        };
+
+        reader.readAsText(file, 'UTF-8');
+      }
+
+      function executeImport() {
+        if (!pendingImportRecords || pendingImportRecords.length === 0) {
+          closeModal('import-modal');
+          return;
+        }
+
+        const selectedMode = document.querySelector('input[name="import-mode"]:checked');
+        const mode = selectedMode ? selectedMode.value : 'merge';
+
+        if (mode === 'overwrite') {
+          if (!window.confirm(`現在の店舗データ（${shops.length}件）をすべて破棄し、読み込んだ ${pendingImportRecords.length} 件で上書き置換しますか？`)) {
+            return;
+          }
+          // Deduplicate IDs within imported set itself
+          const seenIds = new Set();
+          shops = pendingImportRecords.map(rec => {
+            if (seenIds.has(rec.id)) {
+              const copy = { ...rec, id: generateId() };
+              seenIds.add(copy.id);
+              return copy;
+            }
+            seenIds.add(rec.id);
+            return rec;
+          });
+          saveShopsToStorage();
+          renderAll();
+          closeModal('import-modal');
+          showToast(`${shops.length} 件のデータで上書き置換しました`);
+        } else {
+          // Merge mode: keep existing, assign new ID if collision occurs
+          const existingIds = new Set(shops.map(s => s.id));
+          const mergedToAdd = pendingImportRecords.map(rec => {
+            if (existingIds.has(rec.id)) {
+              const newId = generateId();
+              existingIds.add(newId);
+              return { ...rec, id: newId };
+            }
+            existingIds.add(rec.id);
+            return rec;
+          });
+
+          shops = [...mergedToAdd, ...shops];
+          saveShopsToStorage();
+          renderAll();
+          closeModal('import-modal');
+          showToast(`${mergedToAdd.length} 件のデータを追記マージしました`);
+        }
+
+        pendingImportRecords = null;
+      }
+
+      // Modal Helpers
+      function openModal(modalId) {
+        const el = document.getElementById(modalId);
+        if (el) el.classList.add('open');
+      }
+
+      function closeModal(modalId) {
+        const el = document.getElementById(modalId);
+        if (el) el.classList.remove('open');
+        if (modalId === 'import-modal') {
+          pendingImportRecords = null;
+        }
+      }
+
+      function resetFilters() {
+        els.filterKeyword.value = '';
+        els.filterStatus.value = 'all';
+        els.filterFavorite.value = 'all';
+        els.filterGenre.value = 'all';
+        els.filterArea.value = 'all';
+        els.sortBy.value = 'createdDesc';
+        renderAll();
+      }
+
+      // Event Listeners
+      function bindEvents() {
+        document.getElementById('btn-open-add').addEventListener('click', openAddModal);
+        document.getElementById('btn-welcome-add').addEventListener('click', openAddModal);
+        document.getElementById('btn-load-sample').addEventListener('click', loadSampleData);
+        document.getElementById('btn-open-help').addEventListener('click', () => openModal('help-modal'));
+        document.getElementById('btn-toggle-theme').addEventListener('click', toggleTheme);
+
+        els.shopForm.addEventListener('submit', handleShopFormSubmit);
+
+        // Filters & Sort
+        els.filterKeyword.addEventListener('input', () => {
+          clearTimeout(searchDebounceTimer);
+          searchDebounceTimer = setTimeout(renderAll, 150);
+        });
+        els.filterStatus.addEventListener('change', renderAll);
+        els.filterFavorite.addEventListener('change', renderAll);
+        els.filterGenre.addEventListener('change', renderAll);
+        els.filterArea.addEventListener('change', renderAll);
+        els.sortBy.addEventListener('change', renderAll);
+
+        document.getElementById('btn-reset-filters').addEventListener('click', resetFilters);
+        document.getElementById('btn-empty-reset').addEventListener('click', resetFilters);
+
+        // Export / Import / Delete All
+        document.getElementById('btn-export-json').addEventListener('click', exportJson);
+        document.getElementById('btn-alert-export').addEventListener('click', exportJson);
+        document.getElementById('btn-import-json').addEventListener('click', () => els.fileImportInput.click());
+        els.fileImportInput.addEventListener('change', handleFileSelected);
+        document.getElementById('btn-confirm-import').addEventListener('click', executeImport);
+        document.getElementById('btn-delete-all').addEventListener('click', deleteAllShops);
+
+        // Modal close buttons & backdrop click
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            closeModal(btn.getAttribute('data-close-modal'));
+          });
+        });
+
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+          backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) {
+              closeModal(backdrop.id);
+            }
+          });
+        });
+
+        // Esc key closes open modals
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            document.querySelectorAll('.modal-backdrop.open').forEach(modal => {
+              closeModal(modal.id);
+            });
+          }
+        });
+      }
+
+      // Initialize App
+      initTheme();
+      loadShopsFromStorage();
+      bindEvents();
+      renderAll();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NutriGuard — 食事制限・栄養＆NG食材管理ツール</title>
+  <!-- CDN: Chart.js & Lucide Icons (with strict runtime fallback handling) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="https://unpkg.com/lucide@0.441.0/dist/umd/lucide.min.js" defer></script>
+  <style>
+    :root {
+      --bg-app: #f4f6f9;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f8fafc;
+      --bg-muted: #eef2f6;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      --accent-primary: #0d9488;
+      --accent-primary-hover: #0f766e;
+      --accent-primary-soft: rgba(13, 148, 136, 0.12);
+
+      --status-ok: #10b981;
+      --status-ok-soft: rgba(16, 185, 129, 0.14);
+      --status-warn: #f59e0b;
+      --status-warn-soft: rgba(245, 158, 11, 0.15);
+      --status-danger: #ef4444;
+      --status-danger-soft: rgba(239, 68, 68, 0.14);
+      --status-info: #3b82f6;
+      --status-info-soft: rgba(59, 130, 246, 0.14);
+
+      --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+      --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+      --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.16);
+
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg-app: #0b1120;
+      --bg-surface: #131c31;
+      --bg-subtle: #18233c;
+      --bg-muted: #1e293b;
+      --text-primary: #f1f5f9;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --border-color: #27354f;
+      --border-strong: #38496a;
+
+      --accent-primary: #14b8a6;
+      --accent-primary-hover: #2dd4bf;
+      --accent-primary-soft: rgba(20, 184, 166, 0.16);
+
+      --status-ok: #34d399;
+      --status-ok-soft: rgba(52, 211, 153, 0.16);
+      --status-warn: #fbbf24;
+      --status-warn-soft: rgba(251, 191, 36, 0.18);
+      --status-danger: #f87171;
+      --status-danger-soft: rgba(248, 113, 113, 0.18);
+      --status-info: #60a5fa;
+      --status-info-soft: rgba(96, 165, 250, 0.18);
+
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-app);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Utilities & Icons */
+    .icon-inline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .icon-inline svg {
+      width: 16px;
+      height: 16px;
+    }
+    .icon-lg svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* Storage Warning Banner */
+    .storage-banner {
+      background-color: var(--status-warn-soft);
+      border-bottom: 2px solid var(--status-warn);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      text-align: center;
+    }
+    .storage-banner.visible {
+      display: flex;
+    }
+
+    /* Undo Banner */
+    .undo-banner {
+      background-color: var(--status-info-soft);
+      border-bottom: 2px solid var(--status-info);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .undo-banner.visible {
+      display: flex;
+    }
+
+    /* Header */
+    .app-header {
+      background-color: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      box-shadow: var(--shadow-sm);
+    }
+    .header-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--accent-primary), #0284c7);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: block;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 13px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) {
+      background-color: var(--bg-muted);
+      border-color: var(--border-strong);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background-color: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover:not(:disabled) {
+      background-color: var(--accent-primary-hover);
+      border-color: var(--accent-primary-hover);
+    }
+    .btn-danger {
+      background-color: var(--status-danger-soft);
+      border-color: var(--status-danger);
+      color: var(--status-danger);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background-color: var(--status-danger);
+      color: #ffffff;
+    }
+    .btn-warn {
+      background-color: var(--status-warn-soft);
+      border-color: var(--status-warn);
+      color: var(--text-primary);
+    }
+    .btn-sm {
+      padding: 4px 9px;
+      font-size: 0.78rem;
+    }
+    .btn-icon {
+      padding: 7px 9px;
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Date Navigation Bar */
+    .date-bar {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
+    }
+    .date-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .date-input {
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-subtle);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .date-summary-badges {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .pill-ok {
+      background-color: var(--status-ok-soft);
+      color: var(--status-ok);
+    }
+    .pill-warn {
+      background-color: var(--status-warn-soft);
+      color: var(--status-warn);
+    }
+    .pill-danger {
+      background-color: var(--status-danger-soft);
+      color: var(--status-danger);
+    }
+    .pill-neutral {
+      background-color: var(--bg-muted);
+      color: var(--text-secondary);
+    }
+
+    /* Grid Layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 1060px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .col-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      background-color: var(--bg-subtle);
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-body {
+      padding: 18px;
+    }
+
+    /* Nutrient Summary Dashboard */
+    .nutrient-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 12px;
+    }
+    .nutrient-box {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      background-color: var(--bg-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .nutrient-box.status-over {
+      border-color: var(--status-danger);
+      background-color: var(--status-danger-soft);
+    }
+    .nutrient-box.status-under {
+      border-color: var(--status-warn);
+      background-color: var(--status-warn-soft);
+    }
+    .nutrient-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.82rem;
+    }
+    .nutrient-name {
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .nutrient-mode-tag {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+    }
+    .nutrient-values {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .nutrient-values span.target {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .progress-track {
+      height: 7px;
+      border-radius: 999px;
+      background-color: var(--bg-muted);
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background-color: var(--accent-primary);
+      transition: width 0.25s ease, background-color 0.25s ease;
+    }
+    .progress-fill.ok { background-color: var(--status-ok); }
+    .progress-fill.warn { background-color: var(--status-warn); }
+    .progress-fill.danger { background-color: var(--status-danger); }
+
+    .nutrient-rem {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Meal Entry Form */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 12px;
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .col-span-12 { grid-column: span 12; }
+    .col-span-6 { grid-column: span 6; }
+    .col-span-4 { grid-column: span 4; }
+    .col-span-3 { grid-column: span 3; }
+    .col-span-2 { grid-column: span 2; }
+    @media (max-width: 680px) {
+      .col-span-6, .col-span-4, .col-span-3, .col-span-2 {
+        grid-column: span 12;
+      }
+      .mobile-half {
+        grid-column: span 6;
+      }
+    }
+
+    label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    input[type="text"],
+    input[type="number"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.88rem;
+      transition: border-color 0.15s ease;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+    }
+
+    /* Live NG Alert Box inside Form */
+    .live-ng-alert {
+      display: none;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      background-color: var(--status-danger-soft);
+      border: 1px solid var(--status-danger);
+      color: var(--status-danger);
+      font-size: 0.84rem;
+      font-weight: 600;
+      align-items: center;
+      gap: 8px;
+    }
+    .live-ng-alert.visible {
+      display: flex;
+    }
+
+    /* Meal Sections */
+    .meal-section-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .meal-category-block {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+    .meal-category-header {
+      background-color: var(--bg-subtle);
+      padding: 9px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .meal-list {
+      display: flex;
+      flex-direction: column;
+    }
+    .meal-item {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meal-item:last-child {
+      border-bottom: none;
+    }
+    .meal-item.has-ng {
+      background-color: var(--status-danger-soft);
+      border-left: 4px solid var(--status-danger);
+    }
+    .meal-item-main {
+      flex: 1;
+      min-width: 220px;
+    }
+    .meal-item-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ng-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background-color: var(--status-danger);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+    .meal-item-meta {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .meal-item-notes {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .meal-item-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .empty-state {
+      padding: 16px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.84rem;
+    }
+
+    /* Tabs inside Right Sidebar */
+    .tabs-nav {
+      display: flex;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-subtle);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.82rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-family: inherit;
+      transition: all 0.15s ease;
+    }
+    .tab-btn.active {
+      color: var(--accent-primary);
+      border-bottom-color: var(--accent-primary);
+      background-color: var(--bg-surface);
+    }
+    .tab-panel {
+      display: none;
+      padding: 16px;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+
+    /* NG Tag Chips */
+    .ng-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .ng-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background-color: var(--status-danger-soft);
+      border: 1px solid var(--status-danger);
+      color: var(--status-danger);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .ng-chip button {
+      background: none;
+      border: none;
+      color: inherit;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.9rem;
+      line-height: 1;
+      padding: 0 2px;
+    }
+
+    /* Target Settings Row */
+    .target-setting-row {
+      display: grid;
+      grid-template-columns: 1fr 90px 85px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .target-setting-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Preset List */
+    .preset-item {
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      margin-bottom: 8px;
+      background-color: var(--bg-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .preset-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .preset-title {
+      font-weight: 700;
+      font-size: 0.86rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .preset-macros {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Chart Area & Fallback */
+    .chart-wrapper {
+      position: relative;
+      height: 260px;
+      width: 100%;
+    }
+    .chart-fallback {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+      background-color: var(--bg-subtle);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-md);
+    }
+    .chart-fallback.visible {
+      display: flex;
+    }
+    .fallback-bar-row {
+      display: grid;
+      grid-template-columns: 82px 1fr 75px;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+    }
+    .fallback-bar-bg {
+      height: 12px;
+      background-color: var(--bg-muted);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .fallback-bar-fill {
+      height: 100%;
+      background-color: var(--accent-primary);
+    }
+
+    /* Modal Dialog */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      padding: 16px;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+    .modal-box {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      max-width: 480px;
+      width: 100%;
+      padding: 20px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+
+    /* Interactive Tutorial Tour Overlay */
+    .tour-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(15, 23, 42, 0.55);
+      z-index: 100;
+      display: none;
+      pointer-events: auto;
+    }
+    .tour-backdrop.active {
+      display: block;
+    }
+    .tour-highlight-box {
+      position: fixed;
+      border: 3px solid var(--accent-primary);
+      border-radius: var(--radius-md);
+      box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55), 0 0 18px rgba(20, 184, 166, 0.6);
+      z-index: 101;
+      pointer-events: none;
+      transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+      display: none;
+    }
+    .tour-highlight-box.active {
+      display: block;
+    }
+    .tour-popover {
+      position: fixed;
+      z-index: 102;
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      width: 340px;
+      max-width: calc(100vw - 24px);
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .tour-popover.active {
+      display: flex;
+    }
+    .tour-step-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .tour-title {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .tour-desc {
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+    }
+    .tour-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 120;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 360px;
+    }
+    .toast {
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      border-left: 4px solid var(--accent-primary);
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      font-size: 0.84rem;
+      font-weight: 500;
+      animation: slideIn 0.2s ease;
+    }
+    .toast.error { border-left-color: var(--status-danger); }
+    .toast.warn { border-left-color: var(--status-warn); }
+    @keyframes slideIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Storage Fallback Warning Banner -->
+  <div id="storageWarningBanner" class="storage-banner" role="alert">
+    <span class="icon-inline" data-icon="alert-triangle"></span>
+    <span><strong>ローカル保存（localStorage）が制限されています：</strong>現在の環境ではブラウザ保存が利用できないため、データはメモリ上のみで保持されます。ページを閉じる前に必ず「JSONエクスポート」でバックアップしてください。</span>
+    <button type="button" class="btn btn-sm btn-warn" id="bannerExportBtn">今すぐJSON保存</button>
+  </div>
+
+  <!-- Undo Import Banner -->
+  <div id="undoImportBanner" class="undo-banner" role="status">
+    <span class="icon-inline" data-icon="rotate-ccw"></span>
+    <span id="undoImportMessage">JSONデータをインポートしました。</span>
+    <button type="button" class="btn btn-sm btn-primary" id="undoImportBtn">インポートを取り消す（Undo）</button>
+    <button type="button" class="btn btn-sm" id="dismissUndoBtn">閉じる</button>
+  </div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand">
+        <div class="brand-logo" aria-hidden="true">NG</div>
+        <div>
+          <div class="brand-title">NutriGuard</div>
+          <span class="brand-subtitle">栄養制限・残量計算 ＆ NG食材チェック</span>
+        </div>
+      </div>
+
+      <div class="header-actions" id="tourTargetHeaderTools">
+        <button type="button" class="btn" id="loadDemoBtn" title="サンプルデータを投入">
+          <span class="icon-inline" data-icon="sparkles"></span>
+          <span>デモデータ投入</span>
+        </button>
+        <button type="button" class="btn" id="startTourBtn" title="操作チュートリアルを開始">
+          <span class="icon-inline" data-icon="help-circle"></span>
+          <span>チュートリアル</span>
+        </button>
+        <button type="button" class="btn" id="exportJsonBtn" title="全データをJSON出力">
+          <span class="icon-inline" data-icon="download"></span>
+          <span>JSON保存</span>
+        </button>
+        <button type="button" class="btn" id="importJsonBtn" title="JSONファイルから復元">
+          <span class="icon-inline" data-icon="upload"></span>
+          <span>JSON読込</span>
+        </button>
+        <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;" />
+        <button type="button" class="btn btn-icon" id="themeToggleBtn" title="ダーク/ライトモード切替" aria-label="テーマ切替">
+          <span class="icon-inline" id="themeIconSlot" data-icon="moon"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Date Navigation -->
+    <section class="date-bar" aria-label="日付ナビゲーション">
+      <div class="date-controls">
+        <button type="button" class="btn btn-sm" id="prevDayBtn" aria-label="前日">◀ 前日</button>
+        <input type="date" id="selectedDateInput" class="date-input" aria-label="対象日付" />
+        <button type="button" class="btn btn-sm" id="nextDayBtn" aria-label="翌日">翌日 ▶</button>
+        <button type="button" class="btn btn-sm" id="todayBtn">今日</button>
+      </div>
+      <div class="date-summary-badges" id="dayStatusSummary">
+        <!-- Populated by JS -->
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <!-- Left Column: Dashboard + Meal Entry + Meal History -->
+      <div class="col-stack">
+        <!-- 1. Nutrient Progress & Remaining Dashboard -->
+        <section class="card" id="tourTargetDashboard">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon-inline" data-icon="activity"></span>
+              <span>本日の制限・栄養バランスと残量</span>
+            </h2>
+            <span class="pill pill-neutral" id="activeDateLabel">----/--/--</span>
+          </div>
+          <div class="card-body">
+            <div class="nutrient-grid" id="nutrientDashboardGrid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. Meal Record Entry Form -->
+        <section class="card" id="tourTargetMealForm">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon-inline" data-icon="plus-circle"></span>
+              <span>食事記録の追加</span>
+            </h2>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <select id="presetQuickSelect" aria-label="プリセットから入力" style="max-width: 220px; padding: 5px 8px; font-size: 0.8rem;">
+                <option value="">-- プリセットから呼び出し --</option>
+              </select>
+              <button type="button" class="btn btn-sm" id="saveAsPresetBtn" title="現在の入力をプリセットに登録">
+                <span class="icon-inline" data-icon="bookmark"></span>
+                <span>プリセット保存</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <form id="mealEntryForm" class="form-grid" novalidate>
+              <div class="field-group col-span-4">
+                <label for="mealCategory">食事区分</label>
+                <select id="mealCategory" required>
+                  <option value="朝食">朝食</option>
+                  <option value="昼食">昼食</option>
+                  <option value="夕食">夕食</option>
+                  <option value="間食">間食</option>
+                </select>
+              </div>
+              <div class="field-group col-span-8">
+                <label for="mealName">食事名・メニュー名 <span style="color:var(--status-danger)">*</span></label>
+                <input type="text" id="mealName" placeholder="例：鶏むね肉の塩麹焼き定食、プロテインバー" required />
+              </div>
+
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valCalories">カロリー (kcal)</label>
+                <input type="number" id="valCalories" min="0" step="1" value="0" />
+              </div>
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valProtein">タンパク質 (g)</label>
+                <input type="number" id="valProtein" min="0" step="0.1" value="0" />
+              </div>
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valFat">脂質 (g)</label>
+                <input type="number" id="valFat" min="0" step="0.1" value="0" />
+              </div>
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valCarbs">炭水化物 (g)</label>
+                <input type="number" id="valCarbs" min="0" step="0.1" value="0" />
+              </div>
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valSugar">糖質 (g)</label>
+                <input type="number" id="valSugar" min="0" step="0.1" value="0" />
+              </div>
+              <div class="field-group col-span-2 mobile-half">
+                <label for="valSalt">塩分 (g)</label>
+                <input type="number" id="valSalt" min="0" step="0.1" value="0" />
+              </div>
+
+              <div class="field-group col-span-6">
+                <label for="mealIngredients">原材料・使用食材（NG照合対象）</label>
+                <input type="text" id="mealIngredients" placeholder="例：鶏肉、小麦、卵、乳成分、ピーナッツ" />
+              </div>
+              <div class="field-group col-span-6">
+                <label for="mealNotes">メモ（外食店名・体調など・NG照合対象）</label>
+                <input type="text" id="mealNotes" placeholder="例：ドレッシング別添え、グルテンフリー麺に変更" />
+              </div>
+
+              <div class="col-span-12">
+                <div id="liveNgAlert" class="live-ng-alert" role="alert">
+                  <span class="icon-inline" data-icon="shield-alert"></span>
+                  <span id="liveNgAlertText"></span>
+                </div>
+              </div>
+
+              <div class="col-span-12" style="display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn" id="resetMealFormBtn">クリア</button>
+                <button type="submit" class="btn btn-primary">
+                  <span class="icon-inline" data-icon="check"></span>
+                  <span>食事を記録する</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- 3. Daily Meal List -->
+        <section class="card">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon-inline" data-icon="utensils"></span>
+              <span>食事履歴（区分別）</span>
+            </h2>
+            <span class="pill pill-neutral" id="mealCountBadge">0件</span>
+          </div>
+          <div class="card-body">
+            <div class="meal-section-group" id="mealSectionsContainer">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. 7-Day Trend Chart -->
+        <section class="card" id="tourTargetChart">
+          <div class="card-header">
+            <h2 class="card-title">
+              <span class="icon-inline" data-icon="bar-chart-2"></span>
+              <span>直近7日間の摂取推移</span>
+            </h2>
+            <select id="chartMetricSelect" aria-label="グラフ表示項目" style="width:auto; padding:5px 10px; font-size:0.82rem;">
+              <option value="calories">カロリー (kcal)</option>
+              <option value="protein">タンパク質 (g)</option>
+              <option value="fat">脂質 (g)</option>
+              <option value="carbs">炭水化物 (g)</option>
+              <option value="sugar">糖質 (g)</option>
+              <option value="salt">塩分 (g)</option>
+            </select>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrapper" id="chartCanvasContainer">
+              <canvas id="trendChartCanvas"></canvas>
+            </div>
+            <div class="chart-fallback" id="chartFallbackContainer">
+              <!-- Populated when Chart.js is unavailable -->
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right Column: Restrictions, NG Ingredients, Presets -->
+      <aside class="col-stack">
+        <section class="card" id="tourTargetRules">
+          <div class="tabs-nav" role="tablist">
+            <button type="button" class="tab-btn active" data-tab="tabNg" role="tab" aria-selected="true">NG食材リスト</button>
+            <button type="button" class="tab-btn" data-tab="tabTargets" role="tab" aria-selected="false">数値制限・目標</button>
+            <button type="button" class="tab-btn" data-tab="tabPresets" role="tab" aria-selected="false">プリセット管理</button>
+          </div>
+
+          <!-- Tab 1: NG Ingredients -->
+          <div class="tab-panel active" id="tabNg" role="tabpanel">
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:10px;">
+              禁止食材・アレルゲン・避けたい添加物などを登録すると、食事名・原材料・メモに一致した際へ即座に警告します。
+            </p>
+            <form id="addNgForm" style="display:flex; gap:6px;">
+              <input type="text" id="ngKeywordInput" placeholder="例：小麦、そば、甲殻類、カフェイン" required />
+              <button type="submit" class="btn btn-danger">追加</button>
+            </form>
+            <div class="ng-chip-list" id="ngChipList">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Tab 2: Nutrient Targets -->
+          <div class="tab-panel" id="tabTargets" role="tabpanel">
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:10px;">
+              各栄養素の1日基準値と判定モード（<strong>上限</strong>：超えたら警告 / <strong>目標</strong>：下限達成を目指す）を設定します。
+            </p>
+            <form id="targetSettingsForm">
+              <div id="targetSettingsList">
+                <!-- Populated by JS -->
+              </div>
+              <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+                <button type="submit" class="btn btn-primary btn-sm">目標設定を保存</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tab 3: Presets -->
+          <div class="tab-panel" id="tabPresets" role="tabpanel">
+            <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:10px;">
+              よく食べる定番メニューをワンクリックで入力フォームへ呼び出せます。
+            </p>
+            <div id="presetManagerList">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- JSON Import Mode Modal -->
+  <div class="modal-backdrop" id="importModalBackdrop" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-box">
+      <div class="modal-title" id="importModalTitle">JSONデータのインポート方法を選択</div>
+      <p style="font-size:0.86rem; color:var(--text-secondary);" id="importSummaryText">
+        有効なバックアップファイルが読み込まれました。既存データへの反映方法を選択してください。
+      </p>
+      <div style="display:flex; flex-direction:column; gap:8px; font-size:0.82rem; background:var(--bg-subtle); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+        <div><strong>・差分マージ：</strong>既存の記録を保持しつつ、同一IDの食事・プリセットはインポート側で上書きし、新規分を追加します。</div>
+        <div><strong>・全置換（上書き）：</strong>現在の全データを破棄し、インポートファイルの内容に完全に置き換えます。</div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--text-muted);">
+        ※実行後、画面上部のバナーから1回だけ直前の状態へ元に戻す（Undo）ことができます。
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn" id="cancelImportBtn">キャンセル</button>
+        <button type="button" class="btn" id="mergeImportBtn">差分マージ</button>
+        <button type="button" class="btn btn-danger" id="replaceImportBtn">全置換（上書き）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Tutorial Tour Elements -->
+  <div class="tour-backdrop" id="tourBackdrop"></div>
+  <div class="tour-highlight-box" id="tourHighlightBox"></div>
+  <div class="tour-popover" id="tourPopover" role="dialog" aria-live="polite">
+    <div class="tour-step-badge" id="tourStepBadge">STEP 1 / 4</div>
+    <div class="tour-title" id="tourTitle">タイトル</div>
+    <div class="tour-desc" id="tourDesc">説明文</div>
+    <div id="tourExtraAction" style="display:none;">
+      <button type="button" class="btn btn-sm" id="tourDemoInjectBtn" style="width:100%;">
+        <span class="icon-inline" data-icon="sparkles"></span>
+        <span>体験用デモデータを今すぐ投入する</span>
+      </button>
+    </div>
+    <div class="tour-footer">
+      <button type="button" class="btn btn-sm" id="tourSkipBtn">終了</button>
+      <div style="display:flex; gap:6px;">
+        <button type="button" class="btn btn-sm" id="tourPrevBtn">前へ</button>
+        <button type="button" class="btn btn-sm btn-primary" id="tourNextBtn">次へ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ==========================================================================
+         1. Constants, Schema & Safe Storage Wrapper
+         ========================================================================== */
+      const STORAGE_KEY = 'nutriguard_app_state_v1';
+      const THEME_KEY = 'nutriguard_theme_v1';
+      const TOUR_SEEN_KEY = 'nutriguard_tour_seen_v1';
+      const SCHEMA_VERSION = 1;
+
+      const MEAL_CATEGORIES = ['朝食', '昼食', '夕食', '間食'];
+
+      const NUTRIENT_META = [
+        { key: 'calories', label: 'カロリー', unit: 'kcal', step: 1 },
+        { key: 'protein',  label: 'タンパク質', unit: 'g', step: 0.1 },
+        { key: 'fat',      label: '脂質', unit: 'g', step: 0.1 },
+        { key: 'carbs',    label: '炭水化物', unit: 'g', step: 0.1 },
+        { key: 'sugar',    label: '糖質', unit: 'g', step: 0.1 },
+        { key: 'salt',     label: '塩分', unit: 'g', step: 0.1 }
+      ];
+
+      const DEFAULT_TARGETS = {
+        calories: { value: 2000, mode: 'max' },
+        protein:  { value: 80,   mode: 'min' },
+        fat:      { value: 60,   mode: 'max' },
+        carbs:    { value: 250,  mode: 'max' },
+        sugar:    { value: 100,  mode: 'max' },
+        salt:     { value: 7.0,  mode: 'max' }
+      };
+
+      let storageAvailable = true;
+
+      function safeStorageGet(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (err) {
+          storageAvailable = false;
+          updateStorageBanner();
+          return null;
+        }
+      }
+
+      function safeStorageSet(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+          return true;
+        } catch (err) {
+          storageAvailable = false;
+          updateStorageBanner();
+          return false;
+        }
+      }
+
+      function updateStorageBanner() {
+        const banner = document.getElementById('storageWarningBanner');
+        if (!banner) return;
+        if (!storageAvailable) {
+          banner.classList.add('visible');
+        } else {
+          banner.classList.remove('visible');
+        }
+      }
+
+      /* ==========================================================================
+         2. Utility Functions (Date, Escaping, ID, Clones)
+         ========================================================================== */
+      function getTodayStr() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      function shiftDateStr(dateStr, deltaDays) {
+        const parts = dateStr.split('-').map(Number);
+        if (parts.length !== 3) return getTodayStr();
+        const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+        dt.setDate(dt.getDate() + deltaDays);
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      function isValidDateStr(str) {
+        return typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str);
+      }
+
+      function generateId(prefix) {
+        return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      }
+
+      function deepClone(obj) {
+        return JSON.parse(JSON.stringify(obj));
+      }
+
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function formatNum(val, key) {
+        const num = Number(val) || 0;
+        if (key === 'calories') return Math.round(num).toLocaleString('ja-JP');
+        return (Math.round(num * 10) / 10).toFixed(1).replace(/\.0$/, '');
+      }
+
+      /* ==========================================================================
+         3. Icon Fallback Renderer (Lucide Icons)
+         ========================================================================== */
+      const ICON_TEXT_FALLBACKS = {
+        'alert-triangle': '⚠️',
+        'rotate-ccw': '↩️',
+        'sparkles': '✨',
+        'help-circle': '❓',
+        'download': '💾',
+        'upload': '📂',
+        'moon': '🌙',
+        'sun': '☀️',
+        'activity': '📊',
+        'plus-circle': '➕',
+        'bookmark': '🔖',
+        'shield-alert': '🚨',
+        'check': '✔️',
+        'utensils': '🍽️',
+        'bar-chart-2': '📈',
+        'trash-2': '🗑️'
+      };
+
+      function refreshIcons(rootEl) {
+        const scope = rootEl || document;
+        const slots = scope.querySelectorAll('[data-icon]');
+        const hasLucide = typeof window.lucide !== 'undefined' && typeof window.lucide.createIcons === 'function';
+
+        slots.forEach((slot) => {
+          const iconName = slot.getAttribute('data-icon');
+          if (!iconName) return;
+          if (hasLucide) {
+            slot.innerHTML = `<i data-lucide="${escapeHtml(iconName)}"></i>`;
+          } else {
+            slot.textContent = ICON_TEXT_FALLBACKS[iconName] || '•';
+          }
+        });
+
+        if (hasLucide) {
+          try {
+            window.lucide.createIcons({ root: scope });
+          } catch (e) {
+            slots.forEach((slot) => {
+              const iconName = slot.getAttribute('data-icon');
+              slot.textContent = ICON_TEXT_FALLBACKS[iconName] || '•';
+            });
+          }
+        }
+      }
+
+      /* ==========================================================================
+         4. Application State & Persistence
+         ========================================================================== */
+      function createInitialState() {
+        return {
+          targets: deepClone(DEFAULT_TARGETS),
+          ngIngredients: [],
+          meals: [],
+          presets: []
+        };
+      }
+
+      let appState = createInitialState();
+      let selectedDate = getTodayStr();
+      let undoSnapshot = null;
+      let pendingImportPayload = null;
+      let chartInstance = null;
+
+      function loadStateFromStorage() {
+        const raw = safeStorageGet(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          const validated = validateAndNormalizeData(parsed);
+          if (validated.ok) {
+            appState = validated.data;
+          }
+        } catch (e) {
+          // Keep default state on corrupted localStorage
+        }
+      }
+
+      function persistState() {
+        const payload = {
+          schemaVersion: SCHEMA_VERSION,
+          updatedAt: new Date().toISOString(),
+          data: appState
+        };
+        safeStorageSet(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      /* ==========================================================================
+         5. Theme Management (Light / Dark)
+         ========================================================================== */
+      function initTheme() {
+        const savedTheme = safeStorageGet(THEME_KEY);
+        let theme = 'light';
+        if (savedTheme === 'dark' || savedTheme === 'light') {
+          theme = savedTheme;
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          theme = 'dark';
+        }
+        applyTheme(theme, false);
+      }
+
+      function applyTheme(theme, save) {
+        document.documentElement.setAttribute('data-theme', theme);
+        const iconSlot = document.getElementById('themeIconSlot');
+        if (iconSlot) {
+          iconSlot.setAttribute('data-icon', theme === 'dark' ? 'sun' : 'moon');
+          refreshIcons(iconSlot.parentElement);
+        }
+        if (save) {
+          safeStorageSet(THEME_KEY, theme);
+        }
+        if (chartInstance) {
+          renderTrendChart();
+        }
+      }
+
+      /* ==========================================================================
+         6. Core Domain Logic: NG Matching & Nutrient Calculation
+         ========================================================================== */
+      function detectNgMatches(mealObj) {
+        if (!appState.ngIngredients || appState.ngIngredients.length === 0) return [];
+        const haystack = [
+          mealObj.name || '',
+          mealObj.ingredients || '',
+          mealObj.notes || ''
+        ].join(' ').toLowerCase();
+
+        if (!haystack.trim()) return [];
+
+        const matched = [];
+        appState.ngIngredients.forEach((ng) => {
+          const kw = String(ng).trim();
+          if (kw && haystack.includes(kw.toLowerCase())) {
+            matched.push(kw);
+          }
+        });
+        return matched;
+      }
+
+      function calculateDailyTotals(dateStr) {
+        const totals = {
+          calories: 0,
+          protein: 0,
+          fat: 0,
+          carbs: 0,
+          sugar: 0,
+          salt: 0
+        };
+        const dayMeals = appState.meals.filter((m) => m.date === dateStr);
+        dayMeals.forEach((m) => {
+          NUTRIENT_META.forEach((meta) => {
+            totals[meta.key] += Number(m.nutrients?.[meta.key]) || 0;
+          });
+        });
+        return { totals, dayMeals };
+      }
+
+      /* ==========================================================================
+         7. UI Rendering Functions
+         ========================================================================== */
+      function showToast(message, type) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = 'toast' + (type ? ` ${type}` : '');
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transition = 'opacity 0.25s ease';
+          setTimeout(() => toast.remove(), 260);
+        }, 3400);
+      }
+
+      function renderAll() {
+        document.getElementById('selectedDateInput').value = selectedDate;
+        document.getElementById('activeDateLabel').textContent = selectedDate;
+
+        renderDashboard();
+        renderMealList();
+        renderNgList();
+        renderTargetSettings();
+        renderPresetManager();
+        renderTrendChart();
+        checkLiveNgPreview();
+      }
+
+      function renderDashboard() {
+        const { totals, dayMeals } = calculateDailyTotals(selectedDate);
+        const grid = document.getElementById('nutrientDashboardGrid');
+        const summaryEl = document.getElementById('dayStatusSummary');
+
+        let overCount = 0;
+        let ngMealCount = 0;
+        dayMeals.forEach((m) => {
+          if (detectNgMatches(m).length > 0) ngMealCount++;
+        });
+
+        const htmlParts = NUTRIENT_META.map((meta) => {
+          const current = totals[meta.key];
+          const targetCfg = appState.targets[meta.key] || DEFAULT_TARGETS[meta.key];
+          const targetVal = Number(targetCfg.value) || 0;
+          const mode = targetCfg.mode === 'min' ? 'min' : 'max';
+
+          const ratio = targetVal > 0 ? (current / targetVal) * 100 : 0;
+          const clampedWidth = Math.min(100, Math.max(0, ratio));
+
+          let boxClass = 'nutrient-box';
+          let fillClass = 'progress-fill ok';
+          let statusLabel = '';
+          let remText = '';
+
+          if (mode === 'max') {
+            const diff = targetVal - current;
+            if (diff < 0) {
+              overCount++;
+              boxClass += ' status-over';
+              fillClass = 'progress-fill danger';
+              statusLabel = '上限超過';
+              remText = `超過: +${formatNum(Math.abs(diff), meta.key)} ${meta.unit}`;
+            } else if (ratio >= 85) {
+              fillClass = 'progress-fill warn';
+              statusLabel = '上限間近';
+              remText = `残り: ${formatNum(diff, meta.key)} ${meta.unit}`;
+            } else {
+              statusLabel = '適正範囲';
+              remText = `残り: ${formatNum(diff, meta.key)} ${meta.unit}`;
+            }
+          } else {
+            // mode === 'min' (goal target)
+            const diff = targetVal - current;
+            if (diff <= 0) {
+              fillClass = 'progress-fill ok';
+              statusLabel = '目標達成';
+              remText = `達成 (+${formatNum(Math.abs(diff), meta.key)} ${meta.unit})`;
+            } else {
+              boxClass += ' status-under';
+              fillClass = 'progress-fill warn';
+              statusLabel = '目標未達';
+              remText = `あと: ${formatNum(diff, meta.key)} ${meta.unit}`;
+            }
+          }
+
+          return `
+            <div class="${boxClass}">
+              <div class="nutrient-top">
+                <span class="nutrient-name">${escapeHtml(meta.label)}</span>
+                <span class="nutrient-mode-tag">${mode === 'max' ? '上限' : '目標'}</span>
+              </div>
+              <div class="nutrient-values">
+                ${escapeHtml(formatNum(current, meta.key))}
+                <span class="target">/ ${escapeHtml(formatNum(targetVal, meta.key))} ${escapeHtml(meta.unit)}</span>
+              </div>
+              <div class="progress-track">
+                <div class="${fillClass}" style="width: ${clampedWidth.toFixed(1)}%"></div>
+              </div>
+              <div class="nutrient-rem">
+                <span>${escapeHtml(remText)}</span>
+                <strong>${escapeHtml(statusLabel)}</strong>
+              </div>
+            </div>
+          `;
+        });
+
+        grid.innerHTML = htmlParts.join('');
+
+        // Day top summary pills
+        const pills = [];
+        if (ngMealCount > 0) {
+          pills.push(`<span class="pill pill-danger">🚨 NG食材検出: ${ngMealCount}件</span>`);
+        } else {
+          pills.push(`<span class="pill pill-ok">✔ NG食材なし</span>`);
+        }
+        if (overCount > 0) {
+          pills.push(`<span class="pill pill-danger">⚠️ 上限超過: ${overCount}項目</span>`);
+        } else {
+          pills.push(`<span class="pill pill-ok">✔ 全上限クリア</span>`);
+        }
+        summaryEl.innerHTML = pills.join('');
+      }
+
+      function renderMealList() {
+        const container = document.getElementById('mealSectionsContainer');
+        const countBadge = document.getElementById('mealCountBadge');
+        const dayMeals = appState.meals.filter((m) => m.date === selectedDate);
+        countBadge.textContent = `${dayMeals.length}件`;
+
+        const sectionsHtml = MEAL_CATEGORIES.map((cat) => {
+          const items = dayMeals.filter((m) => m.category === cat);
+          const catCalories = items.reduce((acc, cur) => acc + (Number(cur.nutrients?.calories) || 0), 0);
+
+          let listHtml = '';
+          if (items.length === 0) {
+            listHtml = `<div class="empty-state">記録なし</div>`;
+          } else {
+            listHtml = items.map((item) => {
+              const ngMatches = detectNgMatches(item);
+              const hasNg = ngMatches.length > 0;
+              const n = item.nutrients || {};
+              const ngBadgeHtml = hasNg
+                ? `<span class="ng-badge">⚠️ NG一致: ${escapeHtml(ngMatches.join(', '))}</span>`
+                : '';
+
+              const ingHtml = item.ingredients
+                ? `<div class="meal-item-notes"><strong>原材料:</strong> ${escapeHtml(item.ingredients)}</div>`
+                : '';
+              const notesHtml = item.notes
+                ? `<div class="meal-item-notes"><strong>メモ:</strong> ${escapeHtml(item.notes)}</div>`
+                : '';
+
+              return `
+                <div class="meal-item ${hasNg ? 'has-ng' : ''}">
+                  <div class="meal-item-main">
+                    <div class="meal-item-title">
+                      <span>${escapeHtml(item.name)}</span>
+                      ${ngBadgeHtml}
+                    </div>
+                    <div class="meal-item-meta">
+                      <span><strong>${escapeHtml(formatNum(n.calories, 'calories'))}</strong> kcal</span>
+                      <span>P: ${escapeHtml(formatNum(n.protein, 'protein'))}g</span>
+                      <span>F: ${escapeHtml(formatNum(n.fat, 'fat'))}g</span>
+                      <span>C: ${escapeHtml(formatNum(n.carbs, 'carbs'))}g</span>
+                      <span>糖質: ${escapeHtml(formatNum(n.sugar, 'sugar'))}g</span>
+                      <span>塩分: ${escapeHtml(formatNum(n.salt, 'salt'))}g</span>
+                    </div>
+                    ${ingHtml}
+                    ${notesHtml}
+                  </div>
+                  <div class="meal-item-actions">
+                    <button type="button" class="btn btn-sm" data-action="save-meal-preset" data-id="${escapeHtml(item.id)}" title="プリセットへコピー">プリセット化</button>
+                    <button type="button" class="btn btn-sm btn-danger" data-action="delete-meal" data-id="${escapeHtml(item.id)}" title="削除">削除</button>
+                  </div>
+                </div>
+              `;
+            }).join('');
+          }
+
+          return `
+            <div class="meal-category-block">
+              <div class="meal-category-header">
+                <span>${escapeHtml(cat)}（${items.length}品）</span>
+                <span style="color:var(--text-secondary); font-size:0.82rem;">小計: ${escapeHtml(formatNum(catCalories, 'calories'))} kcal</span>
+              </div>
+              <div class="meal-list">
+                ${listHtml}
+              </div>
+            </div>
+          `;
+        });
+
+        container.innerHTML = sectionsHtml.join('');
+      }
+
+      function renderNgList() {
+        const listEl = document.getElementById('ngChipList');
+        if (!appState.ngIngredients.length) {
+          listEl.innerHTML = `<div class="empty-state" style="width:100%;">NG食材はまだ登録されていません。</div>`;
+          return;
+        }
+        listEl.innerHTML = appState.ngIngredients.map((kw, idx) => `
+          <span class="ng-chip">
+            <span>${escapeHtml(kw)}</span>
+            <button type="button" data-action="remove-ng" data-index="${idx}" aria-label="${escapeHtml(kw)}を削除">×</button>
+          </span>
+        `).join('');
+      }
+
+      function renderTargetSettings() {
+        const container = document.getElementById('targetSettingsList');
+        container.innerHTML = NUTRIENT_META.map((meta) => {
+          const cfg = appState.targets[meta.key] || DEFAULT_TARGETS[meta.key];
+          return `
+            <div class="target-setting-row">
+              <label for="targetVal_${meta.key}" style="margin:0;">${escapeHtml(meta.label)} (${escapeHtml(meta.unit)})</label>
+              <input type="number" id="targetVal_${meta.key}" name="targetVal_${meta.key}" min="0" step="${meta.step}" value="${escapeHtml(cfg.value)}" required />
+              <select name="targetMode_${meta.key}" aria-label="${escapeHtml(meta.label)}の基準種別">
+                <option value="max" ${cfg.mode === 'max' ? 'selected' : ''}>上限</option>
+                <option value="min" ${cfg.mode === 'min' ? 'selected' : ''}>目標</option>
+              </select>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderPresetManager() {
+        const selectEl = document.getElementById('presetQuickSelect');
+        const managerEl = document.getElementById('presetManagerList');
+
+        const optionsHtml = ['<option value="">-- プリセットから呼び出し --</option>'].concat(
+          appState.presets.map((p) => {
+            const hasNg = detectNgMatches(p).length > 0;
+            return `<option value="${escapeHtml(p.id)}">${hasNg ? '⚠️ ' : ''}${escapeHtml(p.name)} (${formatNum(p.nutrients?.calories, 'calories')}kcal)</option>`;
+          })
+        );
+        selectEl.innerHTML = optionsHtml.join('');
+
+        if (appState.presets.length === 0) {
+          managerEl.innerHTML = `<div class="empty-state">登録済みのプリセットはありません。食事入力フォームの「プリセット保存」から追加できます。</div>`;
+          return;
+        }
+
+        managerEl.innerHTML = appState.presets.map((p) => {
+          const ngMatches = detectNgMatches(p);
+          const n = p.nutrients || {};
+          return `
+            <div class="preset-item">
+              <div class="preset-info">
+                <div class="preset-title">
+                  <span>${escapeHtml(p.name)}</span>
+                  ${ngMatches.length > 0 ? `<span class="ng-badge">NG: ${escapeHtml(ngMatches.join(','))}</span>` : ''}
+                </div>
+                <div class="preset-macros">
+                  ${formatNum(n.calories, 'calories')}kcal / P:${formatNum(n.protein, 'protein')}g F:${formatNum(n.fat, 'fat')}g C:${formatNum(n.carbs, 'carbs')}g 塩:${formatNum(n.salt, 'salt')}g
+                </div>
+              </div>
+              <div style="display:flex; gap:4px;">
+                <button type="button" class="btn btn-sm btn-primary" data-action="apply-preset" data-id="${escapeHtml(p.id)}">読込</button>
+                <button type="button" class="btn btn-sm btn-danger" data-action="delete-preset" data-id="${escapeHtml(p.id)}">削除</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderTrendChart() {
+        const metricKey = document.getElementById('chartMetricSelect').value || 'calories';
+        const meta = NUTRIENT_META.find((m) => m.key === metricKey) || NUTRIENT_META[0];
+        const targetCfg = appState.targets[metricKey] || DEFAULT_TARGETS[metricKey];
+        const targetVal = Number(targetCfg.value) || 0;
+
+        const labels = [];
+        const values = [];
+        for (let i = -6; i <= 0; i++) {
+          const d = shiftDateStr(selectedDate, i);
+          labels.push(d.slice(5)); // MM-DD
+          const { totals } = calculateDailyTotals(d);
+          values.push(Number(totals[metricKey]) || 0);
+        }
+
+        const canvasContainer = document.getElementById('chartCanvasContainer');
+        const fallbackContainer = document.getElementById('chartFallbackContainer');
+        const canvas = document.getElementById('trendChartCanvas');
+
+        const hasChartJs = typeof window.Chart !== 'undefined';
+
+        if (!hasChartJs) {
+          canvasContainer.style.display = 'none';
+          fallbackContainer.classList.add('visible');
+          const maxVal = Math.max(targetVal, ...values, 1);
+
+          fallbackContainer.innerHTML = `
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:4px;">
+              ※グラフ描画ライブラリ未接続のため簡易バー表示モードで動作中（基準値: ${formatNum(targetVal, metricKey)} ${meta.unit}）
+            </div>
+          ` + labels.map((lbl, idx) => {
+            const v = values[idx];
+            const pct = Math.min(100, (v / maxVal) * 100);
+            const isOver = targetCfg.mode === 'max' && v > targetVal;
+            return `
+              <div class="fallback-bar-row">
+                <span>${escapeHtml(lbl)}</span>
+                <div class="fallback-bar-bg">
+                  <div class="fallback-bar-fill" style="width:${pct.toFixed(1)}%; background-color:${isOver ? 'var(--status-danger)' : 'var(--accent-primary)'};"></div>
+                </div>
+                <span style="text-align:right; font-weight:600;">${escapeHtml(formatNum(v, metricKey))} ${escapeHtml(meta.unit)}</span>
+              </div>
+            `;
+          }).join('');
+          return;
+        }
+
+        canvasContainer.style.display = 'block';
+        fallbackContainer.classList.remove('visible');
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#cbd5e1' : '#475569';
+        const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)';
+
+        const barColors = values.map((v) => {
+          if (targetCfg.mode === 'max' && v > targetVal) return 'rgba(239, 68, 68, 0.82)';
+          if (targetCfg.mode === 'min' && v >= targetVal) return 'rgba(16, 185, 129, 0.82)';
+          return 'rgba(13, 148, 136, 0.82)';
+        });
+
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+
+        try {
+          chartInstance = new window.Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: `${meta.label} (${meta.unit})`,
+                  data: values,
+                  backgroundColor: barColors,
+                  borderRadius: 6,
+                  order: 2
+                },
+                {
+                  type: 'line',
+                  label: `${targetCfg.mode === 'max' ? '上限' : '目標'} (${formatNum(targetVal, metricKey)} ${meta.unit})`,
+                  data: labels.map(() => targetVal),
+                  borderColor: '#f59e0b',
+                  borderWidth: 2,
+                  borderDash: [6, 4],
+                  pointRadius: 0,
+                  fill: false,
+                  order: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  labels: { color: textColor, font: { size: 12 } }
+                }
+              },
+              scales: {
+                x: {
+                  ticks: { color: textColor },
+                  grid: { display: false }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: { color: textColor },
+                  grid: { color: gridColor }
+                }
+              }
+            }
+          });
+        } catch (err) {
+          canvasContainer.style.display = 'none';
+          fallbackContainer.classList.add('visible');
+        }
+      }
+
+      /* ==========================================================================
+         8. Form Handling & Live NG Detection
+         ========================================================================== */
+      function readMealFormValues() {
+        return {
+          category: document.getElementById('mealCategory').value,
+          name: document.getElementById('mealName').value.trim(),
+          nutrients: {
+            calories: Math.max(0, Number(document.getElementById('valCalories').value) || 0),
+            protein:  Math.max(0, Number(document.getElementById('valProtein').value) || 0),
+            fat:      Math.max(0, Number(document.getElementById('valFat').value) || 0),
+            carbs:    Math.max(0, Number(document.getElementById('valCarbs').value) || 0),
+            sugar:    Math.max(0, Number(document.getElementById('valSugar').value) || 0),
+            salt:     Math.max(0, Number(document.getElementById('valSalt').value) || 0)
+          },
+          ingredients: document.getElementById('mealIngredients').value.trim(),
+          notes: document.getElementById('mealNotes').value.trim()
+        };
+      }
+
+      function fillMealForm(item) {
+        if (item.category && MEAL_CATEGORIES.includes(item.category)) {
+          document.getElementById('mealCategory').value = item.category;
+        }
+        document.getElementById('mealName').value = item.name || '';
+        const n = item.nutrients || {};
+        document.getElementById('valCalories').value = n.calories ?? 0;
+        document.getElementById('valProtein').value = n.protein ?? 0;
+        document.getElementById('valFat').value = n.fat ?? 0;
+        document.getElementById('valCarbs').value = n.carbs ?? 0;
+        document.getElementById('valSugar').value = n.sugar ?? 0;
+        document.getElementById('valSalt').value = n.salt ?? 0;
+        document.getElementById('mealIngredients').value = item.ingredients || '';
+        document.getElementById('mealNotes').value = item.notes || '';
+        checkLiveNgPreview();
+      }
+
+      function clearMealForm() {
+        document.getElementById('mealName').value = '';
+        ['valCalories', 'valProtein', 'valFat', 'valCarbs', 'valSugar', 'valSalt'].forEach((id) => {
+          document.getElementById(id).value = '0';
+        });
+        document.getElementById('mealIngredients').value = '';
+        document.getElementById('mealNotes').value = '';
+        document.getElementById('presetQuickSelect').value = '';
+        checkLiveNgPreview();
+      }
+
+      function checkLiveNgPreview() {
+        const draft = readMealFormValues();
+        const matches = detectNgMatches(draft);
+        const alertBox = document.getElementById('liveNgAlert');
+        const alertText = document.getElementById('liveNgAlertText');
+
+        if (matches.length > 0) {
+          alertText.textContent = `NG食材警告：登録済みの禁止キーワード「${matches.join('・')}」が含まれています！`;
+          alertBox.classList.add('visible');
+        } else {
+          alertBox.classList.remove('visible');
+        }
+      }
+
+      /* ==========================================================================
+         9. JSON Export, Strict Validation, Import (Merge / Replace) & Undo
+         ========================================================================== */
+      function exportDataAsJson() {
+        const exportObj = {
+          appName: 'NutriGuard',
+          schemaVersion: SCHEMA_VERSION,
+          exportedAt: new Date().toISOString(),
+          data: appState
+        };
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.href = url;
+        a.download = `nutriguard-backup-${ts}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast('JSONバックアップファイルを出力しました。');
+      }
+
+      function validateAndNormalizeData(rawObj) {
+        if (!rawObj || typeof rawObj !== 'object') {
+          return { ok: false, error: 'JSONのルート構造がオブジェクトではありません。' };
+        }
+        const root = rawObj.data && typeof rawObj.data === 'object' ? rawObj.data : rawObj;
+
+        if (!Array.isArray(root.meals) || !Array.isArray(root.ngIngredients) || !Array.isArray(root.presets)) {
+          return { ok: false, error: '必須配列（meals, ngIngredients, presets）が見つからないか型が不正です。' };
+        }
+        if (!root.targets || typeof root.targets !== 'object') {
+          return { ok: false, error: '目標設定（targets）の構造が不正です。' };
+        }
+
+        // Normalize targets
+        const normalizedTargets = {};
+        for (const meta of NUTRIENT_META) {
+          const t = root.targets[meta.key];
+          if (!t || typeof t !== 'object' || typeof Number(t.value) !== 'number' || Number.isNaN(Number(t.value))) {
+            normalizedTargets[meta.key] = deepClone(DEFAULT_TARGETS[meta.key]);
+          } else {
+            normalizedTargets[meta.key] = {
+              value: Math.max(0, Number(t.value)),
+              mode: t.mode === 'min' ? 'min' : 'max'
+            };
+          }
+        }
+
+        // Normalize ngIngredients
+        const normalizedNg = [];
+        for (const item of root.ngIngredients) {
+          if (typeof item !== 'string') {
+            return { ok: false, error: 'NG食材リストに文字列以外のデータが含まれています。' };
+          }
+          const trimmed = item.trim();
+          if (trimmed && !normalizedNg.includes(trimmed)) {
+            normalizedNg.push(trimmed);
+          }
+        }
+
+        // Normalize meals
+        const normalizedMeals = [];
+        for (const m of root.meals) {
+          if (!m || typeof m !== 'object' || typeof m.name !== 'string' || !m.name.trim()) {
+            return { ok: false, error: '食事記録データに必須項目（name）が欠落したレコードがあります。' };
+          }
+          const dateVal = isValidDateStr(m.date) ? m.date : getTodayStr();
+          const catVal = MEAL_CATEGORIES.includes(m.category) ? m.category : '間食';
+          const nutrients = {};
+          for (const meta of NUTRIENT_META) {
+            const rawVal = Number(m.nutrients?.[meta.key]);
+            if (m.nutrients && m.nutrients[meta.key] !== undefined && Number.isNaN(rawVal)) {
+              return { ok: false, error: `食事「${m.name}」の栄養素（${meta.label}）に数値以外が含まれています。` };
+            }
+            nutrients[meta.key] = Math.max(0, rawVal || 0);
+          }
+          normalizedMeals.push({
+            id: typeof m.id === 'string' && m.id ? m.id : generateId('meal'),
+            date: dateVal,
+            category: catVal,
+            name: m.name.trim(),
+            nutrients,
+            ingredients: typeof m.ingredients === 'string' ? m.ingredients : '',
+            notes: typeof m.notes === 'string' ? m.notes : ''
+          });
+        }
+
+        // Normalize presets
+        const normalizedPresets = [];
+        for (const p of root.presets) {
+          if (!p || typeof p !== 'object' || typeof p.name !== 'string' || !p.name.trim()) {
+            return { ok: false, error: 'プリセットデータに必須項目（name）が欠落しています。' };
+          }
+          const nutrients = {};
+          for (const meta of NUTRIENT_META) {
+            nutrients[meta.key] = Math.max(0, Number(p.nutrients?.[meta.key]) || 0);
+          }
+          normalizedPresets.push({
+            id: typeof p.id === 'string' && p.id ? p.id : generateId('preset'),
+            name: p.name.trim(),
+            nutrients,
+            ingredients: typeof p.ingredients === 'string' ? p.ingredients : '',
+            notes: typeof p.notes === 'string' ? p.notes : ''
+          });
+        }
+
+        return {
+          ok: true,
+          data: {
+            targets: normalizedTargets,
+            ngIngredients: normalizedNg,
+            meals: normalizedMeals,
+            presets: normalizedPresets
+          }
+        };
+      }
+
+      function executeImport(mode) {
+        if (!pendingImportPayload) return;
+
+        // Save snapshot for 1-time Undo
+        undoSnapshot = deepClone(appState);
+
+        if (mode === 'replace') {
+          appState = deepClone(pendingImportPayload);
+        } else {
+          // Differential Merge (import takes priority on matching IDs)
+          appState.targets = deepClone(pendingImportPayload.targets);
+
+          const ngSet = new Set(appState.ngIngredients);
+          pendingImportPayload.ngIngredients.forEach((kw) => ngSet.add(kw));
+          appState.ngIngredients = Array.from(ngSet);
+
+          const mealMap = new Map();
+          appState.meals.forEach((m) => mealMap.set(m.id, m));
+          pendingImportPayload.meals.forEach((m) => mealMap.set(m.id, m));
+          appState.meals = Array.from(mealMap.values());
+
+          const presetMap = new Map();
+          appState.presets.forEach((p) => presetMap.set(p.id, p));
+          pendingImportPayload.presets.forEach((p) => presetMap.set(p.id, p));
+          appState.presets = Array.from(presetMap.values());
+        }
+
+        pendingImportPayload = null;
+        closeImportModal();
+        persistState();
+        renderAll();
+
+        const undoBanner = document.getElementById('undoImportBanner');
+        const undoMsg = document.getElementById('undoImportMessage');
+        undoMsg.textContent = mode === 'replace'
+          ? 'JSONデータで全置換しました。'
+          : 'JSONデータを差分マージしました。';
+        undoBanner.classList.add('visible');
+        showToast('データのインポートが完了しました。');
+      }
+
+      function undoLastImport() {
+        if (!undoSnapshot) return;
+        appState = undoSnapshot;
+        undoSnapshot = null;
+        document.getElementById('undoImportBanner').classList.remove('visible');
+        persistState();
+        renderAll();
+        showToast('インポート直前の状態に復元しました。');
+      }
+
+      function closeImportModal() {
+        document.getElementById('importModalBackdrop').classList.remove('open');
+      }
+
+      /* ==========================================================================
+         10. Demo Data Generator
+         ========================================================================== */
+      function injectDemoData() {
+        undoSnapshot = deepClone(appState);
+        const today = getTodayStr();
+        const d1 = shiftDateStr(today, -1);
+        const d2 = shiftDateStr(today, -2);
+        const d3 = shiftDateStr(today, -3);
+        const d4 = shiftDateStr(today, -4);
+        const d5 = shiftDateStr(today, -5);
+        const d6 = shiftDateStr(today, -6);
+
+        appState = {
+          targets: {
+            calories: { value: 1900, mode: 'max' },
+            protein:  { value: 85,   mode: 'min' },
+            fat:      { value: 55,   mode: 'max' },
+            carbs:    { value: 220,  mode: 'max' },
+            sugar:    { value: 90,   mode: 'max' },
+            salt:     { value: 6.5,  mode: 'max' }
+          },
+          ngIngredients: ['ピーナッツ', 'そば', 'エビ', 'マーガリン'],
+          presets: [
+            {
+              id: 'preset_demo_1',
+              name: 'オートミール＆無脂肪ヨーグルト',
+              nutrients: { calories: 310, protein: 18, fat: 4.5, carbs: 48, sugar: 12, salt: 0.2 },
+              ingredients: 'オーツ麦、乳成分、ブルーベリー',
+              notes: '定番の低脂質朝食'
+            },
+            {
+              id: 'preset_demo_2',
+              name: 'サラダチキンと玄米おにぎり',
+              nutrients: { calories: 420, protein: 34, fat: 5.0, carbs: 56, sugar: 2, salt: 1.8 },
+              ingredients: '鶏むね肉、玄米、海苔',
+              notes: '高タンパクランチ'
+            },
+            {
+              id: 'preset_demo_3',
+              name: '担々麺（ピーナッツペースト使用）',
+              nutrients: { calories: 860, protein: 26, fat: 38, carbs: 98, sugar: 15, salt: 5.8 },
+              ingredients: '小麦麺、豚ひき肉、ピーナッツ、ごま、ラー油',
+              notes: '外食サンプル（NG＆塩分超過確認用）'
+            }
+          ],
+          meals: [
+            {
+              id: 'meal_demo_today_1',
+              date: today,
+              category: '朝食',
+              name: 'オートミール＆無脂肪ヨーグルト',
+              nutrients: { calories: 310, protein: 18, fat: 4.5, carbs: 48, sugar: 12, salt: 0.2 },
+              ingredients: 'オーツ麦、乳成分、ブルーベリー',
+              notes: '体調良好'
+            },
+            {
+              id: 'meal_demo_today_2',
+              date: today,
+              category: '昼食',
+              name: '焼き鮭定食（減塩味噌汁）',
+              nutrients: { calories: 640, protein: 38, fat: 18, carbs: 74, sugar: 4, salt: 2.6 },
+              ingredients: '鮭、白米、大豆、わかめ',
+              notes: ''
+            },
+            {
+              id: 'meal_demo_today_3',
+              date: today,
+              category: '間食',
+              name: 'アジアンスイーツ（ピーナッツトッピング）',
+              nutrients: { calories: 290, protein: 6, fat: 14, carbs: 35, sugar: 24, salt: 0.3 },
+              ingredients: 'ココナッツミルク、タピオカ、ピーナッツ',
+              notes: 'NG警告の動作確認サンプル'
+            },
+            {
+              id: 'meal_demo_d1_1',
+              date: d1,
+              category: '夕食',
+              name: '鶏むね肉のグリル＆温野菜セット',
+              nutrients: { calories: 1780, protein: 92, fat: 48, carbs: 195, sugar: 65, salt: 5.9 },
+              ingredients: '鶏むね肉、ブロッコリー、オリーブオイル',
+              notes: '1日合計サンプル'
+            },
+            {
+              id: 'meal_demo_d2_1',
+              date: d2,
+              category: '昼食',
+              name: '特製ラーメン＆チャーハンセット',
+              nutrients: { calories: 2150, protein: 72, fat: 74, carbs: 260, sugar: 88, salt: 8.4 },
+              ingredients: '小麦、豚肉、鶏ガラ、醤油',
+              notes: 'カロリー・塩分オーバー日'
+            },
+            {
+              id: 'meal_demo_d3_1',
+              date: d3,
+              category: '夕食',
+              name: 'サバの塩焼きとひじき煮定食',
+              nutrients: { calories: 1690, protein: 88, fat: 51, carbs: 180, sugar: 55, salt: 5.4 },
+              ingredients: 'サバ、ひじき、大豆、白米',
+              notes: ''
+            },
+            {
+              id: 'meal_demo_d4_1',
+              date: d4,
+              category: '夕食',
+              name: '豆腐ハンバーグ定食',
+              nutrients: { calories: 1620, protein: 81, fat: 42, carbs: 188, sugar: 60, salt: 5.1 },
+              ingredients: '豆腐、鶏ひき肉、玉ねぎ',
+              notes: ''
+            },
+            {
+              id: 'meal_demo_d5_1',
+              date: d5,
+              category: '夕食',
+              name: '海鮮丼（エビ抜き注文）',
+              nutrients: { calories: 1840, protein: 95, fat: 39, carbs: 230, sugar: 72, salt: 6.2 },
+              ingredients: 'マグロ、サーモン、酢飯',
+              notes: ''
+            },
+            {
+              id: 'meal_demo_d6_1',
+              date: d6,
+              category: '夕食',
+              name: '野菜たっぷり鍋＆雑炊',
+              nutrients: { calories: 1580, protein: 86, fat: 36, carbs: 192, sugar: 52, salt: 5.8 },
+              ingredients: '白菜、鱈、豆腐、白米',
+              notes: ''
+            }
+          ]
+        };
+
+        selectedDate = today;
+        persistState();
+        renderAll();
+        showToast('サンプルデータを投入しました（NG警告・グラフ推移を確認できます）。');
+      }
+
+      /* ==========================================================================
+         11. Interactive Step-by-Step Tutorial Tour
+         ========================================================================== */
+      const TOUR_STEPS = [
+        {
+          targetId: 'tourTargetRules',
+          title: '① 制限目標 ＆ NG食材の設定',
+          desc: '右側のパネルで「NG食材・アレルゲン」や1日の栄養素「上限／目標」、よく食べる「プリセット」を管理できます。',
+          showDemoBtn: true
+        },
+        {
+          targetId: 'tourTargetMealForm',
+          title: '② 食事記録の追加とNGリアルタイム警告',
+          desc: '食事名や原材料にNG食材キーワードが含まれると、入力中から即座に赤い警告アラートが表示されます。プリセットからの一括入力も可能です。',
+          showDemoBtn: false
+        },
+        {
+          targetId: 'tourTargetDashboard',
+          title: '③ 残量計算・超過ステータスと7日間推移',
+          desc: '記録した食事は即座に集計され、各栄養素の残量・超過状況が色分け表示されます。下部では直近7日間の推移グラフも確認できます。',
+          showDemoBtn: false
+        },
+        {
+          targetId: 'tourTargetHeaderTools',
+          title: '④ JSONバックアップ／復元とダークモード切替',
+          desc: 'データは自動保存されますが、「JSON保存」で定期バックアップが可能です。「JSON読込」では差分マージや全置換、インポート直後のUndoにも対応しています。',
+          showDemoBtn: false
+        }
+      ];
+
+      let currentTourStep = -1;
+
+      function startTour() {
+        currentTourStep = 0;
+        document.getElementById('tourBackdrop').classList.add('active');
+        document.getElementById('tourHighlightBox').classList.add('active');
+        document.getElementById('tourPopover').classList.add('active');
+        renderTourStep();
+      }
+
+      function endTour() {
+        currentTourStep = -1;
+        document.getElementById('tourBackdrop').classList.remove('active');
+        document.getElementById('tourHighlightBox').classList.remove('active');
+        document.getElementById('tourPopover').classList.remove('active');
+        safeStorageSet(TOUR_SEEN_KEY, '1');
+      }
+
+      function renderTourStep() {
+        if (currentTourStep < 0 || currentTourStep >= TOUR_STEPS.length) return;
+        const step = TOUR_STEPS[currentTourStep];
+        const targetEl = document.getElementById(step.targetId);
+
+        document.getElementById('tourStepBadge').textContent = `STEP ${currentTourStep + 1} / ${TOUR_STEPS.length}`;
+        document.getElementById('tourTitle').textContent = step.title;
+        document.getElementById('tourDesc').textContent = step.desc;
+        document.getElementById('tourExtraAction').style.display = step.showDemoBtn ? 'block' : 'none';
+        document.getElementById('tourPrevBtn').disabled = currentTourStep === 0;
+        document.getElementById('tourNextBtn').textContent = currentTourStep === TOUR_STEPS.length - 1 ? '完了' : '次へ';
+
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(repositionTourOverlay, 120);
+        }
+      }
+
+      function repositionTourOverlay() {
+        if (currentTourStep < 0 || currentTourStep >= TOUR_STEPS.length) return;
+        const step = TOUR_STEPS[currentTourStep];
+        const targetEl = document.getElementById(step.targetId);
+        const highlightBox = document.getElementById('tourHighlightBox');
+        const popover = document.getElementById('tourPopover');
+        if (!targetEl) return;
+
+        const rect = targetEl.getBoundingClientRect();
+        const pad = 6;
+        const top = Math.max(4, rect.top - pad);
+        const left = Math.max(4, rect.left - pad);
+        const width = Math.min(window.innerWidth - 8, rect.width + pad * 2);
+        const height = Math.min(window.innerHeight - 8, rect.height + pad * 2);
+
+        highlightBox.style.top = `${top}px`;
+        highlightBox.style.left = `${left}px`;
+        highlightBox.style.width = `${width}px`;
+        highlightBox.style.height = `${height}px`;
+
+        // Calculate safe popover position
+        const popRect = popover.getBoundingClientRect();
+        const popW = popRect.width || 340;
+        const popH = popRect.height || 200;
+
+        let popTop = rect.bottom + 14;
+        if (popTop + popH > window.innerHeight - 12) {
+          popTop = Math.max(12, rect.top - popH - 14);
+        }
+        let popLeft = rect.left;
+        if (popLeft + popW > window.innerWidth - 12) {
+          popLeft = Math.max(12, window.innerWidth - popW - 12);
+        }
+        if (popLeft < 12) popLeft = 12;
+
+        popover.style.top = `${popTop}px`;
+        popover.style.left = `${popLeft}px`;
+      }
+
+      /* ==========================================================================
+         12. Event Listeners Setup
+         ========================================================================== */
+      function bindEvents() {
+        // Theme toggle
+        document.getElementById('themeToggleBtn').addEventListener('click', () => {
+          const cur = document.documentElement.getAttribute('data-theme');
+          applyTheme(cur === 'dark' ? 'light' : 'dark', true);
+        });
+
+        // Date navigation
+        document.getElementById('selectedDateInput').addEventListener('change', (e) => {
+          if (isValidDateStr(e.target.value)) {
+            selectedDate = e.target.value;
+            renderAll();
+          }
+        });
+        document.getElementById('prevDayBtn').addEventListener('click', () => {
+          selectedDate = shiftDateStr(selectedDate, -1);
+          renderAll();
+        });
+        document.getElementById('nextDayBtn').addEventListener('click', () => {
+          selectedDate = shiftDateStr(selectedDate, 1);
+          renderAll();
+        });
+        document.getElementById('todayBtn').addEventListener('click', () => {
+          selectedDate = getTodayStr();
+          renderAll();
+        });
+
+        // Live NG preview on typing
+        ['mealName', 'mealIngredients', 'mealNotes'].forEach((id) => {
+          document.getElementById(id).addEventListener('input', checkLiveNgPreview);
+        });
+
+        // Meal Form Submit
+        document.getElementById('mealEntryForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const draft = readMealFormValues();
+          if (!draft.name) {
+            showToast('食事名・メニュー名を入力してください。', 'error');
+            document.getElementById('mealName').focus();
+            return;
+          }
+
+          const ngMatches = detectNgMatches(draft);
+          const newMeal = {
+            id: generateId('meal'),
+            date: selectedDate,
+            category: draft.category,
+            name: draft.name,
+            nutrients: draft.nutrients,
+            ingredients: draft.ingredients,
+            notes: draft.notes
+          };
+
+          appState.meals.push(newMeal);
+          persistState();
+          clearMealForm();
+          renderAll();
+
+          if (ngMatches.length > 0) {
+            showToast(`⚠️ NG食材（${ngMatches.join('・')}）を含む食事を記録しました！`, 'error');
+          } else {
+            showToast(`「${newMeal.name}」を記録しました。`);
+          }
+        });
+
+        document.getElementById('resetMealFormBtn').addEventListener('click', clearMealForm);
+
+        // Save current form as Preset
+        document.getElementById('saveAsPresetBtn').addEventListener('click', () => {
+          const draft = readMealFormValues();
+          if (!draft.name) {
+            showToast('プリセット保存するには食事名を入力してください。', 'warn');
+            return;
+          }
+          appState.presets.push({
+            id: generateId('preset'),
+            name: draft.name,
+            nutrients: draft.nutrients,
+            ingredients: draft.ingredients,
+            notes: draft.notes
+          });
+          persistState();
+          renderPresetManager();
+          showToast(`プリセット「${draft.name}」を登録しました。`);
+        });
+
+        // Quick Select Preset into Form
+        document.getElementById('presetQuickSelect').addEventListener('change', (e) => {
+          const id = e.target.value;
+          if (!id) return;
+          const preset = appState.presets.find((p) => p.id === id);
+          if (preset) {
+            fillMealForm(preset);
+            showToast(`プリセット「${preset.name}」を入力欄に反映しました。`);
+          }
+        });
+
+        // Delegated actions in Meal List
+        document.getElementById('mealSectionsContainer').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          const id = btn.getAttribute('data-id');
+
+          if (action === 'delete-meal') {
+            appState.meals = appState.meals.filter((m) => m.id !== id);
+            persistState();
+            renderAll();
+            showToast('食事記録を削除しました。');
+          } else if (action === 'save-meal-preset') {
+            const meal = appState.meals.find((m) => m.id === id);
+            if (!meal) return;
+            appState.presets.push({
+              id: generateId('preset'),
+              name: meal.name,
+              nutrients: deepClone(meal.nutrients),
+              ingredients: meal.ingredients,
+              notes: meal.notes
+            });
+            persistState();
+            renderPresetManager();
+            showToast(`「${meal.name}」をプリセットに登録しました。`);
+          }
+        });
+
+        // Right Sidebar Tabs
+        document.querySelectorAll('.tab-btn').forEach((tabBtn) => {
+          tabBtn.addEventListener('click', () => {
+            const targetPanelId = tabBtn.getAttribute('data-tab');
+            document.querySelectorAll('.tab-btn').forEach((b) => {
+              b.classList.remove('active');
+              b.setAttribute('aria-selected', 'false');
+            });
+            document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+            tabBtn.classList.add('active');
+            tabBtn.setAttribute('aria-selected', 'true');
+            document.getElementById(targetPanelId).classList.add('active');
+          });
+        });
+
+        // Add NG Ingredient
+        document.getElementById('addNgForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = document.getElementById('ngKeywordInput');
+          const raw = input.value.trim();
+          if (!raw) return;
+
+          // Support comma/space separated batch add
+          const keywords = raw.split(/[、,，\s]+/).map((s) => s.trim()).filter(Boolean);
+          let addedCount = 0;
+          keywords.forEach((kw) => {
+            if (!appState.ngIngredients.includes(kw)) {
+              appState.ngIngredients.push(kw);
+              addedCount++;
+            }
+          });
+          input.value = '';
+          if (addedCount > 0) {
+            persistState();
+            renderAll();
+            showToast(`NG食材を${addedCount}件追加しました。`);
+          } else {
+            showToast('既に登録済みのキーワードです。', 'warn');
+          }
+        });
+
+        // Remove NG Ingredient
+        document.getElementById('ngChipList').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action="remove-ng"]');
+          if (!btn) return;
+          const idx = Number(btn.getAttribute('data-index'));
+          if (!Number.isNaN(idx) && idx >= 0 && idx < appState.ngIngredients.length) {
+            const removed = appState.ngIngredients.splice(idx, 1)[0];
+            persistState();
+            renderAll();
+            showToast(`NG食材「${removed}」を解除しました。`);
+          }
+        });
+
+        // Save Target Settings
+        document.getElementById('targetSettingsForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          NUTRIENT_META.forEach((meta) => {
+            const val = Math.max(0, Number(fd.get(`targetVal_${meta.key}`)) || 0);
+            const mode = fd.get(`targetMode_${meta.key}`) === 'min' ? 'min' : 'max';
+            appState.targets[meta.key] = { value: val, mode };
+          });
+          persistState();
+          renderAll();
+          showToast('1日の数値制限・目標設定を更新しました。');
+        });
+
+        // Preset Manager Actions
+        document.getElementById('presetManagerList').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          const id = btn.getAttribute('data-id');
+          if (action === 'apply-preset') {
+            const preset = appState.presets.find((p) => p.id === id);
+            if (preset) {
+              fillMealForm(preset);
+              document.getElementById('tourTargetMealForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+              showToast(`プリセット「${preset.name}」を読み込みました。`);
+            }
+          } else if (action === 'delete-preset') {
+            appState.presets = appState.presets.filter((p) => p.id !== id);
+            persistState();
+            renderPresetManager();
+            showToast('プリセットを削除しました。');
+          }
+        });
+
+        // Chart Metric Change
+        document.getElementById('chartMetricSelect').addEventListener('change', renderTrendChart);
+
+        // JSON Export
+        document.getElementById('exportJsonBtn').addEventListener('click', exportDataAsJson);
+        document.getElementById('bannerExportBtn').addEventListener('click', exportDataAsJson);
+
+        // JSON Import Trigger
+        const fileInput = document.getElementById('importFileInput');
+        document.getElementById('importJsonBtn').addEventListener('click', () => {
+          fileInput.value = '';
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const parsed = JSON.parse(String(reader.result));
+              const result = validateAndNormalizeData(parsed);
+              if (!result.ok) {
+                showToast(`インポートエラー: ${result.error}`, 'error');
+                return;
+              }
+              pendingImportPayload = result.data;
+              document.getElementById('importSummaryText').textContent =
+                `食事記録 ${result.data.meals.length}件、NG食材 ${result.data.ngIngredients.length}件、プリセット ${result.data.presets.length}件を検出しました。反映方法を選択してください。`;
+              document.getElementById('importModalBackdrop').classList.add('open');
+            } catch (err) {
+              showToast('JSONファイルの解析に失敗しました。ファイル形式を確認してください。', 'error');
+            }
+          };
+          reader.onerror = () => {
+            showToast('ファイルの読み込み中にエラーが発生しました。', 'error');
+          };
+          reader.readAsText(file);
+        });
+
+        // Import Modal Buttons
+        document.getElementById('cancelImportBtn').addEventListener('click', () => {
+          pendingImportPayload = null;
+          closeImportModal();
+        });
+        document.getElementById('mergeImportBtn').addEventListener('click', () => executeImport('merge'));
+        document.getElementById('replaceImportBtn').addEventListener('click', () => executeImport('replace'));
+
+        // Undo Import Banner
+        document.getElementById('undoImportBtn').addEventListener('click', undoLastImport);
+        document.getElementById('dismissUndoBtn').addEventListener('click', () => {
+          document.getElementById('undoImportBanner').classList.remove('visible');
+        });
+
+        // Demo Data Button
+        document.getElementById('loadDemoBtn').addEventListener('click', injectDemoData);
+
+        // Tutorial Controls
+        document.getElementById('startTourBtn').addEventListener('click', startTour);
+        document.getElementById('tourSkipBtn').addEventListener('click', endTour);
+        document.getElementById('tourPrevBtn').addEventListener('click', () => {
+          if (currentTourStep > 0) {
+            currentTourStep--;
+            renderTourStep();
+          }
+        });
+        document.getElementById('tourNextBtn').addEventListener('click', () => {
+          if (currentTourStep < TOUR_STEPS.length - 1) {
+            currentTourStep++;
+            renderTourStep();
+          } else {
+            endTour();
+          }
+        });
+        document.getElementById('tourDemoInjectBtn').addEventListener('click', () => {
+          injectDemoData();
+          repositionTourOverlay();
+        });
+
+        window.addEventListener('resize', repositionTourOverlay);
+        window.addEventListener('scroll', repositionTourOverlay, true);
+      }
+
+      /* ==========================================================================
+         13. Bootstrap
+         ========================================================================== */
+      function init() {
+        initTheme();
+        loadStateFromStorage();
+        updateStorageBanner();
+        bindEvents();
+        refreshIcons(document);
+        renderAll();
+
+        // Launch tutorial automatically on first visit if no data exists
+        const seen = safeStorageGet(TOUR_SEEN_KEY);
+        if (!seen && appState.meals.length === 0 && appState.ngIngredients.length === 0) {
+          setTimeout(startTour, 350);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
