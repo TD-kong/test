@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ja" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Resource & Effort Manager</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for modern icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-chart-line text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-tight">IT Resource & Effort Manager</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">エンジニア工数・要員アサイン管理ダッシュボード</p>
+                </div>
+            </div>
+
+            <!-- Global Actions & Theme Toggle -->
+            <div class="flex items-center space-x-3">
+                <button onclick="openDataModal()" class="hidden sm:inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-database text-slate-500 dark:text-slate-400"></i>
+                    <span>データ管理</span>
+                </button>
+                <button onclick="resetToSampleData()" class="hidden md:inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                    <i class="fa-solid fa-rotate-left text-slate-500 dark:text-slate-400"></i>
+                    <span>サンプル復元</span>
+                </button>
+                <button onclick="toggleDarkMode()" class="w-10 h-10 rounded-lg border border-slate-300 dark:border-slate-600 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="テーマ切り替え">
+                    <i id="themeIcon" class="fa-solid fa-moon text-slate-600 dark:text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab Navigation Bar -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex space-x-1 overflow-x-auto border-t border-slate-100 dark:border-slate-700/50">
+            <button onclick="switchTab('dashboard')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-brand-600 text-brand-600 dark:text-brand-400 flex items-center space-x-2 whitespace-nowrap transition" data-tab="dashboard">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span>ダッシュボード</span>
+            </button>
+            <button onclick="switchTab('members')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition" data-tab="members">
+                <i class="fa-solid fa-users"></i>
+                <span>要員管理</span>
+            </button>
+            <button onclick="switchTab('projects')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition" data-tab="projects">
+                <i class="fa-solid fa-diagram-project"></i>
+                <span>案件・工数管理</span>
+            </button>
+            <button onclick="switchTab('assignments')" class="tab-btn px-4 py-3 text-sm font-medium border-b-2 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap transition" data-tab="assignments">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>アサイン・負荷計画</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Summary Metric Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">総要員数 (稼働中)</p>
+                        <h3 class="text-2xl font-bold mt-1 text-slate-900 dark:text-white" id="statTotalMembers">0名</h3>
+                        <p class="text-xs text-emerald-600 dark:text-emerald-400 mt-1"><span id="statActiveMembers">0</span>名がアサイン中</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-user-group"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">進行中プロジェクト</p>
+                        <h3 class="text-2xl font-bold mt-1 text-slate-900 dark:text-white" id="statActiveProjects">0件</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">全登録: <span id="statTotalProjects">0</span>件</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-briefcase"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">今月総工数実績</p>
+                        <h3 class="text-2xl font-bold mt-1 text-slate-900 dark:text-white" id="statTotalHours">0 h</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">換算人日: <span id="statTotalManDays">0</span> 人日</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                </div>
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-slate-500 dark:text-slate-400">高負荷警告要員 (>100%)</p>
+                        <h3 class="text-2xl font-bold mt-1 text-rose-600 dark:text-rose-400" id="statOverloadCount">0名</h3>
+                        <p class="text-xs text-rose-500 mt-1">要員調整が必要です</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-lg bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Charts / Overview Cards -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Project Progress / Effort Breakdown -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-base text-slate-900 dark:text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie text-brand-600"></i>
+                            <span>プロジェクト別工数割合 (今月)</span>
+                        </h2>
+                        <span class="text-xs text-slate-500" id="currentMonthLabel">2026年10月</span>
+                    </div>
+                    <div id="projectEffortChartContainer" class="space-y-3">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Phase Effort Breakdown -->
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-semibold text-base text-slate-900 dark:text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-bars-progress text-brand-600"></i>
+                            <span>開発フェーズ別工数割合</span>
+                        </h2>
+                        <span class="text-xs text-slate-500">累計実績</span>
+                    </div>
+                    <div id="phaseEffortChartContainer" class="space-y-3">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Effort Logs Table -->
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-base text-slate-900 dark:text-white flex items-center space-x-2">
+                        <i class="fa-solid fa-clock-rotate-left text-brand-600"></i>
+                        <span>最近記録された工数実績</span>
+                    </h2>
+                    <button onclick="switchTab('projects')" class="text-xs text-brand-600 dark:text-brand-400 font-medium hover:underline">すべて見る &rarr;</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="p-3">日付</th>
+                                <th class="p-3">メンバー</th>
+                                <th class="p-3">案件名</th>
+                                <th class="p-3">フェーズ</th>
+                                <th class="p-3 text-right">工数 (h)</th>
+                                <th class="p-3">備考</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentEffortTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: MEMBERS ==================== -->
+        <section id="tab-members" class="tab-content hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex items-center space-x-3 flex-1">
+                    <div class="relative flex-1 max-w-sm">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="memberSearchInput" oninput="renderMembers()" placeholder="名前、スキル、役割で検索..." class="w-full pl-10 pr-4 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <select id="memberStatusFilter" onchange="renderMembers()" class="py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="">すべてのステータス</option>
+                        <option value="稼働中">稼働中</option>
+                        <option value="待機中">待機中</option>
+                        <option value="休暇予定">休暇予定</option>
+                    </select>
+                </div>
+                <button onclick="openMemberModal()" class="inline-flex items-center justify-center space-x-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm rounded-lg shadow-sm transition">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>メンバー追加</span>
+                </button>
+            </div>
+
+            <!-- Members Cards / Grid View -->
+            <div id="membersGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: PROJECTS & EFFORT ==================== -->
+        <section id="tab-projects" class="tab-content hidden space-y-6">
+            <!-- Sub-tabs or Controls -->
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex items-center space-x-2">
+                    <button onclick="switchProjectSubTab('projectsList')" id="subBtnProjectsList" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 transition">案件一覧</button>
+                    <button onclick="switchProjectSubTab('effortLogs')" id="subBtnEffortLogs" class="px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition">工数実績ログ</button>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="openProjectModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-folder-plus"></i>
+                        <span>案件登録</span>
+                    </button>
+                    <button onclick="openEffortModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-stopwatch"></i>
+                        <span>工数記録</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Projects List View -->
+            <div id="subTabProjectsListContainer" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="projectsGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Effort Logs View -->
+            <div id="subTabEffortLogsContainer" class="hidden space-y-4">
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <h3 class="font-semibold text-base text-slate-900 dark:text-white">工数実績タイムライン・一覧</h3>
+                        <div class="flex items-center space-x-2">
+                            <select id="effortFilterProject" onchange="renderEffortLogs()" class="py-1.5 px-3 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                                <option value="">すべての案件</option>
+                            </select>
+                            <select id="effortFilterMember" onchange="renderEffortLogs()" class="py-1.5 px-3 text-xs rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                                <option value="">すべてのメンバー</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                <tr>
+                                    <th class="p-3">日付</th>
+                                    <th class="p-3">メンバー</th>
+                                    <th class="p-3">案件名</th>
+                                    <th class="p-3">フェーズ</th>
+                                    <th class="p-3 text-right">工数 (h)</th>
+                                    <th class="p-3">備考</th>
+                                    <th class="p-3 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fullEffortTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 4: ASSIGNMENTS & LOAD ==================== -->
+        <section id="tab-assignments" class="tab-content hidden space-y-6">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 class="font-semibold text-base text-slate-900 dark:text-white flex items-center space-x-2">
+                            <i class="fa-solid fa-users-gear text-brand-600"></i>
+                            <span>要員アサイン・月別負荷グリッド</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">メンバーごとの月別想定アサイン時間と負荷率を確認・管理します (標準稼働 160h/月)</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openAssignmentModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm rounded-lg shadow-sm transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-calendar-plus"></i>
+                            <span>アサイン登録/変更</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Color Legend -->
+                <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 dark:text-slate-300 pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <span class="font-medium">負荷インジケーター:</span>
+                    <span class="inline-flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span><span>適正 (〜100%)</span></span>
+                    <span class="inline-flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span><span>やや高負荷 (101%〜120%)</span></span>
+                    <span class="inline-flex items-center space-x-1.5"><span class="w-3 h-3 rounded-full bg-rose-500"></span><span>オーバーワーク (>120%)</span></span>
+                </div>
+
+                <!-- Assignment Matrix Table -->
+                <div class="overflow-x-auto pt-2">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            <tr>
+                                <th class="p-3 sticky left-0 bg-slate-50 dark:bg-slate-800 z-10">メンバー</th>
+                                <th class="p-3">役割</th>
+                                <th class="p-3 text-center">10月</th>
+                                <th class="p-3 text-center">11月</th>
+                                <th class="p-3 text-center">12月</th>
+                                <th class="p-3 text-center">1月</th>
+                                <th class="p-3 text-center">2月</th>
+                                <th class="p-3 text-center">3月</th>
+                                <th class="p-3 text-center">平均負荷</th>
+                            </tr>
+                        </thead>
+                        <tbody id="assignmentMatrixBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 mt-12 py-6 text-center text-xs text-slate-500">
+        <p>IT Resource & Effort Manager &copy; 2026 - IT Project Management Suite</p>
+    </footer>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- Member Modal -->
+    <div id="memberModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden m-4">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 id="memberModalTitle" class="font-bold text-base text-slate-900 dark:text-white">メンバー登録</h3>
+                <button onclick="closeMemberModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="memberForm" onsubmit="saveMember(event)" class="p-6 space-y-4">
+                <input type="hidden" id="memberId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">氏名 *</label>
+                    <input type="text" id="memberName" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">役割 / 役職</label>
+                        <select id="memberRole" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <option value="PM / リーダー">PM / リーダー</option>
+                            <option value="バックエンドエンジニア">バックエンドエンジニア</option>
+                            <option value="フロントエンドエンジニア">フロントエンドエンジニア</option>
+                            <option value="インフラ・DevOps">インフラ・DevOps</option>
+                            <option value="QA / テスター">QA / テスター</option>
+                            <option value="UI/UXデザイナー">UI/UXデザイナー</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">稼働ステータス</label>
+                        <select id="memberStatus" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <option value="稼働中">稼働中</option>
+                            <option value="待機中">待機中</option>
+                            <option value="休暇予定">休暇予定</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">スキル・タグ (カンマ区切り)</label>
+                    <input type="text" id="memberSkills" placeholder="Java, Spring Boot, React, AWS, Docker" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">所属チーム</label>
+                        <input type="text" id="memberTeam" placeholder="第一開発部" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">月別想定稼働 (h/月)</label>
+                        <input type="number" id="memberCapacity" value="160" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" onclick="closeMemberModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div id="projectModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden m-4">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 id="projectModalTitle" class="font-bold text-base text-slate-900 dark:text-white">案件登録</h3>
+                <button onclick="closeProjectModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="projectForm" onsubmit="saveProject(event)" class="p-6 space-y-4">
+                <input type="hidden" id="projectId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">案件名 *</label>
+                    <input type="text" id="projectName" required placeholder="ECサイトリニューアル案件" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">クライアント / 部署 *</label>
+                        <input type="text" id="projectClient" required placeholder="〇〇株式会社" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">ステータス</label>
+                        <select id="projectStatus" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <option value="進行中">進行中</option>
+                            <option value="計画中">計画中</option>
+                            <option value="完了">完了</option>
+                            <option value="保守運用">保守運用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">開始予定日</label>
+                        <input type="date" id="projectStartDate" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">終了予定日</label>
+                        <input type="date" id="projectEndDate" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">概要・メモ</label>
+                    <textarea id="projectDesc" rows="3" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500" placeholder="プロジェクトの概要や主要要件など"></textarea>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" onclick="closeProjectModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Effort Modal -->
+    <div id="effortModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden m-4">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white">工数実績記録</h3>
+                <button onclick="closeEffortModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="effortForm" onsubmit="saveEffort(event)" class="p-6 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">日付 *</label>
+                        <input type="date" id="effortDate" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">メンバー *</label>
+                        <select id="effortMemberId" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">案件 *</label>
+                        <select id="effortProjectId" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">開発フェーズ *</label>
+                        <select id="effortPhase" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                            <option value="要件定義">要件定義</option>
+                            <option value="基本設計">基本設計</option>
+                            <option value="詳細設計">詳細設計</option>
+                            <option value="実装・開発">実装・開発</option>
+                            <option value="テスト">テスト</option>
+                            <option value="保守運用">保守運用</option>
+                            <option value="PM・マネジメント">PM・マネジメント</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">工数 (時間) *</label>
+                    <input type="number" id="effortHours" step="0.5" min="0.5" max="24" value="8" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">作業内容・備考</label>
+                    <input type="text" id="effortNote" placeholder="API設計レビュー実施など" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" onclick="closeEffortModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">記録する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assignment Modal -->
+    <div id="assignmentModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden m-4">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white">月別アサイン想定時間の更新</h3>
+                <button onclick="closeAssignmentModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="assignmentForm" onsubmit="saveAssignment(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">メンバー *</label>
+                    <select id="assignMemberId" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">対象月 *</label>
+                    <select id="assignMonth" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                        <option value="2026-10">2026年10月</option>
+                        <option value="2026-11">2026年11月</option>
+                        <option value="2026-12">2026年12月</option>
+                        <option value="2027-01">2027年1月</option>
+                        <option value="2027-02">2027年2月</option>
+                        <option value="2027-03">2027年3月</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">想定アサイン工数 (時間/月) *</label>
+                    <input type="number" id="assignHours" min="0" max="300" value="160" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-brand-500">
+                    <p class="text-xs text-slate-500 mt-1">※標準稼働 160h超過でオーバーワーク警告となります。</p>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button type="button" onclick="closeAssignmentModal()" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition">更新する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Management Modal (Import / Export) -->
+    <div id="dataModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm hidden">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden m-4">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white">JSONデータ管理 (バックアップ)</h3>
+                <button onclick="closeDataModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">データのJSONエクスポート (バックアップ)</label>
+                    <button onclick="exportJSONData()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>JSONファイルとしてダウンロード</span>
+                    </button>
+                </div>
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">データのJSONインポート (復元)</label>
+                    <input type="file" id="importFile" accept=".json" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-slate-700 dark:file:text-slate-200">
+                    <button onclick="importJSONData()" class="w-full mt-2 py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white text-sm font-medium rounded-lg shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-upload"></i>
+                        <span>インポート実行</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 text-sm">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage">操作が完了しました。</span>
+    </div>
+
+    <!-- ==================== JAVASCRIPT APPLICATION LOGIC ==================== -->
+    <script>
+        // Initial Sample Data Store
+        const SAMPLE_DATA = {
+            members: [
+                { id: "m1", name: "山田 太郎", role: "PM / リーダー", status: "稼働中", skills: ["PM", "Agile", "Java"], team: "第一開発部", capacity: 160 },
+                { id: "m2", name: "鈴木 花子", role: "バックエンドエンジニア", status: "稼働中", skills: ["Java", "Spring Boot", "MySQL", "AWS"], team: "第一開発部", capacity: 160 },
+                { id: "m3", name: "佐藤 健一", role: "フロントエンドエンジニア", status: "稼働中", skills: ["React", "TypeScript", "TailwindCSS"], team: "第二開発部", capacity: 160 },
+                { id: "m4", name: "高橋 美咲", role: "インフラ・DevOps", status: "稼働中", skills: ["AWS", "Terraform", "Docker", "Kubernetes"], team: "インフラ部", capacity: 160 },
+                { id: "m5", name: "田中 直人", role: "QA / テスター", status: "待機中", skills: ["Selenium", "Jest", "Manual Testing"], team: "QA部", capacity: 160 },
+            ],
+            projects: [
+                { id: "p1", name: "ECサイトリニューアル", client: "〇〇リテール様", status: "進行中", startDate: "2026-08-01", endDate: "2026-12-31", desc: "大規模ECモダナイゼーション及びマイクロサービス化" },
+                { id: "p2", name: "社内基幹DXシステム構築", client: "社内情報システム部", status: "進行中", startDate: "2026-09-15", endDate: "2027-03-31", desc: "業務プロセスのクラウド移行とワークフロー自動化" },
+                { id: "p3", name: "AIチャットボット連携", client: "カスタマーサポート部", status: "計画中", startDate: "2026-11-01", endDate: "2027-02-28", desc: "生成AIを活用した問い合わせ自動応答システムの導入" },
+            ],
+            efforts: [
+                { id: "e1", date: "2026-10-10", memberId: "m1", projectId: "p1", phase: "要件定義", hours: 8, note: "クライアント要件ヒアリング" },
+                { id: "e2", date: "2026-10-10", memberId: "m2", projectId: "p1", phase: "基本設計", hours: 8, note: "API仕様書ドラフト作成" },
+                { id: "e3", date: "2026-10-11", memberId: "m3", projectId: "p1", phase: "実装・開発", hours: 8, note: "商品一覧画面コンポーネント実装" },
+                { id: "e4", date: "2026-10-12", memberId: "m4", projectId: "p2", phase: "基本設計", hours: 8, note: "AWS環境アーキテクチャ設計" },
+                { id: "e5", date: "2026-10-13", memberId: "m2", projectId: "p2", phase: "実装・開発", hours: 8, note: "認証モジュール実装" },
+            ],
+            // assignments[memberId][month] = hours
+            assignments: {
+                "m1": { "2026-10": 160, "2026-11": 160, "2026-12": 140, "2027-01": 120, "2027-02": 120, "2027-03": 100 },
+                "m2": { "2026-10": 180, "2026-11": 160, "2026-12": 160, "2027-01": 160, "2027-02": 160, "2027-03": 160 },
+                "m3": { "2026-10": 160, "2026-11": 170, "2026-12": 160, "2027-01": 160, "2027-02": 140, "2027-03": 100 },
+                "m4": { "2026-10": 140, "2026-11": 140, "2026-12": 120, "2027-01": 100, "2027-02": 100, "2027-03": 80 },
+                "m5": { "2026-10": 80, "2026-11": 120, "2026-12": 160, "2027-01": 160, "2027-02": 160, "2027-03": 160 }
+            }
+        };
+
+        let appData = {};
+
+        // Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            initTheme();
+            renderAll();
+            
+            // Set today's date on effort modal default
+            document.getElementById('effortDate').value = new Date().toISOString().split('T')[0];
+        });
+
+        function loadData() {
+            const stored = localStorage.getItem('it_resource_manager_data');
+            if (stored) {
+                try {
+                    appData = JSON.parse(stored);
+                } catch(e) {
+                    appData = JSON.parse(JSON.stringify(SAMPLE_DATA));
+                }
+            } else {
+                appData = JSON.parse(JSON.stringify(SAMPLE_DATA));
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('it_resource_manager_data', JSON.stringify(appData));
+        }
+
+        function resetToSampleData() {
+            if(confirm("サンプルデータを再読み込みしますか？（現在の変更はリセットされます）")) {
+                appData = JSON.parse(JSON.stringify(SAMPLE_DATA));
+                saveData();
+                renderAll();
+                showToast("サンプルデータを復元しました。");
+            }
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderMembers();
+            renderProjects();
+            renderEffortLogs();
+            renderAssignments();
+            populateSelectOptions();
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brand-600', 'text-brand-600', 'dark:text-brand-400');
+                btn.classList.add('border-transparent', 'text-slate-600', 'dark:text-slate-400');
+            });
+            const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+            if(activeBtn) {
+                activeBtn.classList.add('border-brand-600', 'text-brand-600', 'dark:text-brand-400');
+                activeBtn.classList.remove('border-transparent', 'text-slate-600', 'dark:text-slate-400');
+            }
+        }
+
+        function switchProjectSubTab(subTabId) {
+            if(subTabId === 'projectsList') {
+                document.getElementById('subTabProjectsListContainer').classList.remove('hidden');
+                document.getElementById('subTabEffortLogsContainer').classList.add('hidden');
+                document.getElementById('subBtnProjectsList').className = "px-4 py-2 text-sm font-medium rounded-lg bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 transition";
+                document.getElementById('subBtnEffortLogs').className = "px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition";
+            } else {
+                document.getElementById('subTabProjectsListContainer').classList.add('hidden');
+                document.getElementById('subTabEffortLogsContainer').classList.remove('hidden');
+                document.getElementById('subBtnEffortLogs').className = "px-4 py-2 text-sm font-medium rounded-lg bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-400 transition";
+                document.getElementById('subBtnProjectsList').className = "px-4 py-2 text-sm font-medium rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition";
+            }
+        }
+
+        // ==================== DASHBOARD RENDERING ====================
+        function renderDashboard() {
+            const members = appData.members || [];
+            const projects = appData.projects || [];
+            const efforts = appData.efforts || [];
+
+            document.getElementById('statTotalMembers').innerText = `${members.length}名`;
+            const activeMembersCount = members.filter(m => m.status === '稼働中').length;
+            document.getElementById('statActiveMembers').innerText = activeMembersCount;
+
+            const activeProjectsCount = projects.filter(p => p.status === '進行中').length;
+            document.getElementById('statActiveProjects').innerText = `${activeProjectsCount}件`;
+            document.getElementById('statTotalProjects').innerText = projects.length;
+
+            const totalHours = efforts.reduce((sum, e) => sum + parseFloat(e.hours || 0), 0);
+            document.getElementById('statTotalHours').innerText = `${totalHours} h`;
+            document.getElementById('statTotalManDays').innerText = (totalHours / 8).toFixed(1);
+
+            // Calculate overloads (> 160h or capacity in current month 2026-10)
+            let overloadCount = 0;
+            members.forEach(m => {
+                const assignHours = (appData.assignments[m.id] && appData.assignments[m.id]["2026-10"]) ? appData.assignments[m.id]["2026-10"] : 160;
+                if(assignHours > (m.capacity || 160)) overloadCount++;
+            });
+            document.getElementById('statOverloadCount').innerText = `${overloadCount}名`;
+
+            // Project effort chart
+            const projectEffortMap = {};
+            efforts.forEach(e => {
+                projectEffortMap[e.projectId] = (projectEffortMap[e.projectId] || 0) + parseFloat(e.hours);
+            });
+
+            const projContainer = document.getElementById('projectEffortChartContainer');
+            projContainer.innerHTML = '';
+            if(Object.keys(projectEffortMap).length === 0) {
+                projContainer.innerHTML = '<p class="text-xs text-slate-400">データがありません</p>';
+            } else {
+                let maxProjHours = Math.max(...Object.values(projectEffortMap), 1);
+                for(let pId in projectEffortMap) {
+                    const proj = projects.find(p => p.id === pId);
+                    const pName = proj ? proj.name : '不明な案件';
+                    const hrs = projectEffortMap[pId];
+                    const pct = Math.round((hrs / maxProjHours) * 100);
+
+                    projContainer.innerHTML += `
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">${pName}</span>
+                                <span class="text-slate-500">${hrs} h (${(hrs/8).toFixed(1)}人日)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                                <div class="bg-brand-600 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Phase effort chart
+            const phaseEffortMap = {};
+            efforts.forEach(e => {
+                phaseEffortMap[e.phase] = (phaseEffortMap[e.phase] || 0) + parseFloat(e.hours);
+            });
+
+            const phaseContainer = document.getElementById('phaseEffortChartContainer');
+            phaseContainer.innerHTML = '';
+            if(Object.keys(phaseEffortMap).length === 0) {
+                phaseContainer.innerHTML = '<p class="text-xs text-slate-400">データがありません</p>';
+            } else {
+                let maxPhaseHours = Math.max(...Object.values(phaseEffortMap), 1);
+                for(let ph in phaseEffortMap) {
+                    const hrs = phaseEffortMap[ph];
+                    const pct = Math.round((hrs / maxPhaseHours) * 100);
+                    phaseContainer.innerHTML += `
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-slate-700 dark:text-slate-300">${ph}</span>
+                                <span class="text-slate-500">${hrs} h</span>
+                            </div>
+                            <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                                <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Recent effort table
+            const recentBody = document.getElementById('recentEffortTableBody');
+            recentBody.innerHTML = '';
+            const sortedEfforts = [...efforts].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            if(sortedEfforts.length === 0) {
+                recentBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 text-xs">工数実績の記録がありません</td></tr>`;
+            } else {
+                sortedEfforts.forEach(e => {
+                    const mem = members.find(m => m.id === e.memberId);
+                    const proj = projects.find(p => p.id === e.projectId);
+                    recentBody.innerHTML += `
+                        <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                            <td class="p-3 text-slate-600 dark:text-slate-300">${e.date}</td>
+                            <td class="p-3 font-medium text-slate-900 dark:text-white">${mem ? mem.name : '不明'}</td>
+                            <td class="p-3 text-slate-700 dark:text-slate-300">${proj ? proj.name : '不明'}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">${e.phase}</span></td>
+                            <td class="p-3 text-right font-semibold text-slate-900 dark:text-white">${e.hours} h</td>
+                            <td class="p-3 text-slate-500 text-xs">${e.note || '-'}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        // ==================== MEMBERS RENDERING ====================
+        function renderMembers() {
+            const grid = document.getElementById('membersGrid');
+            const search = document.getElementById('memberSearchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('memberStatusFilter').value;
+
+            grid.innerHTML = '';
+            const filtered = (appData.members || []).filter(m => {
+                const matchSearch = m.name.toLowerCase().includes(search) || m.role.toLowerCase().includes(search) || (m.skills && m.skills.some(s => s.toLowerCase().includes(search)));
+                const matchStatus = statusFilter === '' || m.status === statusFilter;
+                return matchSearch && matchStatus;
+            });
+
+            if(filtered.length === 0) {
+                grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 text-sm bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">条件に一致するメンバーがいません</div>`;
+                return;
+            }
+
+            filtered.forEach(m => {
+                let statusBadgeColor = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+                if(m.status === '待機中') statusBadgeColor = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+                if(m.status === '休暇予定') statusBadgeColor = 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
+
+                const skillsHtml = (m.skills || []).map(s => `<span class="px-2 py-0.5 text-xs rounded-md bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium">${s}</span>`).join('');
+
+                grid.innerHTML += `
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-start justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 font-bold flex items-center justify-center">
+                                        ${m.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-base text-slate-900 dark:text-white">${m.name}</h3>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400">${m.role} / <span class="text-brand-600 dark:text-brand-400">${m.team || '未所属'}</span></p>
+                                    </div>
+                                </div>
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${statusBadgeColor}">${m.status}</span>
+                            </div>
+                            <div class="mt-4 flex flex-wrap gap-1.5">
+                                ${skillsHtml}
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between text-xs">
+                            <span class="text-slate-500">月間想定稼働: <strong class="text-slate-900 dark:text-white">${m.capacity || 160}h</strong></span>
+                            <div class="space-x-2">
+                                <button onclick="editMember('${m.id}')" class="text-brand-600 dark:text-brand-400 hover:underline font-medium">編集</button>
+                                <button onclick="deleteMember('${m.id}')" class="text-rose-600 dark:text-rose-400 hover:underline font-medium">削除</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // ==================== PROJECTS & EFFORTS RENDERING ====================
+        function renderProjects() {
+            const grid = document.getElementById('projectsGrid');
+            grid.innerHTML = '';
+            const projects = appData.projects || [];
+
+            if(projects.length === 0) {
+                grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 text-sm bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">登録されている案件がありません</div>`;
+                return;
+            }
+
+            projects.forEach(p => {
+                let badge = 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+                if(p.status === '完了') badge = 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+                if(p.status === '計画中') badge = 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+
+                // Calculate project total hours
+                const projEfforts = (appData.efforts || []).filter(e => e.projectId === p.id);
+                const totalProjHrs = projEfforts.reduce((sum, e) => sum + parseFloat(e.hours || 0), 0);
+
+                grid.innerHTML += `
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">${p.client}</span>
+                                    <h3 class="font-bold text-base text-slate-900 dark:text-white mt-0.5">${p.name}</h3>
+                                </div>
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${badge}">${p.status}</span>
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 mt-3 line-clamp-2">${p.desc || 'メモなし'}</p>
+                            <div class="mt-4 text-xs text-slate-500 space-y-1">
+                                <p><i class="fa-regular fa-calendar mr-1.5"></i>期間: ${p.startDate || '未定'} 〜 ${p.endDate || '未定'}</p>
+                                <p><i class="fa-solid fa-stopwatch mr-1.5"></i>工数実績合計: <strong class="text-slate-900 dark:text-white">${totalProjHrs} h</strong> (${(totalProjHrs/8).toFixed(1)}人日)</p>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end space-x-3 text-xs">
+                            <button onclick="editProject('${p.id}')" class="text-brand-600 dark:text-brand-400 hover:underline font-medium">編集</button>
+                            <button onclick="deleteProject('${p.id}')" class="text-rose-600 dark:text-rose-400 hover:underline font-medium">削除</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function renderEffortLogs() {
+            const tbody = document.getElementById('fullEffortTableBody');
+            tbody.innerHTML = '';
+            const efforts = appData.efforts || [];
+            const filterProj = document.getElementById('effortFilterProject').value;
+            const filterMem = document.getElementById('effortFilterMember').value;
+
+            const filtered = efforts.filter(e => {
+                return (filterProj === '' || e.projectId === filterProj) && (filterMem === '' || e.memberId === filterMem);
+            }).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-slate-400 text-xs">工数実績ログがありません</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(e => {
+                const mem = (appData.members || []).find(m => m.id === e.memberId);
+                const proj = (appData.projects || []).find(p => p.id === e.projectId);
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                        <td class="p-3 text-slate-600 dark:text-slate-300">${e.date}</td>
+                        <td class="p-3 font-medium text-slate-900 dark:text-white">${mem ? mem.name : '不明'}</td>
+                        <td class="p-3 text-slate-700 dark:text-slate-300">${proj ? proj.name : '不明'}</td>
+                        <td class="p-3"><span class="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">${e.phase}</span></td>
+                        <td class="p-3 text-right font-semibold text-slate-900 dark:text-white">${e.hours} h</td>
+                        <td class="p-3 text-slate-500 text-xs">${e.note || '-'}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="deleteEffort('${e.id}')" class="text-rose-600 hover:text-rose-800 text-xs font-medium"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==================== ASSIGNMENT MATRIX RENDERING ====================
+        function renderAssignments() {
+            const tbody = document.getElementById('assignmentMatrixBody');
+            tbody.innerHTML = '';
+            const members = appData.members || [];
+            const months = ["2026-10", "2026-11", "2026-12", "2027-01", "2027-02", "2027-03"];
+
+            if(members.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="p-4 text-center text-slate-400 text-xs">メンバーがいません</td></tr>`;
+                return;
+            }
+
+            members.forEach(m => {
+                if(!appData.assignments[m.id]) appData.assignments[m.id] = {};
+                const memAssigns = appData.assignments[m.id];
+                const capacity = m.capacity || 160;
+
+                let monthCells = '';
+                let totalAssigned = 0;
+                let activeMonthsCount = months.length;
+
+                months.forEach(mo => {
+                    const hrs = memAssigns[mo] !== undefined ? memAssigns[mo] : 160;
+                    totalAssigned += hrs;
+                    const ratio = Math.round((hrs / capacity) * 100);
+
+                    let badgeColor = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+                    if(ratio > 100 && ratio <= 120) badgeColor = 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+                    if(ratio > 120) badgeColor = 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300';
+
+                    monthCells += `
+                        <td class="p-3 text-center">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-lg ${badgeColor}" title="負荷率: ${ratio}%">
+                                ${hrs}h <span class="text-[10px] opacity-75">(${ratio}%)</span>
+                            </span>
+                        </td>
+                    `;
+                });
+
+                const avgRatio = Math.round((totalAssigned / (capacity * activeMonthsCount)) * 100);
+                let avgBadgeColor = 'text-emerald-600 dark:text-emerald-400';
+                if(avgRatio > 100 && avgRatio <= 120) avgBadgeColor = 'text-amber-600 dark:text-amber-400';
+                if(avgRatio > 120) avgBadgeColor = 'text-rose-600 dark:text-rose-400 font-bold';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                        <td class="p-3 sticky left-0 bg-white dark:bg-slate-800 font-medium text-slate-900 dark:text-white flex items-center space-x-2">
+                            <div class="w-7 h-7 rounded-full bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 text-xs font-bold flex items-center justify-center">${m.name.charAt(0)}</div>
+                            <span>${m.name}</span>
+                        </td>
+                        <td class="p-3 text-xs text-slate-500">${m.role}</td>
+                        ${monthCells}
+                        <td class="p-3 text-center font-semibold ${avgBadgeColor}">${avgRatio}%</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // ==================== POPULATE SELECT OPTIONS ====================
+        function populateSelectOptions() {
+            const members = appData.members || [];
+            const projects = appData.projects || [];
+
+            // Effort form member select
+            const effMem = document.getElementById('effortMemberId');
+            effMem.innerHTML = '';
+            members.forEach(m => {
+                effMem.innerHTML += `<option value="${m.id}">${m.name} (${m.role})</option>`;
+            });
+
+            // Effort form project select
+            const effProj = document.getElementById('effortProjectId');
+            effProj.innerHTML = '';
+            projects.forEach(p => {
+                effProj.innerHTML += `<option value="${p.id}">${p.name} (${p.client})</option>`;
+            });
+
+            // Effort filter project select
+            const filtProj = document.getElementById('effortFilterProject');
+            filtProj.innerHTML = '<option value="">すべての案件</option>';
+            projects.forEach(p => {
+                filtProj.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+
+            // Effort filter member select
+            const filtMem = document.getElementById('effortFilterMember');
+            filtMem.innerHTML = '<option value="">すべてのメンバー</option>';
+            members.forEach(m => {
+                filtMem.innerHTML += `<option value="${m.id}">${m.name}</option>`;
+            });
+
+            // Assignment modal member select
+            const assignMem = document.getElementById('assignMemberId');
+            assignMem.innerHTML = '';
+            members.forEach(m => {
+                assignMem.innerHTML += `<option value="${m.id}">${m.name} (${m.role})</option>`;
+            });
+        }
+
+        // ==================== MODAL CONTROLS & CRUD ====================
+        function openMemberModal(memberId = null) {
+            document.getElementById('memberForm').reset();
+            document.getElementById('memberId').value = '';
+            document.getElementById('memberModalTitle').innerText = 'メンバー登録';
+            if(memberId) {
+                const m = (appData.members || []).find(x => x.id === memberId);
+                if(m) {
+                    document.getElementById('memberModalTitle').innerText = 'メンバー編集';
+                    document.getElementById('memberId').value = m.id;
+                    document.getElementById('memberName').value = m.name;
+                    document.getElementById('memberRole').value = m.role;
+                    document.getElementById('memberStatus').value = m.status;
+                    document.getElementById('memberSkills').value = (m.skills || []).join(', ');
+                    document.getElementById('memberTeam').value = m.team || '';
+                    document.getElementById('memberCapacity').value = m.capacity || 160;
+                }
+            }
+            document.getElementById('memberModal').classList.remove('hidden');
+        }
+        function closeMemberModal() { document.getElementById('memberModal').classList.add('hidden'); }
+
+        function saveMember(e) {
+            e.preventDefault();
+            const id = document.getElementById('memberId').value;
+            const name = document.getElementById('memberName').value;
+            const role = document.getElementById('memberRole').value;
+            const status = document.getElementById('memberStatus').value;
+            const skillsStr = document.getElementById('memberSkills').value;
+            const skills = skillsStr ? skillsStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const team = document.getElementById('memberTeam').value;
+            const capacity = parseFloat(document.getElementById('memberCapacity').value) || 160;
+
+            if(!appData.members) appData.members = [];
+
+            if(id) {
+                const idx = appData.members.findIndex(x => x.id === id);
+                if(idx !== -1) {
+                    appData.members[idx] = { ...appData.members[idx], name, role, status, skills, team, capacity };
+                }
+                showToast("メンバー情報を更新しました。");
+            } else {
+                const newMember = { id: 'm_' + Date.now(), name, role, status, skills, team, capacity };
+                appData.members.push(newMember);
+                // Initialize default assignments
+                appData.assignments[newMember.id] = { "2026-10": 160, "2026-11": 160, "2026-12": 160, "2027-01": 160, "2027-02": 160, "2027-03": 160 };
+                showToast("新しいメンバーを追加しました。");
+            }
+
+            saveData();
+            closeMemberModal();
+            renderAll();
+        }
+
+        function editMember(id) { openMemberModal(id); }
+        function deleteMember(id) {
+            if(confirm("このメンバーを削除してもよろしいですか？")) {
+                appData.members = appData.members.filter(m => m.id !== id);
+                delete appData.assignments[id];
+                saveData();
+                renderAll();
+                showToast("メンバーを削除しました。");
+            }
+        }
+
+        // Project Modal & CRUD
+        function openProjectModal(projectId = null) {
+            document.getElementById('projectForm').reset();
+            document.getElementById('projectId').value = '';
+            document.getElementById('projectModalTitle').innerText = '案件登録';
+            if(projectId) {
+                const p = (appData.projects || []).find(x => x.id === projectId);
+                if(p) {
+                    document.getElementById('projectModalTitle').innerText = '案件編集';
+                    document.getElementById('projectId').value = p.id;
+                    document.getElementById('projectName').value = p.name;
+                    document.getElementById('projectClient').value = p.client;
+                    document.getElementById('projectStatus').value = p.status;
+                    document.getElementById('projectStartDate').value = p.startDate || '';
+                    document.getElementById('projectEndDate').value = p.endDate || '';
+                    document.getElementById('projectDesc').value = p.desc || '';
+                }
+            }
+            document.getElementById('projectModal').classList.remove('hidden');
+        }
+        function closeProjectModal() { document.getElementById('projectModal').classList.add('hidden'); }
+
+        function saveProject(e) {
+            e.preventDefault();
+            const id = document.getElementById('projectId').value;
+            const name = document.getElementById('projectName').value;
+            const client = document.getElementById('projectClient').value;
+            const status = document.getElementById('projectStatus').value;
+            const startDate = document.getElementById('projectStartDate').value;
+            const endDate = document.getElementById('projectEndDate').value;
+            const desc = document.getElementById('projectDesc').value;
+
+            if(!appData.projects) appData.projects = [];
+
+            if(id) {
+                const idx = appData.projects.findIndex(x => x.id === id);
+                if(idx !== -1) {
+                    appData.projects[idx] = { ...appData.projects[idx], name, client, status, startDate, endDate, desc };
+                }
+                showToast("案件情報を更新しました。");
+            } else {
+                const newProj = { id: 'p_' + Date.now(), name, client, status, startDate, endDate, desc };
+                appData.projects.push(newProj);
+                showToast("新しい案件を追加しました。");
+            }
+
+            saveData();
+            closeProjectModal();
+            renderAll();
+        }
+
+        function editProject(id) { openProjectModal(id); }
+        function deleteProject(id) {
+            if(confirm("この案件を削除してもよろしいですか？")) {
+                appData.projects = appData.projects.filter(p => p.id !== id);
+                saveData();
+                renderAll();
+                showToast("案件を削除しました。");
+            }
+        }
+
+        // Effort Modal & CRUD
+        function openEffortModal() {
+            document.getElementById('effortForm').reset();
+            document.getElementById('effortDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('effortModal').classList.remove('hidden');
+        }
+        function closeEffortModal() { document.getElementById('effortModal').classList.add('hidden'); }
+
+        function saveEffort(e) {
+            e.preventDefault();
+            const date = document.getElementById('effortDate').value;
+            const memberId = document.getElementById('effortMemberId').value;
+            const projectId = document.getElementById('effortProjectId').value;
+            const phase = document.getElementById('effortPhase').value;
+            const hours = parseFloat(document.getElementById('effortHours').value) || 8;
+            const note = document.getElementById('effortNote').value;
+
+            if(!appData.efforts) appData.efforts = [];
+            const newEffort = { id: 'e_' + Date.now(), date, memberId, projectId, phase, hours, note };
+            appData.efforts.push(newEffort);
+
+            saveData();
+            closeEffortModal();
+            renderAll();
+            showToast("工数実績を記録しました。");
+        }
+
+        function deleteEffort(id) {
+            if(confirm("この工数記録を削除してもよろしいですか？")) {
+                appData.efforts = appData.efforts.filter(e => e.id !== id);
+                saveData();
+                renderAll();
+                showToast("工数記録を削除しました。");
+            }
+        }
+
+        // Assignment Modal & CRUD
+        function openAssignmentModal() {
+            document.getElementById('assignmentModal').classList.remove('hidden');
+        }
+        function closeAssignmentModal() { document.getElementById('assignmentModal').classList.add('hidden'); }
+
+        function saveAssignment(e) {
+            e.preventDefault();
+            const memberId = document.getElementById('assignMemberId').value;
+            const month = document.getElementById('assignMonth').value;
+            const hours = parseFloat(document.getElementById('assignHours').value) || 160;
+
+            if(!appData.assignments) appData.assignments = {};
+            if(!appData.assignments[memberId]) appData.assignments[memberId] = {};
+            appData.assignments[memberId][month] = hours;
+
+            saveData();
+            closeAssignmentModal();
+            renderAll();
+            showToast("アサイン時間を更新しました。");
+        }
+
+        // ==================== JSON BACKUP / RESTORE ====================
+        function openDataModal() { document.getElementById('dataModal').classList.remove('hidden'); }
+        function closeDataModal() { document.getElementById('dataModal').classList.add('hidden'); }
+
+        function exportJSONData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `it_resource_effort_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("JSONデータをエクスポートしました。");
+        }
+
+        function importJSONData() {
+            const fileInput = document.getElementById('importFile');
+            if(fileInput.files.length === 0) {
+                alert("ファイルを選択してください。");
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if(parsed.members && parsed.projects && parsed.efforts) {
+                        appData = parsed;
+                        saveData();
+                        renderAll();
+                        closeDataModal();
+                        showToast("JSONデータを正常にインポートしました。");
+                    } else {
+                        alert("無効なJSONデータフォーマットです。");
+                    }
+                } catch(err) {
+                    alert("JSONファイルの解析に失敗しました。");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // ==================== THEME TOGGLE ====================
+        function initTheme() {
+            const isDark = localStorage.getItem('it_manager_dark') === 'true';
+            if(isDark) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = "fa-solid fa-sun text-amber-400";
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = "fa-solid fa-moon text-slate-600";
+            }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('it_manager_dark', isDark);
+            document.getElementById('themeIcon').className = isDark ? "fa-solid fa-sun text-amber-400" : "fa-solid fa-moon text-slate-600";
+        }
+
+        // ==================== TOAST NOTIFICATION ====================
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

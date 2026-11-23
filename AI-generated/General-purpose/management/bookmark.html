@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>タグ管理式ブックマーク</title>
+<style>
+:root{color-scheme:dark;--bg:#111827;--panel:#1f2937;--panel2:#273449;--line:#374151;--text:#e5e7eb;--muted:#9ca3af;--accent:#60a5fa;--good:#34d399;--danger:#f87171;--input:#111827}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select{font:inherit}button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:6px;padding:6px 10px}button:hover{border-color:var(--accent);background:#334155}button.primary{background:#2563eb;border-color:#2563eb;color:white}button.danger{color:#fecaca;border-color:#7f1d1d}button.small{padding:3px 7px;font-size:12px}
+input,select{background:var(--input);border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px;min-width:0}input:focus,select:focus{outline:1px solid var(--accent);border-color:var(--accent)}
+header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid var(--line);background:#0b1220;position:sticky;top:0;z-index:5}
+h1{font-size:17px;margin:0;font-weight:650}.header-actions{display:flex;gap:7px;align-items:center}
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;padding:12px;max-width:1800px;margin:auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;min-width:0}.sidebar{padding:12px;height:calc(100vh - 80px);position:sticky;top:66px;overflow:auto}.main{padding:12px;min-width:0}
+h2{font-size:14px;margin:0 0 10px}h3{font-size:13px;margin:16px 0 8px;color:#cbd5e1}
+.form-row{display:flex;gap:6px}.form-row>*{flex:1}.stack{display:grid;gap:7px}.muted{color:var(--muted)}.tiny{font-size:11px;color:var(--muted)}
+.tag-master{display:grid;gap:5px}.tag-master-row{display:flex;align-items:center;gap:5px;padding:4px 5px;border-radius:5px;background:#172233}.tag-master-row .tag-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag-filter{display:flex;gap:5px;align-items:center;width:100%;text-align:left}.tag-filter.active{border-color:var(--accent);background:#1e3a5f}.tag-count{margin-left:auto;color:var(--muted);font-size:11px}
+.toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:10px}.toolbar input[type=search]{flex:1;min-width:180px}.toolbar select{max-width:180px}
+.add-box{display:grid;grid-template-columns:minmax(200px,1fr) minmax(170px,240px) auto;gap:7px;margin-bottom:10px;padding:10px;background:#172233;border:1px solid var(--line);border-radius:7px}
+.list-head,.bookmark-row{display:grid;grid-template-columns:minmax(170px,1.25fr) minmax(180px,1.2fr) minmax(150px,1fr) auto;gap:10px;align-items:center}
+.list-head{padding:5px 9px;color:var(--muted);font-size:11px;border-bottom:1px solid var(--line)}
+.bookmark-row{padding:6px 9px;border-bottom:1px solid #303b4c;min-height:42px}.bookmark-row:hover{background:#253247}
+.title-link{color:#93c5fd;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}.title-link:hover{text-decoration:underline}.url-text{font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.badges{display:flex;gap:4px;flex-wrap:wrap;min-width:0}.badge{font-size:11px;background:#164e63;color:#cffafe;border:1px solid #155e75;border-radius:10px;padding:2px 7px;white-space:nowrap}
+.row-actions{display:flex;gap:4px;white-space:nowrap}.empty{padding:30px;text-align:center;color:var(--muted)}
+.status{font-size:12px;color:var(--muted);min-height:18px;margin:4px 0 8px}.status.good{color:var(--good)}.status.error{color:var(--danger)}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:10px;width:min(560px,calc(100% - 24px));padding:16px;box-shadow:0 20px 60px #0009}dialog::backdrop{background:#0009}.dialog-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:14px}.edit-grid{display:grid;gap:9px}.edit-grid label{display:grid;gap:4px}.tag-checks{display:flex;gap:6px;flex-wrap:wrap;max-height:150px;overflow:auto}.tag-check{display:flex;gap:5px;align-items:center;background:#172233;padding:5px 7px;border-radius:5px}.tag-check input{accent-color:#3b82f6}
+footer{padding:8px 12px;color:var(--muted);font-size:11px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{height:auto;position:static}.list-head{display:none}.bookmark-row{grid-template-columns:1fr auto;gap:5px}.bookmark-row .url-text,.bookmark-row .badges{grid-column:1}.bookmark-row .row-actions{grid-column:2;grid-row:1/4;align-self:center}.add-box{grid-template-columns:1fr}.header-actions button{padding:5px 7px}.header-actions .hide-mobile{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>▣ タグ管理式ブックマーク</h1>
+  <div class="header-actions">
+    <button id="importHtmlBtn">お気に入りHTML取込</button>
+    <button id="exportJsonBtn">JSON出力</button>
+    <button id="importJsonBtn">JSON読込</button>
+    <input id="htmlFile" type="file" accept=".html,.htm,text/html" hidden>
+    <input id="jsonFile" type="file" accept=".json,application/json" hidden>
+  </div>
+</header>
+<div class="layout">
+  <aside class="panel sidebar">
+    <h2>タグマスター</h2>
+    <div class="form-row"><input id="newTagInput" placeholder="新しいタグ名" maxlength="40"><button class="primary" id="addTagBtn">追加</button></div>
+    <div class="tiny" style="margin:6px 0 10px">タグ名の変更・削除はここで一元管理します。</div>
+    <div id="tagMaster" class="tag-master"></div>
+    <h3>絞り込み</h3>
+    <div class="stack" id="tagFilters"></div>
+  </aside>
+  <main class="panel main">
+    <h2>ブックマーク</h2>
+    <div class="add-box">
+      <input id="urlInput" type="url" placeholder="https://example.com/">
+      <select id="initialTagSelect"><option value="">追加時のタグ（任意）</option></select>
+      <button class="primary" id="addBookmarkBtn">URLから追加</button>
+    </div>
+    <div class="tiny">タイトルはURLから自動取得します。取得できない場合はドメイン名を仮タイトルとして登録し、取得完了後に更新します。</div>
+    <div id="status" class="status" role="status"></div>
+    <div class="toolbar">
+      <input id="searchInput" type="search" placeholder="タイトル・URLを検索">
+      <select id="sortSelect"><option value="new">登録日時順（新しい順）</option><option value="title">タイトル順</option><option value="domain">ドメイン順</option></select>
+      <button id="clearFilterBtn">絞込解除</button>
+    </div>
+    <div class="list-head"><span>タイトル</span><span>URL</span><span>タグ</span><span>操作</span></div>
+    <div id="bookmarkList"></div>
+  </main>
+</div>
+<footer>データはこのブラウザのLocalStorageに保存されます。定期的にJSONバックアップを取得してください。</footer>
+
+<dialog id="editDialog">
+  <form method="dialog" id="editForm">
+    <h2>ブックマーク編集</h2>
+    <div class="edit-grid">
+      <label>タイトル（自動取得後も手動修正できます）<input id="editTitle" maxlength="300"></label>
+      <label>URL<input id="editUrl" type="url"></label>
+      <div><strong>タグの追加・解除</strong><div class="tag-checks" id="editTags"></div></div>
+    </div>
+    <div class="dialog-actions"><button value="cancel">キャンセル</button><button class="primary" id="saveEditBtn" value="save">保存</button></div>
+  </form>
+</dialog>
+<script>
+"use strict";
+class BookmarkManager {
+  constructor() {
+    this.storageKey = "tagBookmarkManager.v1";
+    this.data = this.load();
+    this.filterTag = "";
+    this.editingId = null;
+    this.titleTimeoutMs = 7000;
+    this.$ = id => document.getElementById(id);
+    this.bind();
+    this.render();
+  }
+  defaultData() { return { tags: [], bookmarks: [] }; }
+  load() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (!raw) return this.defaultData();
+      const parsed = JSON.parse(raw);
+      return { tags: Array.isArray(parsed.tags) ? parsed.tags : [], bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : [] };
+    } catch (e) { return this.defaultData(); }
+  }
+  save() {
+    try { localStorage.setItem(this.storageKey, JSON.stringify(this.data)); }
+    catch (e) { this.setStatus("保存に失敗しました。LocalStorageの容量を確認してください。", "error"); }
+  }
+  uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  setStatus(message, type) {
+    const el = this.$("status"); el.textContent = message; el.className = "status" + (type ? " " + type : "");
+  }
+  normalizeUrl(value) {
+    let url;
+    try { url = new URL(value.trim()); } catch (e) { throw new Error("有効なURLを入力してください。"); }
+    if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("URLは http または https で指定してください。");
+    return url.href;
+  }
+  fallbackTitle(url) {
+    try { return new URL(url).hostname; } catch (e) { return url; }
+  }
+  async fetchTitle(url) {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    let timer = null;
+    try {
+      const proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+      const options = { method: "GET", mode: "cors" };
+      if (controller) { options.signal = controller.signal; timer = setTimeout(() => controller.abort(), this.titleTimeoutMs); }
+      const response = await fetch(proxyUrl, options);
+      if (!response.ok) throw new Error("タイトル取得に失敗しました（HTTP " + response.status + "）");
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const title = doc.querySelector("title");
+      const value = title ? title.textContent.replace(/\s+/g, " ").trim() : "";
+      if (!value) throw new Error("ページ内にtitle要素がありません。");
+      return value.slice(0, 300);
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  bind() {
+    this.$("addTagBtn").addEventListener("click", () => this.addTag());
+    this.$("newTagInput").addEventListener("keydown", e => { if (e.key === "Enter") this.addTag(); });
+    this.$("addBookmarkBtn").addEventListener("click", () => this.addBookmark());
+    this.$("urlInput").addEventListener("keydown", e => { if (e.key === "Enter") this.addBookmark(); });
+    this.$("searchInput").addEventListener("input", () => this.renderList());
+    this.$("sortSelect").addEventListener("change", () => this.renderList());
+    this.$("clearFilterBtn").addEventListener("click", () => { this.filterTag = ""; this.$("searchInput").value = ""; this.render(); });
+    this.$("exportJsonBtn").addEventListener("click", () => this.exportJson());
+    this.$("importJsonBtn").addEventListener("click", () => this.$("jsonFile").click());
+    this.$("importHtmlBtn").addEventListener("click", () => this.$("htmlFile").click());
+    this.$("jsonFile").addEventListener("change", e => this.importJson(e.target.files[0]));
+    this.$("htmlFile").addEventListener("change", e => this.importHtml(e.target.files[0]));
+    this.$("saveEditBtn").addEventListener("click", e => { e.preventDefault(); this.saveEdit(); });
+    this.$("tagMaster").addEventListener("click", e => this.handleTagMaster(e));
+    this.$("tagFilters").addEventListener("click", e => {
+      const btn = e.target.closest("[data-filter]");
+      if (btn) { this.filterTag = btn.dataset.filter; this.render(); }
+    });
+    this.$("bookmarkList").addEventListener("click", e => this.handleBookmarkAction(e));
+  }
+  addTag() {
+    const input = this.$("newTagInput"), name = input.value.trim();
+    if (!name) return;
+    if (this.data.tags.some(t => t.name.toLowerCase() === name.toLowerCase())) { this.setStatus("同じ名前のタグが既にあります。", "error"); return; }
+    this.data.tags.push({ id: this.uid(), name }); input.value = ""; this.save(); this.render();
+  }
+  handleTagMaster(e) {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const tag = this.data.tags.find(t => t.id === btn.dataset.id);
+    if (!tag) return;
+    if (btn.dataset.action === "rename") {
+      const name = prompt("新しいタグ名", tag.name);
+      if (name === null) return;
+      const trimmed = name.trim();
+      if (!trimmed) { alert("タグ名を入力してください。"); return; }
+      if (this.data.tags.some(t => t.id !== tag.id && t.name.toLowerCase() === trimmed.toLowerCase())) { alert("同じ名前のタグが既にあります。"); return; }
+      tag.name = trimmed; this.save(); this.render();
+    } else if (btn.dataset.action === "delete") {
+      if (!confirm("タグ「" + tag.name + "」を削除しますか？ ブックマークとの紐付けも解除されます。")) return;
+      this.data.tags = this.data.tags.filter(t => t.id !== tag.id);
+      this.data.bookmarks.forEach(b => b.tagIds = b.tagIds.filter(id => id !== tag.id));
+      this.save(); this.render();
+    }
+  }
+  async addBookmark() {
+    let url;
+    try { url = this.normalizeUrl(this.$("urlInput").value); }
+    catch (e) { this.setStatus(e.message, "error"); return; }
+    if (this.data.bookmarks.some(b => b.url === url)) { this.setStatus("このURLは既に登録されています。", "error"); return; }
+    const tagId = this.$("initialTagSelect").value;
+    const item = { id: this.uid(), url, title: this.fallbackTitle(url), tagIds: tagId ? [tagId] : [], createdAt: Date.now(), titleIsFallback: true };
+    this.data.bookmarks.unshift(item); this.$("urlInput").value = ""; this.save(); this.render();
+    this.setStatus("仮タイトルで登録しました。ページタイトルを取得しています…");
+    try {
+      const title = await this.fetchTitle(url);
+      const current = this.data.bookmarks.find(b => b.id === item.id);
+      if (current && current.titleIsFallback) { current.title = title; current.titleIsFallback = false; this.save(); this.renderList(); }
+      this.setStatus("タイトルを取得しました。", "good");
+    } catch (e) {
+      this.setStatus("仮タイトルで登録済みです。自動取得できませんでした（" + (e.message || "通信エラー") + "）。必要に応じて編集してください。", "error");
+    }
+  }
+  openEdit(id) {
+    const item = this.data.bookmarks.find(b => b.id === id); if (!item) return;
+    this.editingId = id; this.$("editTitle").value = item.title; this.$("editUrl").value = item.url;
+    const wrap = this.$("editTags"); wrap.replaceChildren();
+    this.data.tags.forEach(tag => {
+      const label = document.createElement("label"); label.className = "tag-check";
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.value = tag.id; cb.checked = item.tagIds.includes(tag.id);
+      const span = document.createElement("span"); span.textContent = tag.name;
+      label.append(cb, span); wrap.append(label);
+    });
+    this.$("editDialog").showModal();
+  }
+  saveEdit() {
+    const item = this.data.bookmarks.find(b => b.id === this.editingId); if (!item) return;
+    const title = this.$("editTitle").value.trim();
+    if (!title) { alert("タイトルを入力してください。"); return; }
+    let url;
+    try { url = this.normalizeUrl(this.$("editUrl").value); } catch (e) { alert(e.message); return; }
+    if (this.data.bookmarks.some(b => b.id !== item.id && b.url === url)) { alert("同じURLが既に登録されています。"); return; }
+    item.title = title; item.url = url; item.titleIsFallback = false;
+    item.tagIds = Array.from(this.$("editTags").querySelectorAll("input:checked")).map(cb => cb.value);
+    this.save(); this.$("editDialog").close(); this.render();
+  }
+  handleBookmarkAction(e) {
+    const btn = e.target.closest("button[data-action]"); if (!btn) return;
+    const id = btn.dataset.id, action = btn.dataset.action;
+    if (action === "edit") this.openEdit(id);
+    if (action === "delete") {
+      const item = this.data.bookmarks.find(b => b.id === id);
+      if (item && confirm("「" + item.title + "」を削除しますか？")) {
+        this.data.bookmarks = this.data.bookmarks.filter(b => b.id !== id); this.save(); this.render();
+      }
+    }
+    if (action === "add-tag") this.addTagToBookmark(id, btn);
+    if (action === "remove-tag") {
+      const item = this.data.bookmarks.find(b => b.id === id);
+      if (item) { item.tagIds = item.tagIds.filter(tid => tid !== btn.dataset.tagid); this.save(); this.renderList(); }
+    }
+  }
+  addTagToBookmark(id, button) {
+    const item = this.data.bookmarks.find(b => b.id === id); if (!item) return;
+    const available = this.data.tags.filter(t => !item.tagIds.includes(t.id));
+    if (!available.length) { this.setStatus("追加できるタグがありません。先にタグマスターへ登録してください。"); return; }
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "追加するタグ");
+    const first = document.createElement("option"); first.value = ""; first.textContent = "タグ選択"; select.append(first);
+    available.forEach(t => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.name; select.append(o); });
+    button.replaceWith(select); select.focus();
+    const finish = () => {
+      if (select.value) item.tagIds.push(select.value);
+      this.save(); this.renderList();
+    };
+    select.addEventListener("change", finish);
+    select.addEventListener("blur", () => { if (select.isConnected) this.renderList(); });
+    select.addEventListener("keydown", e => { if (e.key === "Escape") this.renderList(); });
+  }
+  render() { this.renderTags(); this.renderFilters(); this.renderList(); }
+  renderTags() {
+    const master = this.$("tagMaster"); master.replaceChildren();
+    this.data.tags.forEach(tag => {
+      const row = document.createElement("div"); row.className = "tag-master-row";
+      const name = document.createElement("span"); name.className = "tag-name"; name.textContent = tag.name;
+      const edit = document.createElement("button"); edit.className = "small"; edit.textContent = "編集"; edit.dataset.action = "rename"; edit.dataset.id = tag.id;
+      const del = document.createElement("button"); del.className = "small danger"; del.textContent = "削除"; del.dataset.action = "delete"; del.dataset.id = tag.id;
+      row.append(name, edit, del); master.append(row);
+    });
+    if (!this.data.tags.length) { const p = document.createElement("div"); p.className = "tiny"; p.textContent = "タグはまだありません。"; master.append(p); }
+    const select = this.$("initialTagSelect"), selected = select.value; select.replaceChildren();
+    const opt = document.createElement("option"); opt.value = ""; opt.textContent = "追加時のタグ（任意）"; select.append(opt);
+    this.data.tags.forEach(t => { const o = document.createElement("option"); o.value = t.id; o.textContent = t.name; select.append(o); });
+    select.value = this.data.tags.some(t => t.id === selected) ? selected : "";
+  }
+  renderFilters() {
+    const wrap = this.$("tagFilters"); wrap.replaceChildren();
+    const all = document.createElement("button"); all.className = "tag-filter" + (!this.filterTag ? " active" : ""); all.dataset.filter = "";
+    all.textContent = "すべて"; const count = document.createElement("span"); count.className = "tag-count"; count.textContent = this.data.bookmarks.length; all.append(count); wrap.append(all);
+    this.data.tags.forEach(tag => {
+      const btn = document.createElement("button"); btn.className = "tag-filter" + (this.filterTag === tag.id ? " active" : ""); btn.dataset.filter = tag.id;
+      const name = document.createElement("span"); name.textContent = tag.name;
+      const n = document.createElement("span"); n.className = "tag-count"; n.textContent = this.data.bookmarks.filter(b => b.tagIds.includes(tag.id)).length;
+      btn.append(name, n); wrap.append(btn);
+    });
+  }
+  renderList() {
+    const wrap = this.$("bookmarkList"); wrap.replaceChildren();
+    const q = this.$("searchInput").value.trim().toLowerCase();
+    let items = this.data.bookmarks.filter(b => (!this.filterTag || b.tagIds.includes(this.filterTag)) &&
+      (!q || (b.title + " " + b.url).toLowerCase().includes(q)));
+    const sort = this.$("sortSelect").value;
+    if (sort === "title") items.sort((a,b) => a.title.localeCompare(b.title, "ja"));
+    else if (sort === "domain") items.sort((a,b) => this.fallbackTitle(a.url).localeCompare(this.fallbackTitle(b.url)));
+    else items.sort((a,b) => b.createdAt - a.createdAt);
+    if (!items.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "該当するブックマークはありません。"; wrap.append(empty); return; }
+    items.forEach(item => {
+      const row = document.createElement("div"); row.className = "bookmark-row";
+      const titleCell = document.createElement("div");
+      const link = document.createElement("a"); link.className = "title-link"; link.href = item.url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = item.title; link.title = item.title; titleCell.append(link);
+      const url = document.createElement("div"); url.className = "url-text"; url.textContent = item.url; url.title = item.url;
+      const badges = document.createElement("div"); badges.className = "badges";
+      item.tagIds.forEach(tid => {
+        const tag = this.data.tags.find(t => t.id === tid); if (!tag) return;
+        const badge = document.createElement("span"); badge.className = "badge"; badge.textContent = tag.name;
+        const remove = document.createElement("button"); remove.className = "small"; remove.textContent = "×"; remove.title = "タグ解除: " + tag.name; remove.dataset.action = "remove-tag"; remove.dataset.id = item.id; remove.dataset.tagid = tid; remove.style.padding = "0 3px"; remove.style.marginLeft = "3px";
+        badge.append(remove); badges.append(badge);
+      });
+      const actions = document.createElement("div"); actions.className = "row-actions";
+      const add = document.createElement("button"); add.className = "small"; add.textContent = "+タグ"; add.dataset.action = "add-tag"; add.dataset.id = item.id;
+      const edit = document.createElement("button"); edit.className = "small"; edit.textContent = "編集"; edit.dataset.action = "edit"; edit.dataset.id = item.id;
+      const del = document.createElement("button"); del.className = "small danger"; del.textContent = "削除"; del.dataset.action = "delete"; del.dataset.id = item.id;
+      actions.append(add, edit, del); row.append(titleCell, url, badges, actions); wrap.append(row);
+    });
+  }
+  exportJson() {
+    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), ...this.data }, null, 2)], { type: "application/json;charset=utf-8" });
+    this.download(blob, "bookmarks-backup-" + this.dateStamp() + ".json");
+  }
+  async importJson(file) {
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      if (!parsed || !Array.isArray(parsed.tags) || !Array.isArray(parsed.bookmarks)) throw new Error("JSONの形式が正しくありません。");
+      const tags = parsed.tags.filter(t => t && typeof t.id === "string" && typeof t.name === "string");
+      const ids = new Set(tags.map(t => t.id));
+      const bookmarks = parsed.bookmarks.filter(b => b && typeof b.url === "string" && typeof b.title === "string").map(b => ({
+        id: typeof b.id === "string" ? b.id : this.uid(), url: this.normalizeUrl(b.url), title: b.title,
+        tagIds: Array.isArray(b.tagIds) ? b.tagIds.filter(id => ids.has(id)) : [],
+        createdAt: Number(b.createdAt) || Date.now(), titleIsFallback: !!b.titleIsFallback
+      }));
+      if (!confirm("現在のデータを、読み込んだJSONの内容で置き換えますか？")) return;
+      this.data = { tags, bookmarks }; this.save(); this.render(); this.setStatus("JSONを読み込みました。", "good");
+    } catch (e) { this.setStatus("JSON読込エラー: " + e.message, "error"); }
+    finally { this.$("jsonFile").value = ""; }
+  }
+  async importHtml(file) {
+    if (!file) return;
+    try {
+      const text = await file.text(), doc = new DOMParser().parseFromString(text, "text/html");
+      const links = Array.from(doc.querySelectorAll("a[href]"));
+      if (!links.length) throw new Error("ブックマークURLが見つかりません。");
+      let tagName = prompt("取り込むブックマークに付ける初期タグ名（空欄ならタグなし）", "インポート");
+      if (tagName === null) return;
+      let tagId = "";
+      if (tagName.trim()) {
+        let tag = this.data.tags.find(t => t.name.toLowerCase() === tagName.trim().toLowerCase());
+        if (!tag) { tag = { id: this.uid(), name: tagName.trim() }; this.data.tags.push(tag); }
+        tagId = tag.id;
+      }
+      let added = 0;
+      links.forEach(a => {
+        let url;
+        try { url = this.normalizeUrl(new URL(a.getAttribute("href"), location.href).href); } catch (e) { return; }
+        if (this.data.bookmarks.some(b => b.url === url)) return;
+        const title = (a.textContent || "").replace(/\s+/g, " ").trim() || this.fallbackTitle(url);
+        this.data.bookmarks.push({ id: this.uid(), url, title, tagIds: tagId ? [tagId] : [], createdAt: Date.now() + added, titleIsFallback: !a.textContent.trim() });
+        added++;
+      });
+      this.save(); this.render(); this.setStatus(added + "件をHTMLから取り込みました。", "good");
+    } catch (e) { this.setStatus("HTML取込エラー: " + e.message, "error"); }
+    finally { this.$("htmlFile").value = ""; }
+  }
+  download(blob, filename) {
+    const a = document.createElement("a"), url = URL.createObjectURL(blob);
+    a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  dateStamp() { return new Date().toISOString().slice(0,10).replace(/-/g,""); }
+}
+document.addEventListener("DOMContentLoaded", () => new BookmarkManager());
+</script>
+</body>
+</html>

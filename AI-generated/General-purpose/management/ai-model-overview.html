@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Model Atlas | モデル比較</title>
+<style>
+:root{--bg:#080d18;--panel:#101827;--panel2:#141f31;--line:#26344a;--text:#e8eef8;--muted:#91a0b8;--accent:#8b9cff;--cyan:#55d6d0;--green:#7de0ad;--amber:#f5c66b;--pink:#e99acb;--shadow:0 16px 40px #0005}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% -10%,#1b2b50 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.55 Inter,"Segoe UI",Meiryo,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}.shell{max-width:1500px;margin:auto;padding:22px 28px 50px}
+.topline{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--muted);font-size:12px;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:38px;height:38px;border:1px solid #6476cb;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#5369d7,#24b8b0);font-weight:900;color:white;font-size:18px;box-shadow:0 6px 24px #596bd544}
+.brand strong{font-size:15px;letter-spacing:.08em}.brand span{display:block;color:var(--muted);font-size:11px;letter-spacing:.12em}
+.hero{display:flex;justify-content:space-between;align-items:end;gap:25px;margin-bottom:22px}.eyebrow{color:var(--cyan);font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+h1{font-size:clamp(27px,4vw,42px);line-height:1.15;margin:8px 0 10px;letter-spacing:-.04em}.hero p{color:var(--muted);margin:0;max-width:650px}.hero-stat{display:flex;gap:10px;flex-shrink:0}.stat{background:#111c2b;border:1px solid var(--line);padding:12px 16px;border-radius:13px;min-width:104px}.stat b{display:block;font-size:22px}.stat small{color:var(--muted);font-size:11px}
+.toolbar{display:grid;grid-template-columns:minmax(220px,1fr) 240px auto;gap:10px;padding:12px;background:#0e1725;border:1px solid var(--line);border-radius:16px;margin:24px 0 20px;box-shadow:var(--shadow)}
+.searchbox{position:relative}.searchbox span{position:absolute;left:13px;top:9px;color:var(--muted);font-size:17px}.searchbox input{padding-left:40px;width:100%}
+input,select{background:#0a1220;border:1px solid #2a3a52;border-radius:10px;color:var(--text);padding:10px 12px;outline:none;min-width:0}input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px #8b9cff22}
+.toolbar .count{align-self:center;color:var(--muted);font-size:12px;text-align:right;padding:0 8px;white-space:nowrap}
+.section-head{display:flex;justify-content:space-between;align-items:center;margin:25px 0 12px;gap:12px}.section-head h2{font-size:16px;margin:0;letter-spacing:.01em}.section-head p{color:var(--muted);font-size:12px;margin:3px 0 0}
+.legend{display:flex;gap:7px;flex-wrap:wrap}.pill{font-size:10px;padding:4px 8px;border:1px solid var(--line);border-radius:99px;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.model-card{background:linear-gradient(155deg,#152238,#101827 65%);border:1px solid var(--line);border-radius:16px;padding:17px;position:relative;overflow:hidden;transition:.18s}
+.model-card:hover{transform:translateY(-2px);border-color:#6476a5;box-shadow:var(--shadow)}.model-card:before{content:"";position:absolute;right:-35px;top:-55px;width:130px;height:130px;border-radius:50%;background:var(--glow,#7188ff);filter:blur(65px);opacity:.18;pointer-events:none}
+.card-top{display:flex;justify-content:space-between;gap:10px;align-items:start}.model-name{font-size:17px;font-weight:800;letter-spacing:-.02em}.model-id{color:var(--muted);font-size:10px;margin-top:3px}.category{font-size:10px;color:var(--cyan);border:1px solid #3c777b;border-radius:99px;padding:4px 8px;white-space:nowrap}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}.tag{font-size:10px;padding:4px 7px;border-radius:6px;background:#24314a;color:#c8d4ed}.tag.primary{background:#28345e;color:#bfcaff}.description{color:#c2cde0;min-height:46px;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:14px 0}.metric{padding:8px 9px;background:#0b1422;border:1px solid #202e43;border-radius:9px}.metric small{display:block;color:var(--muted);font-size:10px}.metric b{font-size:12px}
+.usecase{border-top:1px solid #26344a;padding-top:11px;color:var(--muted);font-size:11px;min-height:48px}.usecase b{color:#dce5f5}
+.card-actions{display:flex;justify-content:space-between;align-items:center;margin-top:12px}.text-button{border:0;background:transparent;color:var(--accent);font-size:11px;padding:4px}.text-button:hover{text-decoration:underline}.compare-check{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}.compare-check input{accent-color:#8b9cff}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#0e1725;box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:850px;font-size:12px}th,td{padding:11px 13px;border-bottom:1px solid #243149;text-align:left;vertical-align:top}thead th{background:#17243a;color:#dce5f5;position:sticky;top:0;z-index:1}thead th:first-child{width:165px;color:var(--muted)}tbody th{color:#aab8ce;background:#111c2b;font-weight:600;position:sticky;left:0}td{color:#d8e1f0}tr:last-child th,tr:last-child td{border-bottom:0}.empty{text-align:center;color:var(--muted);padding:30px}
+.table-tools{display:flex;align-items:center;gap:10px}.btn{border:1px solid #3b4d6b;background:#1a2941;color:#e8eef8;border-radius:9px;padding:8px 12px;font-size:11px}.btn:hover{background:#263b5d}.btn.accent{background:#566bd0;border-color:#7185ed;color:white}.btn:disabled{opacity:.4;cursor:not-allowed}
+.note{margin-top:12px;color:#8190a8;font-size:11px}.footer{border-top:1px solid var(--line);margin-top:28px;padding-top:16px;color:#72819a;font-size:10px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+dialog{background:#111c2b;color:var(--text);border:1px solid #465979;border-radius:16px;max-width:620px;width:calc(100% - 28px);padding:0;box-shadow:0 24px 90px #000b}dialog::backdrop{background:#020611bb;backdrop-filter:blur(4px)}.modal-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-body{padding:20px;max-height:65vh;overflow:auto}.modal-body h3{font-size:13px;color:var(--cyan);margin:18px 0 5px}.modal-body p{margin:0;color:#c4d0e2;font-size:12px}.close{border:0;background:transparent;color:var(--muted);font-size:22px}
+@media(max-width:1000px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{align-items:start;flex-direction:column}}
+@media(max-width:650px){.shell{padding:15px 13px 35px}.topline{margin-bottom:17px}.hero-stat{width:100%}.stat{flex:1;min-width:0}.toolbar{grid-template-columns:1fr}.toolbar .count{text-align:left;padding:4px}.cards{grid-template-columns:1fr}.section-head{align-items:flex-start;flex-direction:column}.model-card{padding:15px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topline">
+    <div class="brand"><div class="logo">AI</div><div><strong>MODEL ATLAS</strong><span>MODEL INTELLIGENCE / COMPARISON</span></div></div>
+    <div>DATA-DRIVEN CATALOG <span style="color:var(--cyan)">●</span> LOCAL VIEW</div>
+  </div>
+  <header class="hero">
+    <div><div class="eyebrow">Explore · Compare · Choose</div><h1>AIモデル比較カタログ</h1><p>モデルの特性・得意領域・推奨用途を横断的に比較。用途に合ったモデル選定をサポートします。</p></div>
+    <div class="hero-stat"><div class="stat"><b id="totalCount">0</b><small>掲載モデル</small></div><div class="stat"><b id="categoryCount">0</b><small>カテゴリ</small></div><div class="stat"><b id="shownCount">0</b><small>表示中</small></div></div>
+  </header>
+
+  <section class="toolbar" aria-label="検索と絞り込み">
+    <div class="searchbox"><span>⌕</span><input id="searchInput" type="search" placeholder="モデル名・特徴・用途で検索..." aria-label="キーワード検索"></div>
+    <select id="categoryFilter" aria-label="カテゴリで絞り込み"><option value="all">すべてのカテゴリ</option></select>
+    <div class="count" id="resultCount">0件を表示</div>
+  </section>
+
+  <section>
+    <div class="section-head"><div><h2>モデル一覧</h2><p>カードから概要を確認し、比較対象を選択できます。</p></div><div class="legend"><span class="pill">FEATURE OVERVIEW</span><span class="pill">USE CASE</span></div></div>
+    <div id="modelCards" class="cards"></div>
+    <div id="noResults" class="empty" hidden>条件に一致するモデルがありません。</div>
+  </section>
+
+  <section>
+    <div class="section-head"><div><h2>詳細スペック比較</h2><p>比較対象を選択すると、下のマトリクスに反映されます。</p></div>
+      <div class="table-tools"><button class="btn" id="selectVisible">表示中を選択</button><button class="btn" id="clearCompare">選択解除</button><button class="btn accent" id="showAll">全モデル比較</button></div>
+    </div>
+    <div class="table-wrap"><table id="compareTable"><thead></thead><tbody></tbody></table></div>
+    <p class="note">※「未公開・要確認」は添付資料に具体的な数値・仕様の記載がない項目です。公式仕様を確認したうえでデータ配列を更新してください。</p>
+  </section>
+  <footer class="footer"><span>AI MODEL ATLAS · SINGLE FILE EDITION</span><span>モデル情報は index.html 内の modelsData 配列で一元管理</span></footer>
+</div>
+
+<dialog id="detailDialog"><div class="modal-head"><div><div class="eyebrow">MODEL PROFILE</div><strong id="modalTitle">モデル詳細</strong></div><button class="close" id="closeModal" aria-label="閉じる">×</button></div><div class="modal-body" id="modalContent"></div></dialog>
+
+<script>
+"use strict";
+
+/*
+ * ==========================================================
+ * モデル情報の一元管理エリア
+ * 新しいモデルを追加する場合は、この配列にオブジェクトを追加します。
+ * 表示・検索・カテゴリ・比較テーブルは配列から自動生成されます。
+ * ==========================================================
+ */
+const modelsData = [
+  {
+    id:"gpt-6-astra", name:"GPT-6 Astra", category:"高度な推論・コード",
+    tagline:"科学研究・最高峰の論理推論", badge:["最高性能","高度な推論","研究用途"],
+    description:"科学研究や高度な論理推論を行う最高峰のフラッグシップモデル。",
+    strengths:["科学研究","複雑な論理推論","高度な問題解決"],
+    useCases:["研究・分析","専門的な推論","難度の高い課題"],
+    speed:"未公開・要確認", inputCost:"未公開・要確認", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"未公開・要確認", output:"テキスト（詳細要確認）",
+    reasoning:"最高峰の論理推論", multimodal:"未公開・要確認", notes:"添付資料では科学研究・高度な論理推論向けと説明。"
+  },
+  {
+    id:"gpt-6.1-sol", name:"GPT-6.1 Sol", category:"高度な推論・コード",
+    tagline:"複雑なコーディング・ワークフロー", badge:["高性能・低コスト","コーディング","マルチステップ"],
+    description:"複雑なコーディングやマルチステップワークフロー向け。Astra級の性能を低コストで提供。",
+    strengths:["複雑なコーディング","マルチステップ処理","ワークフロー実行"],
+    useCases:["ソフトウェア開発","複数工程の自動化","複雑なタスク"],
+    speed:"未公開・要確認", inputCost:"未公開・要確認", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"未公開・要確認", output:"テキスト（詳細要確認）",
+    reasoning:"Astra級の性能（資料記載）", multimodal:"未公開・要確認", notes:"Astra級の性能を低コストで提供するという資料上の位置付け。"
+  },
+  {
+    id:"gpt-6.1-terra", name:"GPT-6.1 Terra", category:"日常業務・マルチモーダル",
+    tagline:"画面操作・UI解析・視覚推論", badge:["マルチモーダル","UI解析","実務向け"],
+    description:"画面操作、UI解析、視覚推論、画像・文章を扱う日常業務・実務向けモデル。",
+    strengths:["画面操作","UI解析","視覚推論","画像・文章の処理"],
+    useCases:["画面ベースの業務","UI確認・分析","画像と文章を扱う実務"],
+    speed:"未公開・要確認", inputCost:"未公開・要確認", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"画像・文章（資料記載）", output:"未公開・要確認",
+    reasoning:"視覚推論", multimodal:"画像・文章（資料記載）", notes:"画面操作・UI解析を含むマルチモーダルな日常業務向け。"
+  },
+  {
+    id:"gpt-6-sol", name:"GPT-6 Sol", category:"高度な推論・コード",
+    tagline:"バランス型の汎用・開発モデル", badge:["汎用","開発向け","移行元モデル"],
+    description:"バランスの取れた汎用・開発向けモデル。GPT-6.1 Solへの移行元として位置付け。",
+    strengths:["汎用処理","開発支援","バランスの取れた利用"],
+    useCases:["一般的な開発業務","汎用アシスタント","既存処理からの移行検討"],
+    speed:"未公開・要確認", inputCost:"未公開・要確認", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"未公開・要確認", output:"未公開・要確認",
+    reasoning:"汎用・バランス型", multimodal:"未公開・要確認", notes:"添付資料では移行元モデルとして記載。"
+  },
+  {
+    id:"gpt-6-luna", name:"GPT-6 Luna", category:"高速・低コスト定型処理",
+    tagline:"大量データの高速・低コスト処理", badge:["超高速","超低コスト","大量処理"],
+    description:"大量の文章要約、データ抽出、分類などの定型処理を超低コスト・超高速で処理。",
+    strengths:["大量文章の要約","データ抽出","分類","定型処理"],
+    useCases:["大量文書の要約","データの分類・抽出","定型バッチ処理"],
+    speed:"超高速（定性的評価）", inputCost:"超低コスト（定性的評価）", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"テキスト（用途記載）", output:"未公開・要確認",
+    reasoning:"定型処理向け", multimodal:"未公開・要確認", notes:"速度・コストは添付資料の定性的な表現であり、数値比較ではありません。"
+  },
+  {
+    id:"gpt-5.4-mini", name:"GPT-5.4 mini", category:"高速・低コスト定型処理",
+    tagline:"安定性・高スループットの軽量モデル", badge:["安定性","高スループット","軽量・高速"],
+    description:"前世代ながら安定感があり、高スループットを誇る軽量高速モデル。",
+    strengths:["安定した処理","高スループット","軽量・高速処理"],
+    useCases:["大量リクエスト処理","応答速度を重視する処理","既存システムの継続利用"],
+    speed:"高速（定性的評価）", inputCost:"未公開・要確認", outputCost:"未公開・要確認",
+    context:"未公開・要確認", input:"未公開・要確認", output:"未公開・要確認",
+    reasoning:"未公開・要確認", multimodal:"未公開・要確認", notes:"前世代モデルとしての安定性・スループットが資料に記載されています。"
+  }
+];
+
+const fields = [
+  ["モデルID","id"],["カテゴリ","category"],["概要","description"],["得意領域","strengths"],
+  ["推奨ユースケース","useCases"],["応答速度","speed"],["入力コスト目安","inputCost"],
+  ["出力コスト目安","outputCost"],["コンテキスト長","context"],["入力形式","input"],
+  ["出力形式","output"],["推論特性","reasoning"],["マルチモーダル対応","multimodal"],["補足","notes"]
+];
+const selectedIds = new Set();
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const asText = value => Array.isArray(value) ? value.join("、") : (value ?? "未公開・要確認");
+
+function initCategories(){
+  const select = $("categoryFilter");
+  const current = select.value;
+  const categories = [...new Set(modelsData.map(m=>m.category).filter(Boolean))].sort();
+  select.innerHTML = '<option value="all">すべてのカテゴリ</option>' +
+    categories.map(c=>'<option value="'+esc(c)+'">'+esc(c)+'</option>').join("");
+  if(categories.includes(current)) select.value=current;
+  $("categoryCount").textContent=categories.length;
+  $("totalCount").textContent=modelsData.length;
+}
+function getVisibleModels(){
+  const q=$("searchInput").value.trim().toLowerCase();
+  const category=$("categoryFilter").value;
+  return modelsData.filter(m=>{
+    const text=[m.id,m.name,m.category,m.tagline,m.description,...(m.badge||[]),...(m.strengths||[]),...(m.useCases||[])].join(" ").toLowerCase();
+    return (!q||text.includes(q))&&(category==="all"||m.category===category);
+  });
+}
+function renderCards(){
+  const list=getVisibleModels();
+  $("shownCount").textContent=list.length;
+  $("resultCount").textContent=list.length+" / "+modelsData.length+"件を表示";
+  $("noResults").hidden=list.length!==0;
+  $("modelCards").innerHTML=list.map(m=>`
+    <article class="model-card" style="--glow:${m.id.includes("astra")?"#8b9cff":m.id.includes("terra")?"#55d6d0":m.id.includes("luna")?"#e99acb":"#7c9be8"}">
+      <div class="card-top"><div><div class="model-name">${esc(m.name)}</div><div class="model-id">${esc(m.id)}</div></div><span class="category">${esc(m.category)}</span></div>
+      <div class="tags">${(m.badge||[]).map((t,i)=>'<span class="tag '+(i===0?'primary':'')+'">'+esc(t)+'</span>').join("")}</div>
+      <div class="description">${esc(m.description)}</div>
+      <div class="metrics">
+        <div class="metric"><small>得意領域</small><b>${esc((m.strengths||[]).slice(0,2).join(" / ")||"要確認")}</b></div>
+        <div class="metric"><small>応答速度</small><b>${esc(m.speed||"未公開・要確認")}</b></div>
+        <div class="metric"><small>入力コスト</small><b>${esc(m.inputCost||"未公開・要確認")}</b></div>
+        <div class="metric"><small>コンテキスト長</small><b>${esc(m.context||"未公開・要確認")}</b></div>
+      </div>
+      <div class="usecase"><b>主な用途：</b>${esc((m.useCases||[]).join("、"))}</div>
+      <div class="card-actions"><button class="text-button" data-detail="${esc(m.id)}">詳細スペックを見る →</button><label class="compare-check"><input type="checkbox" data-compare="${esc(m.id)}" ${selectedIds.has(m.id)?"checked":""}> 比較対象</label></div>
+    </article>`).join("");
+  $("modelCards").querySelectorAll("[data-detail]").forEach(b=>b.addEventListener("click",()=>showDetail(b.dataset.detail)));
+  $("modelCards").querySelectorAll("[data-compare]").forEach(c=>c.addEventListener("change",()=>{
+    c.checked?selectedIds.add(c.dataset.compare):selectedIds.delete(c.dataset.compare);
+    renderTable();
+  }));
+}
+function renderTable(){
+  const chosen=modelsData.filter(m=>selectedIds.has(m.id));
+  const thead=$("compareTable").querySelector("thead");
+  const tbody=$("compareTable").querySelector("tbody");
+  thead.innerHTML="<tr><th>比較項目</th>"+chosen.map(m=>"<th>"+esc(m.name)+"</th>").join("")+"</tr>";
+  if(!chosen.length){tbody.innerHTML='<tr><td class="empty" colspan="8">比較対象を選択してください。「全モデル比較」から全件表示することもできます。</td></tr>';return;}
+  tbody.innerHTML=fields.map(([label,key])=>"<tr><th>"+esc(label)+"</th>"+chosen.map(m=>"<td>"+esc(asText(m[key]))+"</td>").join("")+"</tr>").join("");
+}
+function showDetail(id){
+  const m=modelsData.find(x=>x.id===id); if(!m)return;
+  $("modalTitle").textContent=m.name+" / "+m.id;
+  $("modalContent").innerHTML=`
+    <p>${esc(m.description)}</p>
+    <h3>得意領域</h3><p>${esc(asText(m.strengths))}</p>
+    <h3>推奨ユースケース</h3><p>${esc(asText(m.useCases))}</p>
+    <h3>主要スペック</h3><p>応答速度：${esc(m.speed)}<br>入力コスト：${esc(m.inputCost)}<br>出力コスト：${esc(m.outputCost)}<br>コンテキスト長：${esc(m.context)}<br>入力：${esc(m.input)}<br>出力：${esc(m.output)}<br>推論特性：${esc(m.reasoning)}<br>マルチモーダル：${esc(m.multimodal)}</p>
+    <h3>補足</h3><p>${esc(m.notes)}</p>`;
+  $("detailDialog").showModal();
+}
+$("searchInput").addEventListener("input",renderCards);
+$("categoryFilter").addEventListener("change",renderCards);
+$("selectVisible").addEventListener("click",()=>{getVisibleModels().forEach(m=>selectedIds.add(m.id));renderCards();renderTable();});
+$("clearCompare").addEventListener("click",()=>{selectedIds.clear();renderCards();renderTable();});
+$("showAll").addEventListener("click",()=>{modelsData.forEach(m=>selectedIds.add(m.id));renderCards();renderTable();});
+$("closeModal").addEventListener("click",()=>$("detailDialog").close());
+$("detailDialog").addEventListener("click",e=>{if(e.target===$("detailDialog"))$("detailDialog").close();});
+initCategories();renderCards();renderTable();
+</script>
+</body>
+</html>

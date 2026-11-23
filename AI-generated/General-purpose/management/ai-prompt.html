@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt & Markdown Manager</title>
+    <!-- Tailwind CSS for modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js for markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="fa-solid fa-brain"></i> AI Prompt Manager
+            </h1>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openModal()" class="bg-white text-indigo-600 hover:bg-indigo-50 font-semibold px-4 py-2 rounded-lg shadow transition flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> 新規プロンプト追加
+                </button>
+                <button onclick="exportAllAsMarkdown()" class="bg-indigo-500 hover:bg-indigo-400 text-white font-medium px-3 py-2 rounded-lg transition flex items-center gap-1 text-sm" title="全プロンプトをAI用のMarkdownとしてエクスポート">
+                    <i class="fa-solid fa-file-export"></i> AI用コンテキスト出力
+                </button>
+                <button onclick="exportData()" class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-2 rounded-lg transition text-sm" title="JSONバックアップ">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <label class="bg-indigo-700 hover:bg-indigo-800 text-white px-3 py-2 rounded-lg transition text-sm cursor-pointer" title="JSON復元">
+                    <i class="fa-solid fa-upload"></i>
+                    <input type="file" id="importFile" onchange="importData(event)" class="hidden" accept=".json">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6 flex-grow">
+        <!-- Search & Filter Bar -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div class="relative w-full md:w-1/3">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+                    <i class="fa-solid fa-search"></i>
+                </span>
+                <input type="text" id="searchInput" oninput="renderPrompts()" placeholder="タイトル、説明、タグで検索..." class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0" id="categoryFilters">
+                <!-- Categories injected dynamically -->
+            </div>
+        </div>
+
+        <!-- Prompt Grid -->
+        <div id="promptGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Cards will be injected here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-16">
+            <i class="fa-solid fa-folder-open text-5xl text-gray-300 mb-4"></i>
+            <p class="text-gray-500 text-lg">プロンプトが見つかりませんでした。</p>
+        </div>
+    </main>
+
+    <!-- Add/Edit Modal -->
+    <div id="promptModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h2 id="modalTitle" class="text-xl font-bold text-gray-800">新規プロンプト作成</h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
+            </div>
+            <form id="promptForm" onsubmit="savePrompt(event)" class="p-6 space-y-4 flex-grow">
+                <input type="hidden" id="promptId">
+                <div>
+                    <label class="block text-sm font-semibold mb-1">タイトル <span class="text-red-500">*</span></label>
+                    <input type="text" id="formTitle" required placeholder="例: コードレビューアシスタント" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">カテゴリ</label>
+                        <input type="text" id="formCategory" placeholder="例: 開発, 記事作成, デバッグ" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-1">タグ (カンマ区切り)</label>
+                        <input type="text" id="formTags" placeholder="例: python, refactor, v1" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">簡単な説明</label>
+                    <input type="text" id="formDescription" placeholder="この指示書の目的や概要を記入" class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-sm font-semibold">Markdown内容 (プロンプト本文) <span class="text-red-500">*</span></label>
+                        <span class="text-xs text-gray-400">Markdown記法が使えます</span>
+                    </div>
+                    <textarea id="formContent" rows="10" required placeholder="# 役割&#10;あなたは優秀なソフトウェアエンジニアです..." class="w-full px-3 py-2 border rounded-lg font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition">キャンセル</button>
+                    <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Detail View & Preview Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white z-10">
+                <h2 id="detailModalTitle" class="text-xl font-bold text-gray-800">プロンプト詳細</h2>
+                <div class="flex gap-2">
+                    <button onclick="downloadActiveMd()" class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1" title=".mdファイルとしてダウンロード">
+                        <i class="fa-solid fa-file-arrow-down"></i> .mdダウンロード
+                    </button>
+                    <button onclick="copyDetailContent()" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
+                        <i class="fa-regular fa-copy"></i> コピー
+                    </button>
+                    <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600 text-xl font-bold px-2">&times;</button>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex flex-wrap gap-2 text-sm text-gray-500 items-center">
+                    <span id="detailCategory" class="bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full font-medium"></span>
+                    <span id="detailDate"></span>
+                </div>
+                <p id="detailDescription" class="text-gray-600 italic"></p>
+                <div id="detailTags" class="flex flex-wrap gap-1"></div>
+                <hr>
+                <!-- Rendered Markdown Preview Area -->
+                <div class="flex border-b mb-2">
+                    <button onclick="switchTab('preview')" id="tabPreviewBtn" class="px-4 py-2 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600">プレビュー</button>
+                    <button onclick="switchTab('raw')" id="tabRawBtn" class="px-4 py-2 text-sm font-semibold text-gray-500 border-b-2 border-transparent">Raw (テキスト)</button>
+                </div>
+                <div id="detailPreview" class="prose max-w-none bg-gray-50 p-4 rounded-xl border min-h-[200px]"></div>
+                <div id="detailRaw" class="hidden bg-gray-900 text-green-400 p-4 rounded-xl border font-mono text-sm whitespace-pre-wrap overflow-x-auto min-h-[200px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-2">
+        <i class="fa-solid fa-check text-green-400"></i>
+        <span id="toastMessage">コピーしました</span>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t py-4 text-center text-xs text-gray-500 mt-auto">
+        AI Prompt Manager &copy; 2026 - LocalStorage Based Tool
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        let prompts = JSON.parse(localStorage.getItem('ai_prompts')) || [
+            {
+                id: '1',
+                title: 'Clean Code 提案アシスタント',
+                category: '開発',
+                tags: ['refactor', 'clean-code'],
+                description: '提出されたコードを保守性の高いコードにリファクタリングするためのシステムプロンプト。',
+                content: `# 役割\nあなたはシニアソフトウェアエンジニアです。\n\n# 指示\n以下の原則に従ってコードをリファクタリングしてください：\n1. 読みやすさの向上\n2. 適切な命名規則\n3. 冗長な処理の削除`,
+                updatedAt: new Date().toISOString()
+            }
+        ];
+
+        let currentFilterCategory = 'all';
+
+        function saveToStorage() {
+            localStorage.setItem('ai_prompts', JSON.stringify(prompts));
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').innerText = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2000);
+        }
+
+        function renderCategories() {
+            const container = document.getElementById('categoryFilters');
+            const categories = ['all', ...new Set(prompts.map(p => p.category).filter(Boolean))];
+            
+            container.innerHTML = categories.map(cat => `
+                <button onclick="filterCategory('${cat}')" class="category-btn px-3 py-1.5 rounded-lg text-sm font-medium transition whitespace-nowrap ${currentFilterCategory === cat ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    ${cat === 'all' ? 'すべて' : cat}
+                </button>
+            `).join('');
+        }
+
+        function filterCategory(cat) {
+            currentFilterCategory = cat;
+            renderCategories();
+            renderPrompts();
+        }
+
+        function renderPrompts() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const grid = document.getElementById('promptGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            const filtered = prompts.filter(p => {
+                const matchesCategory = currentFilterCategory === 'all' || p.category === currentFilterCategory;
+                const matchesSearch = p.title.toLowerCase().includes(search) || 
+                                      (p.description && p.description.toLowerCase().includes(search)) ||
+                                      (p.tags && p.tags.some(t => t.toLowerCase().includes(search))) ||
+                                      p.content.toLowerCase().includes(search);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = filtered.map(p => `
+                <div class="bg-white rounded-xl shadow-sm border hover:shadow-md transition flex flex-col justify-between overflow-hidden">
+                    <div class="p-5">
+                        <div class="flex justify-between items-start gap-2 mb-2">
+                            <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">${escapeHtml(p.category || '未分類')}</span>
+                            <div class="flex gap-1">
+                                <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-indigo-600 p-1" title="編集"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deletePrompt('${p.id}')" class="text-gray-400 hover:text-red-600 p-1" title="削除"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <h3 onclick="openDetailModal('${p.id}')" class="font-bold text-lg text-gray-800 cursor-pointer hover:text-indigo-600 transition mb-1">${escapeHtml(p.title)}</h3>
+                        <p class="text-gray-500 text-sm mb-3 line-clamp-2">${escapeHtml(p.description || '説明なし')}</p>
+                        <div class="flex flex-wrap gap-1 mb-4">
+                            ${(p.tags || []).map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">#${escapeHtml(t.trim())}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-5 py-3 border-t flex justify-between items-center">
+                        <div class="flex gap-1">
+                            <button onclick="downloadSingleMd('${p.id}')" class="text-xs bg-white border hover:bg-gray-100 text-gray-700 px-2.5 py-1.5 rounded font-medium transition" title=".mdダウンロード"><i class="fa-solid fa-file-arrow-down"></i></button>
+                            <button onclick="openDetailModal('${p.id}')" class="text-xs bg-white border hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded font-medium transition">詳細</button>
+                        </div>
+                        <button onclick="copyContent('${escapeQuotes(p.content)}')" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded font-medium transition flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> コピー
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Modal Controls
+        function openModal() {
+            document.getElementById('promptId').value = '';
+            document.getElementById('promptForm').reset();
+            document.getElementById('modalTitle').innerText = '新規プロンプト作成';
+            document.getElementById('promptModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('promptModal').classList.add('hidden');
+        }
+
+        function openEditModal(id) {
+            const p = prompts.find(item => item.id === id);
+            if (!p) return;
+            document.getElementById('promptId').value = p.id;
+            document.getElementById('formTitle').value = p.title;
+            document.getElementById('formCategory').value = p.category || '';
+            document.getElementById('formTags').value = (p.tags || []).join(', ');
+            document.getElementById('formDescription').value = p.description || '';
+            document.getElementById('formContent').value = p.content;
+            document.getElementById('modalTitle').innerText = 'プロンプト編集';
+            document.getElementById('promptModal').classList.remove('hidden');
+        }
+
+        let activeDetailPrompt = null;
+        function openDetailModal(id) {
+            const p = prompts.find(item => item.id === id);
+            if (!p) return;
+            activeDetailPrompt = p;
+            document.getElementById('detailModalTitle').innerText = p.title;
+            document.getElementById('detailCategory').innerText = p.category || '未分類';
+            document.getElementById('detailDate').innerText = `更新日: ${new Date(p.updatedAt).toLocaleString()}`;
+            document.getElementById('detailDescription').innerText = p.description || '';
+            document.getElementById('detailTags').innerHTML = (p.tags || []).map(t => `<span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">#${escapeHtml(t.trim())}</span>`).join('');
+            
+            // Render Markdown using marked.js
+            document.getElementById('detailPreview').innerHTML = marked.parse(p.content);
+            document.getElementById('detailRaw').innerText = p.content;
+            
+            switchTab('preview');
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        function switchTab(mode) {
+            const previewEl = document.getElementById('detailPreview');
+            const rawEl = document.getElementById('detailRaw');
+            const previewBtn = document.getElementById('tabPreviewBtn');
+            const rawBtn = document.getElementById('tabRawBtn');
+
+            if (mode === 'preview') {
+                previewEl.classList.remove('hidden');
+                rawEl.classList.add('hidden');
+                previewBtn.className = "px-4 py-2 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600";
+                rawBtn.className = "px-4 py-2 text-sm font-semibold text-gray-500 border-b-2 border-transparent";
+            } else {
+                previewEl.classList.add('hidden');
+                rawEl.classList.remove('hidden');
+                previewBtn.className = "px-4 py-2 text-sm font-semibold text-gray-500 border-b-2 border-transparent";
+                rawBtn.className = "px-4 py-2 text-sm font-semibold border-b-2 border-indigo-600 text-indigo-600";
+            }
+        }
+
+        function copyDetailContent() {
+            if (!activeDetailPrompt) return;
+            navigator.clipboard.writeText(activeDetailPrompt.content);
+            showToast('プロンプトをコピーしました');
+        }
+
+        function downloadSingleMd(id) {
+            const p = prompts.find(item => item.id === id);
+            if (!p) return;
+            const blob = new Blob([p.content], { type: 'text/markdown;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            // ファイル名に使用できない文字を置き換え
+            const safeTitle = p.title.replace(/[\/\\?%*:|"<>]/g, '_');
+            a.download = `${safeTitle}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('.mdファイルをダウンロードしました');
+        }
+
+        function downloadActiveMd() {
+            if (activeDetailPrompt) {
+                downloadSingleMd(activeDetailPrompt.id);
+            }
+        }
+
+        function savePrompt(e) {
+            e.preventDefault();
+            const id = document.getElementById('promptId').value;
+            const title = document.getElementById('formTitle').value;
+            const category = document.getElementById('formCategory').value.trim();
+            const tags = document.getElementById('formTags').value.split(',').map(t => t.trim()).filter(Boolean);
+            const description = document.getElementById('formDescription').value;
+            const content = document.getElementById('formContent').value;
+
+            if (id) {
+                const index = prompts.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    prompts[index] = { ...prompts[index], title, category, tags, description, content, updatedAt: new Date().toISOString() };
+                }
+            } else {
+                const newPrompt = {
+                    id: Date.now().toString(),
+                    title, category, tags, description, content,
+                    updatedAt: new Date().toISOString()
+                };
+                prompts.unshift(newPrompt);
+            }
+
+            saveToStorage();
+            closeModal();
+            renderCategories();
+            renderPrompts();
+            showToast('保存しました');
+        }
+
+        function deletePrompt(id) {
+            if (confirm('本当にこのプロンプトを削除しますか？')) {
+                prompts = prompts.filter(p => p.id !== id);
+                saveToStorage();
+                renderCategories();
+                renderPrompts();
+                showToast('削除しました');
+            }
+        }
+
+        function copyContent(text) {
+            const decoded = text.replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+            navigator.clipboard.writeText(decoded);
+            showToast('プロンプトをクリップボードにコピーしました');
+        }
+
+        function exportAllAsMarkdown() {
+            let md = `# AI Prompt / Instruction Context List\n\nGenerated at: ${new Date().toLocaleString()}\n\n`;
+            prompts.forEach((p) => {
+                md += `## [${p.category || 'General'}] ${p.title}\n`;
+                if (p.description) md += `> ${p.description}\n\n`;
+                md += `\`\`\`markdown\n${p.content}\n\`\`\`\n\n---\n\n`;
+            });
+            navigator.clipboard.writeText(md);
+            showToast('全プロンプトをAIコンテキスト用Markdownとしてコピーしました！');
+        }
+
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(prompts, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `ai_prompts_backup_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchorElem.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        prompts = imported;
+                        saveToStorage();
+                        renderCategories();
+                        renderPrompts();
+                        showToast('データをインポートしました');
+                    } else {
+                        alert('無効なJSONフォーマットです。');
+                    }
+                } catch (err) {
+                    alert('ファイルの読み込みに失敗しました。');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeQuotes(str) {
+            return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/\n/g, '\\n');
+        }
+
+        // Initial Render
+        renderCategories();
+        renderPrompts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub風 Diff & 差分バージョン管理ツール</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f6f8fa;
+            color: #24292e;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        h2 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card {
+            background: #ffffff;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .input-area {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .input-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .file-input-wrapper {
+            font-size: 13px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #d1d5da;
+            border-radius: 6px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+        textarea[readonly] {
+            background-color: #f6f8fa;
+            color: #57606a;
+        }
+        .file-name {
+            display: block;
+            margin-top: 4px;
+            color: #57606a;
+            font-size: 11px;
+            overflow-wrap: anywhere;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+        .commit-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #d8dee4;
+        }
+        input[type="text"] {
+            padding: 7px 10px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 13px;
+            flex: 1;
+            min-width: 220px;
+        }
+        button {
+            border: none;
+            padding: 8px 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.15s;
+        }
+        button.action-btn {
+            background-color: #2ea44f;
+            color: white;
+        }
+        button.action-btn:hover {
+            background-color: #2c974b;
+        }
+        button.primary-btn {
+            background-color: #0969da;
+            color: white;
+        }
+        button.primary-btn:hover {
+            background-color: #0550ae;
+        }
+        button.secondary-btn {
+            background-color: #f6f8fa;
+            color: #24292e;
+            border: 1px solid #d0d7de;
+        }
+        button.secondary-btn:hover {
+            background-color: #eef1f4;
+        }
+        button.danger-btn {
+            background-color: #cf222e;
+            color: white;
+        }
+        button.danger-btn:hover {
+            background-color: #a40e26;
+        }
+        button.small-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 文字コードバッジのスタイル */
+        .encoding-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 4px;
+            background-color: #eaeef2;
+            color: #57606a;
+            border: 1px solid #d0d7de;
+            font-family: monospace;
+        }
+        /* 文字コードが不一致の時の色付きバッジ（赤系） */
+        .encoding-badge.mismatch {
+            background-color: #ffebe9;
+            color: #cf222e;
+            border-color: #ff8182;
+        }
+
+        /* 履歴テーブル & ページング */
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .history-table th, .history-table td {
+            border-bottom: 1px solid #d8dee4;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .history-table th {
+            background-color: #f6f8fa;
+            font-weight: 600;
+            color: #57606a;
+        }
+        .history-table tr.active-version {
+            background-color: #ddf4ff;
+        }
+        .pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #57606a;
+        }
+        .pagination-controls {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 10px;
+            background-color: #afb8c133;
+            color: #24292e;
+        }
+        .badge.head {
+            background-color: #2ea44f;
+            color: #ffffff;
+        }
+        .stats-add { color: #1a7f37; font-weight: 600; font-family: monospace; }
+        .stats-del { color: #cf222e; font-weight: 600; font-family: monospace; }
+
+        /* GitHub風 Diff テーブルのスタイル */
+        .diff-container {
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background-color: #ffffff;
+            overflow-x: auto;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+            font-size: 12px;
+            line-height: 20px;
+        }
+        table.diff-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        tr.diff-line {
+            display: flex;
+            width: 100%;
+        }
+        td.diff-num {
+            width: 50px;
+            color: #57606a;
+            text-align: right;
+            padding-right: 10px;
+            user-select: none;
+            background-color: #f6f8fa;
+            border-right: 1px solid #d0d7de;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+        td.diff-num.empty {
+            background-color: #f6f8fa;
+        }
+        td.diff-code {
+            flex: 1;
+            padding-left: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            box-sizing: border-box;
+        }
+        tr.diff-added { background-color: #e6ffec; }
+        tr.diff-added td.diff-code, tr.diff-added td.diff-num { background-color: #ccffd8; }
+        tr.diff-deleted { background-color: #ffebe9; }
+        tr.diff-deleted td.diff-code, tr.diff-deleted td.diff-num { background-color: #ffd7d5; }
+        tr.diff-unchanged { background-color: #ffffff; }
+
+        .guide-box {
+            font-size: 12px;
+            color: #57606a;
+            background-color: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>
+        <span>GitHub風 Diff & 差分バージョン管理ツール</span>
+        <span style="font-size: 12px; font-weight: normal; color: #57606a;">文字コード自動判定 & 不一致カラー警告対応</span>
+    </h2>
+
+    <div class="guide-box">
+        <strong>使い方:</strong>
+        1. 「変更前」と「変更後」にファイルを読み込ませると、文字コード（UTF-8 / Shift_JIS）が自動判定されます。<br>
+        2. 比較結果エリアにそれぞれの文字コードが表示され、<strong>文字コードが異なる場合は赤色で色付き警告</strong>されます。<br>
+        3. 「変更を履歴に記録 (Commit)」で差分パッチを管理し、履歴JSONを `history.json` として保存・読込可能です。
+    </div>
+
+    <!-- エディタ・比較エリア -->
+    <div class="card">
+        <div class="input-area">
+            <!-- 変更前 -->
+            <div class="input-group">
+                <label for="old-text">変更前 (Base / 現在の最新コミット)</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="file-old" onchange="loadFile(event, 'old-text')">
+                    <span id="file-old-name" class="file-name">表示中: 初期サンプル (v0)</span>
+                </div>
+                <textarea id="old-text" oninput="onOldTextManualEdit()">Hello World
+This is line two.
+Line three is here.
+Unchanged line.</textarea>
+            </div>
+            <!-- 変更後 -->
+            <div class="input-group">
+                <label for="new-text">変更後 (Modified / 作業ツリー)</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="file-new" onchange="loadFile(event, 'new-text')">
+                    <span id="file-new-name" class="file-name">表示中: 編集中</span>
+                </div>
+                <textarea id="new-text" oninput="generateDiff()">Hello GitHub!
+This is line two.
+New line inserted.
+Unchanged line.
+Added at the end.</textarea>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="secondary-btn" onclick="generateDiff()">Diffを再計算</button>
+            <button class="secondary-btn" onclick="swapFiles()">変更前 ⇔ 変更後を入れ替え</button>
+            <label class="checkbox-label">
+                <input type="checkbox" id="diff-only-checkbox" onchange="generateDiff()"> 差分のある行のみ表示する
+            </label>
+        </div>
+
+        <div class="commit-box">
+            <input type="text" id="commit-message" placeholder="変更メモを入力（例: 2行目の文言修正、末尾に追記）">
+            <button class="action-btn" onclick="commitChanges()">変更を履歴に記録 (Commit)</button>
+            <button class="danger-btn" onclick="resetRepository()" title="履歴をすべて消去して現在の「変更前」をv0として再スタートします">履歴をリセット</button>
+        </div>
+    </div>
+
+    <!-- バージョン履歴 & JSON保存・読込エリア -->
+    <div class="card">
+        <div class="history-header">
+            <h2 style="margin: 0;">バージョン履歴（差分パッチ一覧・降順）</h2>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="primary-btn small-btn" onclick="exportHistoryJson()">履歴JSONを保存 (history.json)</button>
+                <button class="secondary-btn small-btn" onclick="document.getElementById('json-import-input').click()">履歴JSONを読込 (Import)</button>
+                <input type="file" id="json-import-input" accept=".json" style="display: none;" onchange="importHistoryJson(event)">
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th style="width: 75px;">Ver.</th>
+                        <th style="width: 150px;">記録日時</th>
+                        <th>変更メモ</th>
+                        <th style="width: 120px;">差分規模</th>
+                        <th style="width: 290px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="history-tbody">
+                    <!-- JSで動的に描画 -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ページネーションコントロール -->
+        <div class="pagination">
+            <span id="pagination-info">全 0 件中 1-0 件を表示</span>
+            <div class="pagination-controls">
+                <button class="secondary-btn small-btn" id="prev-page-btn" onclick="changePage(-1)">前へ</button>
+                <span id="page-indicator" style="padding: 0 6px; font-weight: 600;">1 / 1</span>
+                <button class="secondary-btn small-btn" id="next-page-btn" onclick="changePage(1)">次へ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diff プレビューエリア -->
+    <h2 style="margin-top: 24px;">
+        <span id="diff-title">現在の比較結果 (変更前 vs 変更後)</span>
+        <div id="encoding-status" style="display: flex; gap: 8px; align-items: center;">
+            <!-- JSで文字コードバッジを動的表示 -->
+        </div>
+    </h2>
+    <div class="diff-container">
+        <table class="diff-table" id="diff-output"></table>
+    </div>
+</div>
+
+<script>
+// リポジトリ状態（ベーステキスト ＋ 差分パッチ配列のみ保持）
+let repo = {
+    fileName: "document.txt",
+    baseText: "",
+    commits: [] // { id, timestamp, message, addedCount, deletedCount, ops: [...] }
+};
+
+// 読み込まれたファイルの文字コード保持用
+let fileEncodings = {
+    old: "UTF-8 (手入力/デフォルト)",
+    new: "UTF-8 (手入力/デフォルト)"
+};
+
+// ページング設定
+let currentPage = 1;
+const pageSize = 5;
+
+// 初期化
+window.onload = function() {
+    repo.baseText = document.getElementById('old-text').value;
+    renderHistoryTable();
+    generateDiff();
+};
+
+/**
+ * ファイルを読み込み、UTF-8かShift_JISかを自動判定してデコードする
+ */
+function loadFile(event, targetId) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const buffer = e.target.result;
+        const decoded = decodeTextAuto(buffer);
+
+        document.getElementById(targetId).value = decoded.text;
+        const nameId = targetId === 'old-text' ? 'file-old-name' : 'file-new-name';
+        document.getElementById(nameId).textContent = '表示中: ' + file.name;
+
+        // 文字コード情報の保持
+        if (targetId === 'old-text') {
+            fileEncodings.old = decoded.encoding;
+            repo.fileName = file.name;
+            onOldTextManualEdit();
+        } else {
+            fileEncodings.new = decoded.encoding;
+            generateDiff();
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+/**
+ * ArrayBufferからUTF-8またはShift_JISを自動判別し、判定結果の文字コード名と共に返す
+ */
+function decodeTextAuto(arrayBuffer) {
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // 1. UTF-8としてのデコードを検証
+    try {
+        const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+        const text = utf8Decoder.decode(uint8Array);
+        return { text: text, encoding: "UTF-8" };
+    } catch (e) {
+        // UTF-8として不適合な場合はShift_JISへフォールバック
+    }
+
+    // 2. Shift_JIS (cp932) としてデコード
+    try {
+        const sjisDecoder = new TextDecoder('shift_jis');
+        const text = sjisDecoder.decode(uint8Array);
+        return { text: text, encoding: "Shift_JIS" };
+    } catch (e) {
+        const fallbackDecoder = new TextDecoder('utf-8');
+        return { text: fallbackDecoder.decode(uint8Array), encoding: "UTF-8 (Fallback)" };
+    }
+}
+
+// 「変更前」が手動変更された場合
+function onOldTextManualEdit() {
+    if (repo.commits.length === 0) {
+        repo.baseText = document.getElementById('old-text').value;
+        renderHistoryTable();
+    }
+    fileEncodings.old = "UTF-8 (手入力)";
+    generateDiff();
+}
+
+// 変更前・変更後の内容とメタデータを入れ替える
+function swapFiles() {
+    const oldText = document.getElementById('old-text');
+    const newText = document.getElementById('new-text');
+    const oldName = document.getElementById('file-old-name');
+    const newName = document.getElementById('file-new-name');
+    
+    const tempText = oldText.value;
+    const tempName = oldName.textContent;
+    const tempEnc = fileEncodings.old;
+
+    oldText.value = newText.value;
+    newText.value = tempText;
+    oldName.textContent = newName.textContent;
+    newName.textContent = tempName;
+    
+    fileEncodings.old = fileEncodings.new;
+    fileEncodings.new = tempEnc;
+
+    document.getElementById('file-old').value = '';
+    document.getElementById('file-new').value = '';
+
+    onOldTextManualEdit();
+}
+
+// 最長共通部分列（LCS）アルゴリズム
+function computeLCS(oldLines, newLines) {
+    const m = oldLines.length;
+    const n = newLines.length;
+    const dp = Array(m + 1).fill(0).map(() => Array(n + 1).fill(0));
+    
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (oldLines[i - 1] === newLines[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+                dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+    }
+    
+    let i = m, j = n;
+    let result = [];
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldLines[i - 1] === newLines[j - 1]) {
+            result.unshift({ type: 'equal', value: oldLines[i - 1] });
+            i--;
+            j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            result.unshift({ type: 'add', value: newLines[j - 1] });
+            j--;
+        } else if (i > 0 && (j === 0 || dp[i][j - 1] < dp[i - 1][j])) {
+            result.unshift({ type: 'delete', value: oldLines[i - 1] });
+            i--;
+        }
+    }
+    return result;
+}
+
+// パッチ生成
+function createPatchOps(diffResult) {
+    const ops = [];
+    let addedCount = 0;
+    let deletedCount = 0;
+
+    diffResult.forEach(item => {
+        const lastOp = ops[ops.length - 1];
+        if (item.type === 'equal') {
+            if (lastOp && lastOp.type === 'retain') {
+                lastOp.count++;
+            } else {
+                ops.push({ type: 'retain', count: 1 });
+            }
+        } else if (item.type === 'delete') {
+            deletedCount++;
+            if (lastOp && lastOp.type === 'delete') {
+                lastOp.count++;
+            } else {
+                ops.push({ type: 'delete', count: 1 });
+            }
+        } else if (item.type === 'add') {
+            addedCount++;
+            if (lastOp && lastOp.type === 'insert') {
+                lastOp.lines.push(item.value);
+            } else {
+                ops.push({ type: 'insert', lines: [item.value] });
+            }
+        }
+    });
+
+    return { ops, addedCount, deletedCount };
+}
+
+function applySinglePatch(lines, ops) {
+    const nextLines = [];
+    let cursor = 0;
+
+    ops.forEach(op => {
+        if (op.type === 'retain') {
+            for (let i = 0; i < op.count; i++) {
+                if (cursor < lines.length) {
+                    nextLines.push(lines[cursor++]);
+                }
+            }
+        } else if (op.type === 'delete') {
+            cursor += op.count;
+        } else if (op.type === 'insert') {
+            op.lines.forEach(line => nextLines.push(line));
+        }
+    });
+
+    while (cursor < lines.length) {
+        nextLines.push(lines[cursor++]);
+    }
+    return nextLines;
+}
+
+function reconstructVersion(versionIndex) {
+    const lineEnding = repo.baseText.includes('\r\n') ? '\r\n' : '\n';
+    let currentLines = repo.baseText.split(/\r?\n/);
+
+    for (let i = 0; i < versionIndex; i++) {
+        currentLines = applySinglePatch(currentLines, repo.commits[i].ops);
+    }
+    return currentLines.join(lineEnding);
+}
+
+// コミット処理
+function commitChanges() {
+    const latestRecordedText = reconstructVersion(repo.commits.length);
+    const currentOldText = document.getElementById('old-text').value;
+    const currentNewText = document.getElementById('new-text').value;
+
+    if (repo.commits.length > 0 && currentOldText !== latestRecordedText) {
+        const proceed = confirm(
+            "「変更前」の内容が最新コミット(v" + repo.commits.length + ")と異なっています。\n" +
+            "連続した差分履歴を保つため、最新コミット(v" + repo.commits.length + ")からの差分として記録しますか？"
+        );
+        if (!proceed) return;
+        document.getElementById('old-text').value = latestRecordedText;
+    }
+
+    const baseForDiff = reconstructVersion(repo.commits.length);
+    if (baseForDiff === currentNewText) {
+        alert("変更内容がありません（変更前と変更後が完全に一致しています）。");
+        return;
+    }
+
+    const oldLines = baseForDiff.split(/\r?\n/);
+    const newLines = currentNewText.split(/\r?\n/);
+    const diffResult = computeLCS(oldLines, newLines);
+    const { ops, addedCount, deletedCount } = createPatchOps(diffResult);
+
+    const msgInput = document.getElementById('commit-message');
+    const message = msgInput.value.trim() || ("変更 #" + (repo.commits.length + 1));
+
+    const now = new Date();
+    const timestamp = now.getFullYear() + "-" +
+        String(now.getMonth() + 1).padStart(2, '0') + "-" +
+        String(now.getDate()).padStart(2, '0') + " " +
+        String(now.getHours()).padStart(2, '0') + ":" +
+        String(now.getMinutes()).padStart(2, '0') + ":" +
+        String(now.getSeconds()).padStart(2, '0');
+
+    repo.commits.push({
+        id: repo.commits.length + 1,
+        timestamp: timestamp,
+        message: message,
+        addedCount: addedCount,
+        deletedCount: deletedCount,
+        ops: ops
+    });
+
+    document.getElementById('old-text').value = currentNewText;
+    document.getElementById('file-old-name').textContent = "表示中: v" + repo.commits.length + " (最新コミット)";
+    msgInput.value = "";
+
+    currentPage = 1;
+    renderHistoryTable();
+    document.getElementById('diff-title').textContent = "現在の比較結果 (変更前 vs 変更後)";
+    generateDiff();
+}
+
+function changePage(direction) {
+    const totalItems = repo.commits.length + 1;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    
+    currentPage += direction;
+    if (currentPage < 1) currentPage = 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    renderHistoryTable();
+}
+
+function renderHistoryTable() {
+    const tbody = document.getElementById('history-tbody');
+    const headVer = repo.commits.length;
+
+    let allItems = [];
+    allItems.push({
+        ver: 0,
+        timestamp: "-",
+        message: "初期状態 (ベーステキスト)",
+        stats: "基準データ",
+        isBase: true
+    });
+    repo.commits.forEach((c, idx) => {
+        allItems.push({
+            ver: idx + 1,
+            timestamp: c.timestamp,
+            message: c.message,
+            stats: `<span class="stats-add">+${c.addedCount}</span> / <span class="stats-del">-${c.deletedCount}</span>`,
+            isBase: false
+        });
+    });
+
+    allItems.sort((a, b) => b.ver - a.ver);
+
+    const totalItems = allItems.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const pageItems = allItems.slice(startIndex, endIndex);
+
+    let html = "";
+    pageItems.forEach(item => {
+        const isHead = (item.ver === headVer);
+        let badgeHtml = "";
+        if (item.isBase) {
+            badgeHtml = headVer === 0 ? '<span class="badge head">最新</span>' : '<span class="badge">初期</span>';
+        } else if (isHead) {
+            badgeHtml = '<span class="badge head">最新</span>';
+        }
+
+        html += `
+            <tr class="${isHead ? 'active-version' : ''}">
+                <td><strong>v${item.ver}</strong> ${badgeHtml}</td>
+                <td>${escapeHtml(item.timestamp)}</td>
+                <td>${escapeHtml(item.message)}</td>
+                <td>${item.stats}</td>
+                <td>
+                    <button class="secondary-btn small-btn" onclick="loadVersionToEditor(${item.ver}, 'new')">変更後に復元</button>
+                    ${item.ver > 0 ? `<button class="secondary-btn small-btn" onclick="previewVersionDiff(${item.ver})">v${item.ver - 1}とDiff</button>` : `<button class="secondary-btn small-btn" disabled>-</button>`}
+                    <button class="primary-btn small-btn" onclick="downloadVersionFile(${item.ver})">出力(DL)</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    const displayStart = totalItems === 0 ? 0 : startIndex + 1;
+    const displayEnd = Math.min(endIndex, totalItems);
+    document.getElementById('pagination-info').textContent = `全 ${totalItems} 件中 ${displayStart}-${displayEnd} 件を表示`;
+    document.getElementById('page-indicator').textContent = `${currentPage} / ${totalPages}`;
+    document.getElementById('prev-page-btn').disabled = (currentPage <= 1);
+    document.getElementById('next-page-btn').disabled = (currentPage >= totalPages);
+}
+
+function loadVersionToEditor(ver, target) {
+    const restoredText = reconstructVersion(ver);
+    if (target === 'new') {
+        document.getElementById('new-text').value = restoredText;
+        document.getElementById('file-new-name').textContent = "表示中: v" + ver + " から復元";
+        document.getElementById('diff-title').textContent = "現在の比較結果 (変更前 vs v" + ver + "復元内容)";
+        // 履歴復元時は文字コードを統一扱いとする
+        fileEncodings.new = fileEncodings.old;
+        generateDiff();
+    }
+}
+
+function previewVersionDiff(ver) {
+    if (ver === 0) return;
+    const prevText = reconstructVersion(ver - 1);
+    const currText = reconstructVersion(ver);
+    document.getElementById('old-text').value = prevText;
+    document.getElementById('new-text').value = currText;
+    document.getElementById('file-old-name').textContent = "表示中: v" + (ver - 1);
+    document.getElementById('file-new-name').textContent = "表示中: v" + ver;
+    document.getElementById('diff-title').textContent = "履歴プレビュー: v" + (ver - 1) + " → v" + ver + " (" + repo.commits[ver - 1].message + ")";
+    generateDiff();
+}
+
+function downloadVersionFile(ver) {
+    const content = reconstructVersion(ver);
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const baseName = repo.fileName.replace(/\.[^/.]+$/, "");
+    const extMatch = repo.fileName.match(/\.[^/.]+$/);
+    const ext = extMatch ? extMatch[0] : ".txt";
+    const downloadName = baseName + "_v" + ver + ext;
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function exportHistoryJson() {
+    const exportData = {
+        format: "delta-version-history-v1",
+        exportedAt: new Date().toISOString(),
+        fileName: repo.fileName,
+        baseText: repo.baseText,
+        commits: repo.commits
+    };
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonStr], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "history.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function importHistoryJson(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+            if (typeof parsed.baseText !== "string" || !Array.isArray(parsed.commits)) {
+                alert("無効な履歴JSONファイルです。");
+                return;
+            }
+            repo.fileName = parsed.fileName || "document.txt";
+            repo.baseText = parsed.baseText;
+            repo.commits = parsed.commits;
+
+            const latestVer = repo.commits.length;
+            const latestText = reconstructVersion(latestVer);
+
+            document.getElementById('old-text').value = latestText;
+            document.getElementById('new-text').value = latestText;
+            document.getElementById('file-old-name').textContent = "表示中: v" + latestVer + " (JSON読込)";
+            document.getElementById('file-new-name').textContent = "表示中: v" + latestVer + " (JSON読込)";
+            document.getElementById('diff-title').textContent = "現在の比較結果 (変更前 vs 変更後)";
+
+            currentPage = 1;
+            renderHistoryTable();
+            generateDiff();
+            alert("履歴データを読み込みました（全 " + latestVer + " コミット）。");
+        } catch (err) {
+            alert("JSONの解析に失敗しました: " + err.message);
+        } finally {
+            event.target.value = "";
+        }
+    };
+    reader.readAsText(file);
+}
+
+function resetRepository() {
+    if (repo.commits.length > 0) {
+        if (!confirm("記録されている差分履歴をすべて消去し、現在の「変更前」を初期状態(v0)として再スタートしますか？")) {
+            return;
+        }
+    }
+    repo.baseText = document.getElementById('old-text').value;
+    repo.commits = [];
+    currentPage = 1;
+    document.getElementById('file-old-name').textContent = "表示中: 初期状態 (v0)";
+    renderHistoryTable();
+    generateDiff();
+}
+
+// Diff HTML生成 ＆ 文字コードステータスの描画
+function generateDiff() {
+    const oldStr = document.getElementById('old-text').value;
+    const newStr = document.getElementById('new-text').value;
+    const diffOnly = document.getElementById('diff-only-checkbox').checked;
+    
+    // 文字コードの不一致判定（完全一致するかどうか）
+    const isEncodingMismatch = (fileEncodings.old !== fileEncodings.new);
+    const mismatchClass = isEncodingMismatch ? "encoding-badge mismatch" : "encoding-badge";
+
+    // 比較結果タイトルの右側に文字コード情報を描画
+    const encodingStatusEl = document.getElementById('encoding-status');
+    encodingStatusEl.innerHTML = `
+        <span style="font-size: 12px; font-weight: normal; color: #57606a;">文字コード:</span>
+        <span class="${mismatchClass}" title="変更前の文字コード">変更前: ${escapeHtml(fileEncodings.old)}</span>
+        <span style="font-size: 12px; color: #57606a;">vs</span>
+        <span class="${mismatchClass}" title="変更後の文字コード">変更後: ${escapeHtml(fileEncodings.new)}</span>
+        ${isEncodingMismatch ? '<span style="font-size: 11px; font-weight: bold; color: #cf222e; background: #ffebe9; padding: 2px 6px; border-radius: 4px; border: 1px solid #ff8182;">⚠️ 文字コード不一致</span>' : ''}
+    `;
+
+    const oldLines = oldStr.split(/\r?\n/);
+    const newLines = newStr.split(/\r?\n/);
+    
+    const output = document.getElementById('diff-output');
+    output.innerHTML = '';
+
+    const diffResult = computeLCS(oldLines, newLines);
+
+    let oldLineNum = 1;
+    let newLineNum = 1;
+    let html = '';
+
+    diffResult.forEach(item => {
+        let lineClass = 'diff-unchanged';
+        let sign = ' ';
+        let oldNumStr = '';
+        let newNumStr = '';
+
+        if (item.type === 'equal') {
+            lineClass = 'diff-unchanged';
+            sign = ' ';
+            oldNumStr = oldLineNum++;
+            newNumStr = newLineNum++;
+            if (diffOnly) return;
+        } else if (item.type === 'delete') {
+            lineClass = 'diff-deleted';
+            sign = '-';
+            oldNumStr = oldLineNum++;
+            newNumStr = '';
+        } else if (item.type === 'add') {
+            lineClass = 'diff-added';
+            sign = '+';
+            oldNumStr = '';
+            newNumStr = newLineNum++;
+        }
+
+        html += `
+            <tr class="diff-line ${lineClass}">
+                <td class="diff-num ${oldNumStr === '' ? 'empty' : ''}">${oldNumStr}</td>
+                <td class="diff-num ${newNumStr === '' ? 'empty' : ''}">${newNumStr}</td>
+                <td class="diff-code">${sign} ${escapeHtml(item.value)}</td>
+            </tr>
+        `;
+    });
+
+    output.innerHTML = html;
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+}
+</script>
+
+</body>
+</html>

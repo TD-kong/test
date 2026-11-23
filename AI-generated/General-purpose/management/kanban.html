@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevFlow - IT Professional Kanban Board</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+        }
+        /* Custom scrollbar for columns */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.8);
+        }
+        .drag-over {
+            background-color: rgba(59, 130, 246, 0.1) !important;
+            border: 2px dashed #3b82f6 !important;
+        }
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30 shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <i class="fa-solid fa-kanban text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    DevFlow <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">IT Edition</span>
+                </h1>
+                <p class="text-xs text-slate-400">開発チーム向け高度カンバンツール</p>
+            </div>
+        </div>
+
+        <!-- Project Switcher & Actions -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Project Selector -->
+            <div class="flex items-center bg-slate-900/60 border border-slate-700 rounded-lg px-3 py-1.5">
+                <i class="fa-solid fa-folder-open text-slate-400 mr-2"></i>
+                <select id="projectSelect" class="bg-transparent text-sm font-medium text-slate-200 focus:outline-none cursor-pointer pr-4">
+                    <option value="project-1">Core API Refactoring</option>
+                    <option value="project-2">Mobile App v2.0</option>
+                    <option value="project-3">Infrastructure Migration</option>
+                </select>
+                <button onclick="openNewProjectModal()" class="ml-2 text-slate-400 hover:text-blue-400 transition" title="新規プロジェクト作成">
+                    <i class="fa-solid fa-plus-circle"></i>
+                </button>
+            </div>
+
+            <!-- Theme Toggle -->
+            <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 transition" title="テーマ切り替え">
+                <i class="fa-solid fa-moon" id="themeIcon"></i>
+            </button>
+
+            <!-- Backup & Restore -->
+            <div class="flex items-center bg-slate-700 rounded-lg overflow-hidden border border-slate-600">
+                <button onclick="exportData()" class="px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-600 transition flex items-center gap-1.5 border-r border-slate-600">
+                    <i class="fa-solid fa-download"></i> エクスポート
+                </button>
+                <label class="px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-600 transition flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-upload"></i> インポート
+                    <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+                </label>
+            </div>
+
+            <!-- New Task Button -->
+            <button onclick="openTaskModal()" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-lg text-sm transition shadow-lg shadow-blue-600/25 flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> タスク追加
+            </button>
+        </div>
+    </header>
+
+    <!-- Filter & Search Toolbar -->
+    <section class="bg-slate-800/60 border-b border-slate-700/80 px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+        <!-- Search Bar -->
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                <i class="fa-solid fa-search"></i>
+            </span>
+            <input type="text" id="searchInput" oninput="filterTasks()" placeholder="タイトル、説明、タグで検索..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition">
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Assignee Filter -->
+            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <span class="text-slate-400 text-xs font-medium">担当者:</span>
+                <select id="filterAssignee" onchange="filterTasks()" class="bg-transparent text-slate-200 focus:outline-none cursor-pointer">
+                    <option value="">すべて</option>
+                    <option value="T. Tanaka">T. Tanaka</option>
+                    <option value="A. Sato">A. Sato</option>
+                    <option value="K. Suzuki">K. Suzuki</option>
+                    <option value="M. Takahashi">M. Takahashi</option>
+                </select>
+            </div>
+
+            <!-- Priority Filter -->
+            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <span class="text-slate-400 text-xs font-medium">優先度:</span>
+                <select id="filterPriority" onchange="filterTasks()" class="bg-transparent text-slate-200 focus:outline-none cursor-pointer">
+                    <option value="">すべて</option>
+                    <option value="Critical">Critical</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+            </div>
+
+            <!-- Tag Filter -->
+            <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-sm">
+                <span class="text-slate-400 text-xs font-medium">タグ:</span>
+                <select id="filterTag" onchange="filterTasks()" class="bg-transparent text-slate-200 focus:outline-none cursor-pointer">
+                    <option value="">すべて</option>
+                    <option value="Bug">Bug</option>
+                    <option value="Feature">Feature</option>
+                    <option value="Refactor">Refactor</option>
+                    <option value="DB">DB</option>
+                    <option value="Security">Security</option>
+                </select>
+            </div>
+
+            <button onclick="resetFilters()" class="text-xs text-slate-400 hover:text-slate-200 px-2 py-1 transition" title="フィルタクリア">
+                <i class="fa-solid fa-rotate-right mr-1"></i> リセット
+            </button>
+        </div>
+    </section>
+
+    <!-- Overall Progress Section -->
+    <section class="px-6 py-4 bg-slate-800/30 border-b border-slate-700/50 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto">
+            <div>
+                <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">全体進捗状況</span>
+                <div class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                    <span id="progressPercent">0%</span>
+                    <span class="text-xs font-normal text-slate-400">(<span id="completedCount">0</span> / <span id="totalCount">0</span> タスク完了)</span>
+                </div>
+            </div>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full md:w-96 bg-slate-700 rounded-full h-3 overflow-hidden border border-slate-600">
+            <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-emerald-400 h-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+    </section>
+
+    <!-- Kanban Board Container (6 Columns) -->
+    <main class="flex-1 p-6 overflow-x-auto custom-scrollbar">
+        <div id="kanbanBoard" class="flex gap-6 min-w-[1400px] items-start pb-4">
+            <!-- Columns will be dynamically generated or rendered here -->
+        </div>
+    </main>
+
+    <!-- Task Modal (Create / Edit) -->
+    <div id="taskModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden transform transition-all">
+            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/80">
+                <h3 id="modalTitle" class="text-lg font-semibold text-slate-100">新規タスク追加</h3>
+                <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-200 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <form id="taskForm" onsubmit="handleTaskSubmit(event)" class="p-6 space-y-4">
+                <input type="hidden" id="taskId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">タスクタイトル <span class="text-red-400">*</span></label>
+                    <input type="text" id="taskTitle" required placeholder="例: ユーザー認証APIのJWT検証修正" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">ステータス</label>
+                        <select id="taskStatus" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="backlog">Backlog</option>
+                            <option value="todo">To Do</option>
+                            <option value="inprogress">In Progress</option>
+                            <option value="codereview">Code Review</option>
+                            <option value="testing">Testing</option>
+                            <option value="done">Done</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">担当者</label>
+                        <select id="taskAssignee" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="T. Tanaka">T. Tanaka</option>
+                            <option value="A. Sato">A. Sato</option>
+                            <option value="K. Suzuki">K. Suzuki</option>
+                            <option value="M. Takahashi">M. Takahashi</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">優先度</label>
+                        <select id="taskPriority" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">タグ</label>
+                        <select id="taskTag" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 cursor-pointer">
+                            <option value="Bug">Bug</option>
+                            <option value="Feature">Feature</option>
+                            <option value="Refactor">Refactor</option>
+                            <option value="DB">DB</option>
+                            <option value="Security">Security</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">期限日</label>
+                    <input type="date" id="taskDueDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">詳細説明</label>
+                    <textarea id="taskDescription" rows="3" placeholder="タスクの詳細や仕様要件を記載..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500 custom-scrollbar"></textarea>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
+                    <button type="button" onclick="closeTaskModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 text-slate-300 transition">キャンセル</button>
+                    <button type="submit" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition shadow-lg shadow-blue-600/20">保存する</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Project Modal -->
+    <div id="projectModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/80">
+                <h3 class="text-lg font-semibold text-slate-100">新規プロジェクト追加</h3>
+                <button onclick="closeNewProjectModal()" class="text-slate-400 hover:text-slate-200 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-300 mb-1">プロジェクト名</label>
+                    <input type="text" id="newProjectName" placeholder="例: Cloud Native Architecture" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeNewProjectModal()" class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-700 hover:bg-slate-600 text-slate-300 transition">キャンセル</button>
+                    <button type="button" onclick="createProject()" class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white transition">作成</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 border border-slate-700 text-slate-100 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-24 opacity-0 transition-all duration-300 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastMessage" class="text-sm font-medium">アクションが完了しました</span>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Column Definitions (6 IT Columns)
+        const COLUMNS = [
+            { id: 'backlog', title: 'Backlog', icon: 'fa-box-archive', color: 'border-slate-600 text-slate-400' },
+            { id: 'todo', title: 'To Do', icon: 'fa-list-check', color: 'border-amber-500/50 text-amber-400' },
+            { id: 'inprogress', title: 'In Progress', icon: 'fa-spinner', color: 'border-blue-500/50 text-blue-400' },
+            { id: 'codereview', title: 'Code Review', icon: 'fa-code-pull-request', color: 'border-purple-500/50 text-purple-400' },
+            { id: 'testing', title: 'Testing', icon: 'fa-vial', color: 'border-pink-500/50 text-pink-400' },
+            { id: 'done', title: 'Done', icon: 'fa-circle-check', color: 'border-emerald-500/50 text-emerald-400' }
+        ];
+
+        // Default Mock Data for Demonstration
+        const DEFAULT_DATA = {
+            'project-1': {
+                name: 'Core API Refactoring',
+                tasks: [
+                    { id: 't-101', title: 'REST APIのエンドポイント設計とSwagger定義', status: 'done', assignee: 'T. Tanaka', priority: 'High', tag: 'Feature', dueDate: '2026-10-20', description: 'v2エンドポイントの仕様書をOpenAPI 3.0形式で策定しチームレビューを通す。' },
+                    { id: 't-102', title: 'JWT認証ミドルウェアのセキュリティ強化', status: 'codereview', assignee: 'A. Sato', priority: 'Critical', tag: 'Security', dueDate: '2026-10-25', description: 'リフレッシュトークンのローテーション機構を追加。' },
+                    { id: 't-103', title: 'PostgreSQLのインデックス最適化とスロークエリ改善', status: 'inprogress', assignee: 'K. Suzuki', priority: 'High', tag: 'DB', dueDate: '2026-10-28', description: 'usersテーブルおよびordersテーブルの結合クエリのEXPLAIN検証。' },
+                    { id: 't-104', title: 'Redisセッションストアの冗長化設定', status: 'todo', assignee: 'M. Takahashi', priority: 'Medium', tag: 'Refactor', dueDate: '2026-11-02', description: 'AWS ElastiCacheクラスターモード有効化。' },
+                    { id: 't-105', title: 'Dockerビルドイメージのマルチステージ化による軽量化', status: 'backlog', assignee: 'T. Tanaka', priority: 'Low', tag: 'Refactor', dueDate: '2026-11-10', description: 'Alpineベースイメージに切り替えビルドサイズを削減する。' },
+                    { id: 't-106', title: '単体テストのカバレッジを80%以上に引き上げ', status: 'testing', assignee: 'A. Sato', priority: 'Medium', tag: 'Feature', dueDate: '2026-10-22', description: 'Jestを用いたリポジトリ層のモックテスト追加。' }
+                ]
+            },
+            'project-2': {
+                name: 'Mobile App v2.0',
+                tasks: [
+                    { id: 't-201', title: 'React Nativeプッシュ通知の実装', status: 'inprogress', assignee: 'K. Suzuki', priority: 'High', tag: 'Feature', dueDate: '2026-10-30', description: 'FCMとAPNsの統合ハンドリング。' }
+                ]
+            },
+            'project-3': {
+                name: 'Infrastructure Migration',
+                tasks: [
+                    { id: 't-301', title: 'TerraformによるAWSインフラのコード化', status: 'todo', assignee: 'M. Takahashi', priority: 'Critical', tag: 'Security', dueDate: '2026-11-15', description: 'VPC, ECS, RDSのIaC構築。' }
+                ]
+            }
+        };
+
+        // State Management
+        let appData = {};
+        let currentProjectId = 'project-1';
+        let draggedTaskId = null;
+
+        // Initialize App on Load
+        window.onload = function() {
+            loadFromLocalStorage();
+            initProjectSelector();
+            renderBoard();
+            updateProgress();
+            
+            // Sync theme initialization
+            if (document.documentElement.classList.contains('dark')) {
+                document.getElementById('themeIcon').className = "fa-solid fa-sun";
+            } else {
+                document.getElementById('themeIcon').className = "fa-solid fa-moon";
+            }
+        };
+
+        // LocalStorage Management
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('devflow_kanban_data');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch(e) {
+                    appData = DEFAULT_DATA;
+                }
+            } else {
+                appData = DEFAULT_DATA;
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('devflow_kanban_data', JSON.stringify(appData));
+        }
+
+        // Project Management
+        function initProjectSelector() {
+            const select = document.getElementById('projectSelect');
+            select.innerHTML = '';
+            for (const [id, proj] of Object.entries(appData)) {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = proj.name;
+                if (id === currentProjectId) opt.selected = true;
+                select.appendChild(opt);
+            }
+            select.onchange = (e) => {
+                currentProjectId = e.target.value;
+                renderBoard();
+                updateProgress();
+            };
+        }
+
+        function openNewProjectModal() {
+            document.getElementById('newProjectName').value = '';
+            document.getElementById('projectModal').classList.remove('hidden');
+        }
+
+        function closeNewProjectModal() {
+            document.getElementById('projectModal').classList.add('hidden');
+        }
+
+        function createProject() {
+            const name = document.getElementById('newProjectName').value.trim();
+            if (!name) {
+                showToast('プロジェクト名を入力してください', 'error');
+                return;
+            }
+            const newId = 'project-' + Date.now();
+            appData[newId] = { name: name, tasks: [] };
+            currentProjectId = newId;
+            saveToLocalStorage();
+            initProjectSelector();
+            renderBoard();
+            updateProgress();
+            closeNewProjectModal();
+            showToast('新しいプロジェクトを作成しました');
+        }
+
+        // Render Kanban Board
+        function renderBoard() {
+            const boardContainer = document.getElementById('kanbanBoard');
+            boardContainer.innerHTML = '';
+
+            const currentTasks = appData[currentProjectId] ? appData[currentProjectId].tasks : [];
+
+            // Get filter values
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const filterAssignee = document.getElementById('filterAssignee').value;
+            const filterPriority = document.getElementById('filterPriority').value;
+            const filterTag = document.getElementById('filterTag').value;
+
+            COLUMNS.forEach(col => {
+                // Filter tasks for this column
+                const colTasks = currentTasks.filter(task => {
+                    if (task.status !== col.id) return false;
+                    
+                    // Search query match
+                    if (searchQuery) {
+                        const matchText = (task.title + ' ' + (task.description || '') + ' ' + task.tag).toLowerCase();
+                        if (!matchText.includes(searchQuery)) return false;
+                    }
+                    // Assignee match
+                    if (filterAssignee && task.assignee !== filterAssignee) return false;
+                    // Priority match
+                    if (filterPriority && task.priority !== filterPriority) return false;
+                    // Tag match
+                    if (filterTag && task.tag !== filterTag) return false;
+
+                    return true;
+                });
+
+                const columnEl = document.createElement('div');
+                columnEl.className = 'w-80 flex-shrink-0 bg-slate-800/80 border border-slate-700/80 rounded-2xl flex flex-col max-h-[calc(100vh-250px)] shadow-lg';
+                
+                // Column Header
+                const headerHTML = `
+                    <div class="p-4 border-b border-slate-700/60 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid ${col.icon} ${col.color}"></i>
+                            <h2 class="font-semibold text-sm text-slate-200">${col.title}</h2>
+                            <span class="bg-slate-700 text-slate-300 text-xs font-bold px-2 py-0.5 rounded-full">${colTasks.length}</span>
+                        </div>
+                        <button onclick="openTaskModalForStatus('${col.id}')" class="text-slate-400 hover:text-blue-400 transition p-1" title="この列にタスク追加">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Task List Container (Drop Zone)
+                const listEl = document.createElement('div');
+                listEl.className = 'p-3 flex-1 overflow-y-auto custom-scrollbar space-y-3 min-h-[200px]';
+                listEl.dataset.status = col.id;
+                
+                // Drag & Drop event listeners
+                listEl.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    listEl.classList.add('drag-over');
+                });
+                listEl.addEventListener('dragleave', () => {
+                    listEl.classList.remove('drag-over');
+                });
+                listEl.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    listEl.classList.remove('drag-over');
+                    if (draggedTaskId) {
+                        moveTaskStatus(draggedTaskId, col.id);
+                    }
+                });
+
+                if (colTasks.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="h-28 border-2 border-dashed border-slate-700/60 rounded-xl flex flex-col items-center justify-center text-slate-500 text-xs">
+                            <i class="fa-solid fa-folder-open mb-1 text-base"></i>
+                            タスクなし
+                        </div>
+                    `;
+                } else {
+                    colTasks.forEach(task => {
+                        listEl.appendChild(createTaskCard(task));
+                    });
+                }
+
+                columnEl.innerHTML = headerHTML;
+                columnEl.appendChild(listEl);
+                boardContainer.appendChild(columnEl);
+            });
+        }
+
+        // Create Task Card Element
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'bg-slate-900 border border-slate-700 hover:border-slate-600 rounded-xl p-3.5 shadow transition-all cursor-pointer group relative';
+            card.draggable = true;
+
+            // Drag events
+            card.addEventListener('dragstart', () => {
+                draggedTaskId = task.id;
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragend', () => {
+                draggedTaskId = null;
+                card.classList.remove('dragging');
+            });
+
+            // Click to edit
+            card.addEventListener('click', (e) => {
+                // Prevent opening if clicking delete button
+                if (e.target.closest('.delete-btn')) return;
+                openTaskModal(task.id);
+            });
+
+            // Priority badge styling
+            let priorityClass = 'bg-slate-800 text-slate-300 border-slate-700';
+            if (task.priority === 'Critical') priorityClass = 'bg-red-500/10 text-red-400 border-red-500/30';
+            else if (task.priority === 'High') priorityClass = 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+            else if (task.priority === 'Medium') priorityClass = 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+            else if (task.priority === 'Low') priorityClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+
+            // Tag badge styling
+            let tagClass = 'bg-slate-800 text-slate-300';
+            if (task.tag === 'Bug') tagClass = 'bg-rose-500/20 text-rose-300';
+            else if (task.tag === 'Feature') tagClass = 'bg-emerald-500/20 text-emerald-300';
+            else if (task.tag === 'Refactor') tagClass = 'bg-cyan-500/20 text-cyan-300';
+            else if (task.tag === 'DB') tagClass = 'bg-amber-500/20 text-amber-300';
+            else if (task.tag === 'Security') tagClass = 'bg-indigo-500/20 text-indigo-300';
+
+            // Due date check
+            let dueDateHtml = '';
+            if (task.dueDate) {
+                const isOverdue = new Date(task.dueDate) < new Date() && task.status !== 'done';
+                dueDateHtml = `
+                    <span class="flex items-center gap-1 text-xs ${isOverdue ? 'text-red-400 font-semibold' : 'text-slate-400'}">
+                        <i class="fa-regular fa-calendar"></i> ${task.dueDate}
+                    </span>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <span class="text-[10px] font-semibold px-2 py-0.5 rounded border ${priorityClass}">${task.priority}</span>
+                    <button onclick="deleteTask(event, '${task.id}')" class="delete-btn text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition p-1" title="タスク削除">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+                <h4 class="text-xs font-semibold text-slate-100 mb-2 leading-relaxed line-clamp-2">${escapeHTML(task.title)}</h4>
+                ${task.description ? `<p class="text-[11px] text-slate-400 mb-3 line-clamp-2">${escapeHTML(task.description)}</p>` : ''}
+                <div class="flex items-center justify-between pt-2 border-t border-slate-800 text-[11px]">
+                    <span class="px-2 py-0.5 rounded font-medium ${tagClass}">${task.tag}</span>
+                    ${dueDateHtml}
+                </div>
+                <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-user-circle"></i> ${task.assignee}</span>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Task Modal Handlers
+        function openTaskModal(taskId = null) {
+            const modal = document.getElementById('taskModal');
+            const modalTitle = document.getElementById('modalTitle');
+            document.getElementById('taskForm').reset();
+            document.getElementById('taskId').value = '';
+
+            if (taskId) {
+                modalTitle.textContent = 'タスク編集';
+                const task = appData[currentProjectId].tasks.find(t => t.id === taskId);
+                if (task) {
+                    document.getElementById('taskId').value = task.id;
+                    document.getElementById('taskTitle').value = task.title;
+                    document.getElementById('taskStatus').value = task.status;
+                    document.getElementById('taskAssignee').value = task.assignee;
+                    document.getElementById('taskPriority').value = task.priority;
+                    document.getElementById('taskTag').value = task.tag;
+                    document.getElementById('taskDueDate').value = task.dueDate || '';
+                    document.getElementById('taskDescription').value = task.description || '';
+                }
+            } else {
+                modalTitle.textContent = '新規タスク追加';
+                document.getElementById('taskDueDate').value = new Date().toISOString().split('T')[0];
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function openTaskModalForStatus(status) {
+            openTaskModal();
+            document.getElementById('taskStatus').value = status;
+        }
+
+        function closeTaskModal() {
+            document.getElementById('taskModal').classList.add('hidden');
+        }
+
+        function handleTaskSubmit(e) {
+            e.preventDefault();
+            const taskId = document.getElementById('taskId').value;
+            const title = document.getElementById('taskTitle').value.trim();
+            const status = document.getElementById('taskStatus').value;
+            const assignee = document.getElementById('taskAssignee').value;
+            const priority = document.getElementById('taskPriority').value;
+            const tag = document.getElementById('taskTag').value;
+            const dueDate = document.getElementById('taskDueDate').value;
+            const description = document.getElementById('taskDescription').value.trim();
+
+            if (!title) return;
+
+            const tasks = appData[currentProjectId].tasks;
+
+            if (taskId) {
+                // Edit existing
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.title = title;
+                    task.status = status;
+                    task.assignee = assignee;
+                    task.priority = priority;
+                    task.tag = tag;
+                    task.dueDate = dueDate;
+                    task.description = description;
+                    showToast('タスクを更新しました');
+                }
+            } else {
+                // Create new
+                const newTask = {
+                    id: 't-' + Date.now(),
+                    title,
+                    status,
+                    assignee,
+                    priority,
+                    tag,
+                    dueDate,
+                    description
+                };
+                tasks.push(newTask);
+                showToast('タスクを追加しました');
+            }
+
+            saveToLocalStorage();
+            renderBoard();
+            updateProgress();
+            closeTaskModal();
+        }
+
+        function moveTaskStatus(taskId, newStatus) {
+            const tasks = appData[currentProjectId].tasks;
+            const task = tasks.find(t => t.id === taskId);
+            if (task && task.status !== newStatus) {
+                task.status = newStatus;
+                saveToLocalStorage();
+                renderBoard();
+                updateProgress();
+                showToast('ステータスを更新しました');
+            }
+        }
+
+        function deleteTask(e, taskId) {
+            e.stopPropagation();
+            if (confirm('このタスクを削除してもよろしいですか？')) {
+                const tasks = appData[currentProjectId].tasks;
+                appData[currentProjectId].tasks = tasks.filter(t => t.id !== taskId);
+                saveToLocalStorage();
+                renderBoard();
+                updateProgress();
+                showToast('タスクを削除しました');
+            }
+        }
+
+        // Filtering & Progress
+        function filterTasks() {
+            renderBoard();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterAssignee').value = '';
+            document.getElementById('filterPriority').value = '';
+            document.getElementById('filterTag').value = '';
+            renderBoard();
+        }
+
+        function updateProgress() {
+            const tasks = appData[currentProjectId] ? appData[currentProjectId].tasks : [];
+            const total = tasks.length;
+            const completed = tasks.filter(t => t.status === 'done').length;
+            const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
+        }
+
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                icon.className = "fa-solid fa-moon";
+                showToast('ライトモードに切り替えました');
+            } else {
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-sun";
+                showToast('ダークモードに切り替えました');
+            }
+        }
+
+        // Import & Export JSON Data
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `devflow_kanban_backup_${currentProjectId}_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast('データをバックアップとしてエクスポートしました');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (typeof imported === 'object' && imported !== null) {
+                        appData = imported;
+                        saveToLocalStorage();
+                        initProjectSelector();
+                        renderBoard();
+                        updateProgress();
+                        showToast('データを正常にインポートしました');
+                    } else {
+                        throw new Error('Invalid format');
+                    }
+                } catch(err) {
+                    showToast('無効なJSONファイルです', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Toast Notification Helper
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = message;
+            if (type === 'error') {
+                toastIcon.className = 'fa-solid fa-circle-exclamation text-red-400';
+            } else {
+                toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
+            }
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-24', 'opacity-0');
+            }, 3000);
+        }
+
+        // Escape HTML for safety
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
