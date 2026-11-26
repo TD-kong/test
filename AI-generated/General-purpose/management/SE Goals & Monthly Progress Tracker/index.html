@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6fb">
+  <title>SE目標・月次進捗トラッカー</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='3' width='18' height='18' rx='5' fill='%234f46e5'/%3E%3Cpath d='M7 15l3-4 3 2 4-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/storage.js" defer></script>
+  <script src="js/ui.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span>SE</span></div>
+        <div><strong>SE Tracker</strong><small>目標・月次進捗</small></div>
+      </div>
+      <nav class="main-nav" aria-label="メインメニュー">
+        <button class="nav-item active" data-page="dashboard"><span class="nav-icon" data-icon="grid"></span>ダッシュボード</button>
+        <button class="nav-item" data-page="long"><span class="nav-icon" data-icon="target"></span>中長期目標</button>
+        <button class="nav-item" data-page="short"><span class="nav-icon" data-icon="check-square"></span>短期目標・進捗</button>
+        <button class="nav-item" data-page="monthly"><span class="nav-icon" data-icon="calendar"></span>月次報告</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="offline-note"><span class="online-dot"></span><span>ローカル保存・オフライン</span></div>
+        <button class="nav-item" id="tutorialBtn"><span class="nav-icon" data-icon="help"></span>使い方ガイド</button>
+        <button class="nav-item" id="settingsBtn"><span class="nav-icon" data-icon="settings"></span>設定・データ管理</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button mobile-menu" id="mobileMenuBtn" aria-label="メニュー"><span data-icon="menu"></span></button>
+          <div><div class="eyebrow" id="pageEyebrow">OVERVIEW</div><h1 id="pageTitle">ダッシュボード</h1></div>
+        </div>
+        <div class="topbar-actions">
+          <span class="save-status" id="saveStatus"><span class="save-dot"></span>自動保存</span>
+          <button class="button button-primary" id="quickAddBtn"><span data-icon="plus"></span>目標を追加</button>
+        </div>
+      </header>
+
+      <section class="page active" id="page-dashboard">
+        <div class="welcome-row">
+          <div><h2>目標の現在地を確認しましょう</h2><p class="muted">中長期の方向性と、今月の行動をひと目で把握できます。</p></div>
+          <div class="month-chip"><span data-icon="calendar"></span><span id="dashboardMonth"></span></div>
+        </div>
+        <div class="stats-grid" id="dashboardStats"></div>
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-heading"><div><h3>短期目標の進捗</h3><p>年度計画に対する現在の実績</p></div><button class="text-button" data-goto="short">すべて見る <span data-icon="arrow-right"></span></button></div>
+            <div id="dashboardShortList" class="compact-list"></div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading"><div><h3>中長期目標</h3><p>目指すキャリア・役割</p></div><button class="text-button" data-goto="long">一覧へ <span data-icon="arrow-right"></span></button></div>
+            <div id="dashboardLongList" class="goal-mini-list"></div>
+          </section>
+        </div>
+        <section class="panel monthly-prompt">
+          <div class="prompt-icon" data-icon="notebook"></div>
+          <div class="prompt-copy"><h3>今月の振り返りを記録する</h3><p>成果・課題・来月の計画を整理して、月次報告に転記できます。</p></div>
+          <button class="button button-secondary" data-goto="monthly">月次報告を作成 <span data-icon="arrow-right"></span></button>
+        </section>
+      </section>
+
+      <section class="page" id="page-long">
+        <div class="page-toolbar">
+          <div class="filter-row"><div class="search-wrap"><span data-icon="search"></span><input id="longSearch" type="search" placeholder="目標を検索"></div>
+            <select id="longHorizonFilter" aria-label="期間フィルター"><option value="all">すべての期間</option><option value="1y">1年後</option><option value="3y">3年後</option><option value="5y">5年後</option></select>
+            <select id="longStatusFilter" aria-label="状態フィルター"><option value="all">すべての状態</option><option value="not_started">未着手</option><option value="in_progress">進行中</option><option value="completed">達成</option></select>
+          </div>
+          <button class="button button-primary" id="addLongBtn"><span data-icon="plus"></span>中長期目標</button>
+        </div>
+        <div class="section-summary" id="longSummary"></div>
+        <div class="goal-grid" id="longGoalList"></div>
+      </section>
+
+      <section class="page" id="page-short">
+        <div class="page-toolbar short-toolbar">
+          <div class="filter-row"><div class="search-wrap"><span data-icon="search"></span><input id="shortSearch" type="search" placeholder="短期目標・達成基準を検索"></div>
+            <select id="shortLinkFilter" aria-label="紐づく中長期目標"><option value="all">すべての中長期目標</option><option value="unlinked">未分類</option></select>
+            <select id="shortStatusFilter" aria-label="状態フィルター"><option value="all">すべての状態</option><option value="not_started">未着手</option><option value="in_progress">進行中</option><option value="completed">達成</option></select>
+          </div>
+          <button class="button button-primary" id="addShortBtn"><span data-icon="plus"></span>短期目標</button>
+        </div>
+        <div class="progress-summary panel" id="shortSummary"></div>
+        <div id="shortGoalList" class="short-goal-list"></div>
+      </section>
+
+      <section class="page" id="page-monthly">
+        <div class="monthly-layout">
+          <section class="panel report-editor">
+            <div class="report-heading"><div><div class="eyebrow">MONTHLY REVIEW</div><h2>月次報告</h2><p class="muted">今月の成果と来月の計画をまとめます。</p></div>
+              <div class="month-control"><button class="icon-button" id="prevMonthBtn" aria-label="前月"><span data-icon="chevron-left"></span></button><input type="month" id="reportMonth"><button class="icon-button" id="nextMonthBtn" aria-label="翌月"><span data-icon="chevron-right"></span></button></div>
+            </div>
+            <div class="report-fields">
+              <label><span class="field-title"><span class="field-number">01</span>今月やったこと <small>成果・対応・学んだこと</small></span><textarea id="doneThisMonth" rows="7" placeholder="例：担当機能の設計・実装を完了。障害調査ではログの見方を習得した。"></textarea></label>
+              <label><span class="field-title"><span class="field-number">02</span>来月やること <small>具体的な行動・期限</small></span><textarea id="planNextMonth" rows="6" placeholder="例：結合テストを完了し、レビュー指摘を翌営業日までに対応する。"></textarea></label>
+              <label><span class="field-title"><span class="field-number">03</span>相談したいこと <small>課題・支援してほしいこと</small></span><textarea id="consultation" rows="4" placeholder="例：設計レビューの観点について、先輩に相談したい。"></textarea></label>
+            </div>
+            <div class="report-footer"><span class="muted" id="reportSavedAt">入力内容は自動保存されます</span><button class="button button-primary" id="copyReportBtn"><span data-icon="copy"></span>報告文をコピー</button></div>
+          </section>
+          <aside class="panel report-side">
+            <div class="panel-heading"><div><h3>報告のヒント</h3><p>伝わりやすい月次報告のポイント</p></div></div>
+            <ul class="tips-list"><li><span class="tip-check" data-icon="check"></span><div><strong>事実と成果を書く</strong><p>「頑張った」より、完了した作業や結果を具体的に。</p></div></li><li><span class="tip-check" data-icon="check"></span><div><strong>次月の行動を明確に</strong><p>作業・期限・達成条件をできるだけセットで。</p></div></li><li><span class="tip-check" data-icon="check"></span><div><strong>相談は早めに共有</strong><p>困りごとだけでなく、自分の考えも添える。</p></div></li></ul>
+            <div class="report-transfer"><h4>目標進捗から転記</h4><p>短期目標の今月の実績を、報告文の下書きに追加できます。</p><button class="button button-secondary button-full" id="transferProgressBtn">実績を下書きに追加 <span data-icon="arrow-down"></span></button></div>
+            <div class="report-history"><h4>保存済み月次報告</h4><div id="reportHistory"></div></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-header"><h2 id="modalTitle">目標を追加</h2><button class="icon-button" id="modalCloseBtn" aria-label="閉じる"><span data-icon="x"></span></button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></section>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+  <div class="tutorial-overlay" id="tutorialOverlay" hidden><div class="tutorial-card"><button class="icon-button tutorial-close" id="tutorialCloseBtn" aria-label="閉じる"><span data-icon="x"></span></button><div class="tutorial-step" id="tutorialStep"></div><div class="tutorial-actions"><button class="button button-secondary" id="tutorialSkipBtn">スキップ</button><button class="button button-primary" id="tutorialNextBtn">次へ</button></div></div></div>
+</body>
+</html>

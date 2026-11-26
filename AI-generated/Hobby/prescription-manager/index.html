@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>処方箋管理 | お薬手帳＋処方箋控え</title>
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+<symbol id="i-card" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4 8 8 0 1020 14.5z"/></symbol>
+<symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1-1.5 2M12 17h.01"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4"/></symbol>
+<symbol id="i-hospital" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></symbol>
+<symbol id="i-pill" viewBox="0 0 24 24"><rect x="2.5" y="8.5" width="19" height="7" rx="3.5" transform="rotate(-40 12 12)"/><path d="M9 9l6 6"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3L12 4zM12 10v4M12 17h.01"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-arrup" viewBox="0 0 24 24"><path d="M6 14l6-6 6 6"/></symbol>
+<symbol id="i-arrdn" viewBox="0 0 24 24"><path d="M6 10l6 6 6-6"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></symbol>
+</defs></svg>
+
+<header class="top"><div class="wrap bar">
+  <h1 class="brand"><img src="assets/icon.svg" alt="" width="32" height="32"><span>処方箋管理</span></h1>
+  <div class="tools">
+    <button class="btn icon" id="bView" aria-label="表示切替"></button>
+    <button class="btn icon" id="bTheme" aria-label="テーマ切替"></button>
+    <button class="btn icon" id="bHelp" aria-label="使い方"></button>
+    <button class="btn icon" id="bImport" aria-label="JSONを読み込む"></button>
+    <button class="btn icon" id="bExport" aria-label="JSONを書き出す"></button>
+    <button class="btn icon" id="bSet" aria-label="設定"></button>
+    <button class="btn primary desk" id="bAdd"></button>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <div id="backup" class="banner" role="status" hidden></div>
+  <nav id="summary" class="summary" aria-label="ステータスで絞り込み"></nav>
+  <div class="filters">
+    <label class="search"><span class="sr">検索</span><span id="sIco"></span><input id="q" type="search" placeholder="服用者・医療機関・薬局・薬品名などで検索" autocomplete="off"></label>
+    <label><span class="sr">服用者</span><select id="fRec"></select></label>
+    <label><span class="sr">並び替え</span><select id="fSort"><option value="new">処方日: 新しい順</option><option value="old">処方日: 古い順</option><option value="end">終了予定日: 近い順</option></select></label>
+    <button class="btn" id="bPurge" hidden></button>
+  </div>
+  <p id="count" class="muted" aria-live="polite"></p>
+  <section id="list" aria-live="polite"></section>
+  <section id="empty" class="empty" hidden></section>
+</main>
+
+<button class="fab" id="bFab" aria-label="新規処方箋を登録"></button>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="file" accept="application/json,.json" hidden>
+
+<datalist id="dlRec"></datalist><datalist id="dlClinic"></datalist><datalist id="dlPharm"></datalist><datalist id="dlDept"></datalist><datalist id="dlMed"></datalist><datalist id="dlUsage"></datalist>
+
+<dialog id="dForm" aria-labelledby="fTitle" class="sheet">
+  <form id="form" novalidate>
+    <div class="dhead"><h2 id="fTitle"></h2><button type="button" class="btn icon" id="fClose" aria-label="閉じる"></button></div>
+    <div class="dbody">
+      <p id="fErr" class="err" role="alert" hidden></p>
+      <div class="grid">
+        <label>服用者 <b class="req">必須</b><input name="recipient" list="dlRec" maxlength="60" required></label>
+        <label>処方日 <b class="req">必須</b><input name="prescribedDate" type="date" required></label>
+        <label>処方日数 <b class="req">必須</b><input name="daysSupply" type="number" min="1" max="3650" step="1" inputmode="numeric" required></label>
+        <label class="chk"><input name="isDispensed" type="checkbox"> 調剤済み</label>
+        <label>医療機関名 <b class="req">必須</b><input name="clinicName" list="dlClinic" maxlength="120" required></label>
+        <label>診療科<input name="department" list="dlDept" maxlength="60"></label>
+        <label>薬局名<input name="pharmacyName" list="dlPharm" maxlength="120"></label>
+        <label>参考URL (http/https)<input name="referenceUrl" type="url" inputmode="url" maxlength="500"></label>
+        <label class="full">メモ<textarea name="memo" rows="2" maxlength="1000"></textarea></label>
+      </div>
+      <h3>薬剤</h3>
+      <div id="meds"></div>
+      <button type="button" class="btn" id="bAddMed"></button>
+    </div>
+    <div class="dfoot"><button type="button" class="btn" id="fCancel">キャンセル</button><button type="submit" class="btn primary">保存する</button></div>
+  </form>
+</dialog>
+
+<dialog id="dConfirm" aria-labelledby="cMsg"><div class="dbody"><p id="cMsg"></p></div><div class="dfoot" id="cBtns"></div></dialog>
+
+<dialog id="dHelp" aria-labelledby="hTitle" class="sheet"><div class="dhead"><h2 id="hTitle">使い方</h2><button class="btn icon" id="hClose" aria-label="閉じる"></button></div>
+  <div class="dbody"><p class="muted" id="hStep"></p><h3 id="hH"></h3><p id="hP"></p></div>
+  <div class="dfoot"><button class="btn" id="hPrev">前へ</button><button class="btn primary" id="hNext">次へ</button></div></dialog>
+
+<dialog id="dSet" aria-labelledby="sTitle" class="sheet"><div class="dhead"><h2 id="sTitle">設定・管理</h2><button class="btn icon" id="sClose" aria-label="閉じる"></button></div>
+  <div class="dbody" id="sBody"></div></dialog>
+
+<script defer src="js/utils.js"></script>
+<script defer src="js/storage.js"></script>
+<script defer src="js/app.js"></script>
+</body>
+</html>
