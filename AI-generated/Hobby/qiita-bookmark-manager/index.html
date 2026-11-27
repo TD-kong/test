@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>Qiita専用ブックマーク</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%2355c500'/%3E%3Ctext x='20' y='28' font-size='25' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EQ%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/storage.js"></script><script defer src="js/qiita-api.js"></script><script defer src="js/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+ <div class="brand"><span class="mark">Q</span><div><b>Qiita Bookmarks</b><small>記事をためて、読み進める。</small></div></div>
+ <div class="head-actions"><button id="themeBtn" class="icon-btn" aria-label="テーマ切替">☼</button><button id="helpBtn" class="icon-btn" aria-label="使い方">?</button><button id="backupBtn" class="btn ghost">バックアップ</button></div>
+</header>
+<main>
+<section class="quick panel" id="quickPanel">
+ <div class="section-head"><div><h1>記事を追加</h1><p>Qiita記事URLを貼り付けるだけ</p></div><span class="tiny">API取得 / 手動登録対応</span></div>
+ <div class="quick-row"><input id="quickUrl" type="url" placeholder="https://qiita.com/user/items/xxxxxxxxxxxxxxxxxxxx" aria-label="Qiita記事URL"><button id="addUrlBtn" class="btn primary">＋ 登録</button></div>
+ <div id="quickMsg" class="message" aria-live="polite"></div>
+</section>
+<section class="toolbar">
+ <div class="search-wrap"><span>⌕</span><input id="search" placeholder="タイトル・メモ・タグ・著者を検索" aria-label="検索"><kbd>/</kbd></div>
+ <div class="toolbar-actions">
+  <select id="statusFilter" aria-label="ステータス"><option value="all">すべて</option><option value="unread">未読</option><option value="reading">読書中</option><option value="done">読了</option><option value="pinned">お気に入り</option></select>
+  <select id="sort" aria-label="並び順"><option value="new">登録新しい順</option><option value="old">登録古い順</option><option value="updated">更新順</option><option value="likes">LGTM数順</option><option value="title">タイトル昇順</option></select>
+  <button id="tagToggle" class="btn ghost">タグ絞込</button>
+  <button id="viewBtn" class="btn ghost" aria-pressed="false">☷ リスト</button>
+ </div>
+</section>
+<section id="tagPanel" class="tag-panel panel hidden"><div class="tag-head"><b>タグ絞り込み</b><label><input type="radio" name="tagMode" value="and" checked> AND</label><label><input type="radio" name="tagMode" value="or"> OR</label></div><div id="tagChoices" class="tag-choices"></div></section>
+<section class="list-head"><div><b id="resultCount">0件</b><span id="selectedCount" class="muted"></span></div><div class="bulk-actions"><button id="selectModeBtn" class="btn ghost">一括選択</button><select id="bulkStatus" class="hidden"><option value="">ステータス変更</option><option value="unread">未読</option><option value="reading">読書中</option><option value="done">読了</option></select><button id="bulkTagBtn" class="btn ghost hidden">タグ追加</button><button id="bulkDeleteBtn" class="btn danger hidden">一括削除</button></div></section>
+<section id="items" class="items"></section>
+<section id="empty" class="empty panel hidden"><div class="empty-icon">▤</div><h2 id="emptyTitle">まだ記事がありません</h2><p id="emptyText">上のURL登録欄からQiita記事を追加しましょう。</p><button id="sampleBtn" class="btn primary">サンプル3件を読み込む</button><button id="resetFilterBtn" class="btn ghost hidden">フィルタをすべてリセット</button></section>
+<footer><span>ローカル保存 · 外部サーバー不要</span><span id="storageInfo">保存データを確認中</span><button id="resetBtn" class="text-btn">全データリセット</button></footer>
+</main>
+<div id="modalLayer" class="modal-layer hidden" role="presentation">
+ <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <header class="modal-head"><div><h2 id="modalTitle">記事の編集</h2><p>内容を編集して保存します</p></div><button id="modalClose" class="icon-btn" aria-label="閉じる">×</button></header>
+  <form id="editForm">
+   <input type="hidden" id="editId">
+   <label>Qiita記事URL <input id="editUrl" type="url" required></label>
+   <label>タイトル <input id="editTitle" maxlength="300" required><small class="counter" id="titleCount">0 / 300</small></label>
+   <div class="form-grid"><label>著者 <input id="editAuthor" maxlength="100"></label><label>LGTM数 <input id="editLikes" type="number" min="0"></label></div>
+   <label>タグ（カンマ区切り・最大20件） <input id="editTags" maxlength="700" placeholder="Java, Oracle, Qiita"><small class="counter" id="tagCount">0 / 20</small></label>
+   <div class="form-grid"><label>カテゴリ <input id="editCategory" maxlength="100"></label><label>ステータス <select id="editStatus"><option value="unread">未読</option><option value="reading">読書中</option><option value="done">読了</option></select></label></div>
+   <label>メモ <textarea id="editMemo" rows="5" maxlength="10000" placeholder="あとで読みたいポイントなど"></textarea><small class="counter" id="memoCount">0 / 10,000</small></label>
+   <label class="checkline"><input id="editPinned" type="checkbox"> お気に入り（ピン留め）</label>
+   <div class="modal-actions"><button type="button" id="cancelEdit" class="btn ghost">キャンセル</button><button type="submit" class="btn primary">保存する</button></div>
+  </form>
+ </section>
+</div>
+<div id="toast" class="toast hidden" role="status"></div>
+<div id="tutorial" class="tutorial hidden"><div class="tutorial-card"><span id="tourStep" class="tiny"></span><h3 id="tourTitle"></h3><p id="tourText"></p><div><button id="tourSkip" class="btn ghost">終了</button><button id="tourNext" class="btn primary">次へ</button></div></div></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+</body></html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>勤怠管理ツール</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='none' stroke='%230e8b78' stroke-width='2'/%3E%3Cpath d='M12 6v6l4 2' fill='none' stroke='%230e8b78' stroke-width='2'/%3E%3Cpath d='m7 17 2 2 5-5' fill='none' stroke='%230e8b78' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body>
+<header class="app-header">
+ <div class="brand"><span class="brand-mark" aria-hidden="true">◷</span><div><h1>勤怠管理</h1><small>Attendance Tracker</small></div></div>
+ <div class="header-actions">
+  <button class="icon-btn" id="themeBtn" aria-label="テーマ切替" title="テーマ切替" data-icon="moon"></button>
+  <button class="icon-btn" id="viewBtn" aria-label="表示切替" title="テーブル／カード切替" data-icon="layout-grid"></button>
+  <button class="icon-btn" id="helpBtn" aria-label="使い方" title="使い方" data-icon="help-circle"></button>
+  <button class="icon-btn" id="settingsBtn" aria-label="設定" title="設定" data-icon="settings"></button>
+ </div>
+</header>
+<div id="notice" class="notice" role="status" hidden></div>
+<main class="container">
+ <section class="quick-bar" aria-label="クイック打刻">
+  <div class="quick-copy"><strong>今日の打刻</strong><span id="todayLabel"></span></div>
+  <div class="quick-actions"><button class="btn btn-primary" id="clockInBtn" data-icon="log-in">出勤打刻</button><button class="btn btn-dark" id="clockOutBtn" data-icon="log-out">退勤打刻</button><button class="btn btn-outline" id="newBtn" data-icon="plus">勤怠を登録</button></div>
+ </section>
+ <section class="summary-grid" id="summary"></section>
+ <section class="panel">
+  <div class="month-toolbar">
+   <div class="month-nav"><button class="icon-btn" id="prevMonth" aria-label="前月" data-icon="chevron-left"></button><input type="month" id="monthPicker" aria-label="対象年月"><button class="icon-btn" id="nextMonth" aria-label="翌月" data-icon="chevron-right"></button><button class="btn btn-small btn-outline" id="thisMonthBtn">今月</button></div>
+   <div class="toolbar-actions"><button class="btn btn-small btn-outline" id="bulkBtn" data-icon="calendar-check">平日一括入力</button><button class="btn btn-small btn-outline" id="csvBtn" data-icon="file-spreadsheet">CSV</button><button class="btn btn-small btn-outline" id="exportBtn" data-icon="download">JSON出力</button><button class="btn btn-small btn-outline" id="importBtn" data-icon="upload">JSON復元</button><input type="file" id="importFile" accept=".json,application/json" hidden></div>
+  </div>
+  <div class="filter-row"><select id="statusFilter" aria-label="勤務区分"><option value="">すべての勤務区分</option></select><input id="keyword" type="search" placeholder="作業メモを検索" aria-label="作業メモを検索"><span class="count" id="recordCount"></span><button class="btn btn-small btn-danger-outline" id="deleteSelectedBtn" disabled>選択行を削除</button></div>
+  <div id="records" class="records"></div>
+  <div id="emptyState" class="empty" hidden><div class="empty-icon">◷</div><h2>この月の勤怠データはありません</h2><p>サンプルデータを入れて、集計や表示を試せます。</p><div class="empty-actions"><button class="btn btn-primary" id="sampleBtn">今月分のサンプルデータを投入</button><button class="btn btn-outline" id="emptyNewBtn">最初の勤怠を登録</button></div></div>
+ </section>
+ <footer>データはこのブラウザ内に保存されます。定期的にJSONバックアップを保存してください。</footer>
+</main>
+<div class="mobile-action-bar"><button class="btn btn-primary" id="mobileIn">出勤</button><button class="btn btn-dark" id="mobileOut">退勤</button><button class="btn btn-outline" id="mobileNew">＋ 登録</button></div>
+
+<dialog id="recordDialog" class="modal">
+ <form id="recordForm" method="dialog" novalidate>
+  <div class="modal-head"><div><h2 id="recordDialogTitle">勤怠を登録</h2><p>日付ごとに1件の勤怠を管理します。</p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+  <div class="form-grid">
+   <label>日付<input type="date" id="fDate" required><span class="field-error" id="eDate"></span></label>
+   <label>勤務区分<select id="fStatus"></select><span class="field-error" id="eStatus"></span></label>
+   <label>開始時刻<input type="time" id="fStart"><span class="field-error" id="eStart"></span></label>
+   <label>終了時刻<input type="time" id="fEnd"><span class="field-error" id="eEnd"></span></label>
+   <label>休憩（分）<input type="number" id="fBreak" min="0" step="1"><span class="field-error" id="eBreak"></span></label>
+   <label class="full">作業内容・備考<textarea id="fMemo" rows="3" maxlength="2000" placeholder="作業内容、連絡事項など"></textarea><span class="field-error" id="eMemo"></span></label>
+  </div>
+  <div class="modal-foot"><button type="button" class="btn btn-outline close-dialog">キャンセル</button><button type="submit" class="btn btn-primary">保存する</button></div>
+ </form>
+</dialog>
+<dialog id="settingsDialog" class="modal">
+ <form id="settingsForm" method="dialog">
+  <div class="modal-head"><div><h2>基本設定</h2><p>一括入力・新規登録の初期値に使用します。</p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+  <div class="form-grid">
+   <label>デフォルト始業<input type="time" id="sStart" required></label><label>デフォルト終業<input type="time" id="sEnd" required></label>
+   <label>デフォルト休憩（分）<input type="number" id="sBreak" min="0" step="1" required></label><label>所定労働時間（分）<input type="number" id="sStandard" min="1" step="1" required></label>
+   <label class="full">端数丸め<select id="sRounding"><option value="1">1分単位（実働を切り捨て）</option><option value="15">15分単位（実働を切り捨て）</option></select></label>
+  </div>
+  <div class="modal-foot"><button type="button" class="btn btn-outline close-dialog">閉じる</button><button type="submit" class="btn btn-primary">設定を保存</button></div>
+ </form>
+</dialog>
+<dialog id="bulkDialog" class="modal">
+ <form id="bulkForm" method="dialog">
+  <div class="modal-head"><div><h2>平日に定時データを一括入力</h2><p id="bulkDescription"></p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+  <label class="radio-line"><input type="radio" name="bulkMode" value="skip" checked> 既存日はスキップ</label><label class="radio-line"><input type="radio" name="bulkMode" value="overwrite"> 既存日を上書き</label>
+  <p class="hint">土日を除く平日に、設定の始業・終業・休憩時間で登録します。</p>
+  <div class="modal-foot"><button type="button" class="btn btn-outline close-dialog">キャンセル</button><button type="submit" class="btn btn-primary">一括入力する</button></div>
+ </form>
+</dialog>
+<dialog id="importDialog" class="modal">
+ <form id="importForm" method="dialog">
+  <div class="modal-head"><div><h2>JSONバックアップの復元</h2><p id="importDescription"></p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+  <label class="radio-line"><input type="radio" name="importMode" value="merge" checked> 既存データと統合（日付が同じ場合は上書き）</label><label class="radio-line"><input type="radio" name="importMode" value="replace"> 全データを置き換え</label>
+  <div class="modal-foot"><button type="button" class="btn btn-outline close-dialog">キャンセル</button><button type="submit" class="btn btn-primary">復元する</button></div>
+ </form>
+</dialog>
+<dialog id="helpDialog" class="modal tutorial-modal">
+ <div class="modal-head"><div><h2>勤怠管理ツールの使い方</h2><p id="tutorialStepLabel"></p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+ <div class="tutorial-progress" id="tutorialProgress"></div><div class="tutorial-content" id="tutorialContent"></div>
+ <label class="radio-line"><input type="checkbox" id="skipTutorial"> 次回から表示しない</label>
+ <div class="modal-foot"><button type="button" class="btn btn-outline" id="tutorialPrev">戻る</button><button type="button" class="btn btn-primary" id="tutorialNext">次へ</button></div>
+</dialog>
+<dialog id="confirmDialog" class="modal confirm-modal">
+ <div class="modal-head"><div><h2 id="confirmTitle">確認</h2><p id="confirmText"></p></div><button type="button" class="icon-btn close-dialog" aria-label="閉じる" data-icon="x"></button></div>
+ <div id="confirmExtra"></div><div class="modal-foot"><button type="button" class="btn btn-outline" id="confirmCancel">キャンセル</button><button type="button" class="btn btn-danger" id="confirmOk">実行する</button></div>
+</dialog>
+</body>
+</html>

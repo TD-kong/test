@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f7f7f2">
+<title>My Gourmet Map</title>
+<link rel="icon" id="favicon"><link rel="apple-touch-icon" id="appleIcon">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="css/style.css">
+<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script defer src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<script defer src="js/storage.js"></script><script defer src="js/io.js"></script><script defer src="js/map.js"></script><script defer src="js/app.js"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="#"><span class="brand-mark">✦</span><span>My Gourmet Map<small>MY FOOD JOURNAL</small></span></a><div class="top-actions"><button id="themeBtn" class="icon-btn" aria-label="テーマ切替" title="テーマ切替">◐</button><button id="helpBtn" class="icon-btn" aria-label="使い方" title="使い方">？</button><button id="addBtn" class="primary"><span>＋</span> 店を登録</button></div></header>
+<main class="app-shell">
+<aside class="sidebar">
+<div class="intro"><p class="eyebrow">YOUR PERSONAL FOOD MAP</p><h1>おいしい記憶を、<br>地図に残そう。</h1><p class="sub">お気に入りのお店も、次に行きたいお店も。</p></div>
+<div class="stats"><button class="stat active" data-status="all"><strong id="totalCount">0</strong><span>すべて</span></button><button class="stat" data-status="visited"><strong id="visitedCount">0</strong><span>行った</span></button><button class="stat" data-status="wishlist"><strong id="wishCount">0</strong><span>行きたい</span></button></div>
+<div class="search-wrap"><span>⌕</span><input id="searchInput" placeholder="店名・メモ・タグで検索" aria-label="検索"><button id="clearSearch" aria-label="検索をクリア">×</button></div>
+<div class="filter-row"><select id="categoryFilter" aria-label="カテゴリ"><option value="all">すべてのカテゴリ</option></select><select id="ratingFilter" aria-label="最低評価"><option value="0">評価すべて</option><option value="3">★ 3以上</option><option value="4">★ 4以上</option><option value="4.5">★ 4.5以上</option></select></div>
+<div class="filter-row"><select id="sortSelect" aria-label="並び替え"><option value="created">登録が新しい順</option><option value="visit">訪問日が新しい順</option><option value="rating">評価が高い順</option><option value="name">店名順</option></select><label class="small-toggle"><input type="checkbox" id="boundsFilter"> 地図範囲内</label></div>
+<div class="tag-filters" id="tagFilters"></div>
+<div class="list-head"><span id="resultCount">0件</span><div><button id="selectAllBtn" class="text-btn">選択</button><button id="bulkDeleteBtn" class="text-btn danger hidden">一括削除</button><button id="bulkTagBtn" class="text-btn hidden">タグ追加</button></div></div>
+<div id="storeList" class="store-list"></div>
+<div id="emptyState" class="empty hidden"><div class="empty-emoji">🍜</div><h3>まだお店がありません</h3><p>お気に入りのお店を登録して、<br>自分だけのグルメ地図を作ろう。</p><button class="primary" id="emptyAddBtn">＋ 最初のお店を登録</button><button class="secondary" id="sampleBtn">サンプルデータを試す</button></div>
+</aside>
+<section class="content">
+<div class="content-head"><div><p class="eyebrow">MY PLACES</p><h2 id="viewTitle">お店の地図</h2></div><div class="view-switch" role="group" aria-label="表示モード"><button data-view="map" class="selected" title="地図＋一覧">地図</button><button data-view="cards" title="カード">カード</button><button data-view="list" title="リスト">リスト</button></div></div>
+<div id="offlineBanner" class="offline-banner hidden">地図を読み込めません。カード・リスト表示と登録・編集は引き続き利用できます。</div>
+<div id="mapView" class="map-layout"><div id="map"></div><div class="map-controls"><button id="locateBtn" class="map-control" title="現在地">◎</button><button id="mapAddBtn" class="map-control" title="地図上で店を登録">＋</button></div><div class="map-hint">地図をクリックして場所を指定</div></div>
+<div id="cardsView" class="cards-view hidden"></div><div id="tableView" class="table-view hidden"></div>
+<div class="mobile-sheet" id="mobileSheet"><button id="sheetHandle" class="sheet-handle" aria-label="一覧を開閉"><span></span></button><div class="sheet-title">登録したお店 <b id="mobileCount">0</b></div><div id="mobileList" class="mobile-list"></div></div>
+<div class="data-tools"><button id="exportJsonBtn">JSONバックアップ</button><button id="importJsonBtn">JSON読み込み</button><button id="exportCsvBtn">CSV出力</button><button id="importCsvBtn">CSV取り込み</button><button id="tutorialBtn">使い方</button><input type="file" id="jsonFile" accept=".json,application/json" hidden><input type="file" id="csvFile" accept=".csv,text/csv" hidden></div>
+</section></main>
+<div id="modalRoot"></div><div id="toast" class="toast" role="status"></div>
+<noscript>このアプリを利用するにはJavaScriptを有効にしてください。</noscript>
+</body></html>
