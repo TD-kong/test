@@ -41,11 +41,11 @@ function exportData() {
     dlAnchorElem.click();
 }
 
-function importData(event) {
+async function importData(event) {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             const imported = JSON.parse(e.target.result);
             if (Array.isArray(imported)) {
@@ -54,6 +54,9 @@ function importData(event) {
                 renderCategories();
                 renderPrompts();
                 showToast('データをインポートしました');
+                if (typeof pushToCloud === 'function') {
+                    await pushToCloud(false);
+                }
             } else {
                 alert('無効なJSONフォーマットです。');
             }

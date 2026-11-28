@@ -26,5 +26,5 @@ function showToast(message) {
     toast.classList.remove('translate-y-20', 'opacity-0');
     setTimeout(() => {
         toast.classList.add('translate-y-20', 'opacity-0');
-    }, 2000);
+    }, 2500);
 }

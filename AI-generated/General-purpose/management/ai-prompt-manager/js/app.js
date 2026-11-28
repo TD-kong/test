@@ -2,7 +2,7 @@
  * Main Application Actions & Event Handlers
  */
 
-function savePrompt(e) {
+async function savePrompt(e) {
     e.preventDefault();
     const id = document.getElementById('promptId').value;
     const title = document.getElementById('formTitle').value;
@@ -42,15 +42,21 @@ function savePrompt(e) {
     renderCategories();
     renderPrompts();
     showToast('保存しました');
+
+    // Push changes to GAS cloud
+    await pushToCloud(false);
 }
 
-function deletePrompt(id) {
+async function deletePrompt(id) {
     if (confirm('本当にこのプロンプトを削除しますか？')) {
         prompts = prompts.filter(p => p.id !== id);
         saveToStorage();
         renderCategories();
         renderPrompts();
         showToast('削除しました');
+
+        // Push deletion to GAS cloud
+        await pushToCloud(false);
     }
 }
 
@@ -72,8 +78,25 @@ function downloadActiveMd() {
     }
 }
 
-// Initial Render on page load
-document.addEventListener('DOMContentLoaded', () => {
+// Initial Render & Cloud Sync on page load
+document.addEventListener('DOMContentLoaded', async () => {
     renderCategories();
     renderPrompts();
+
+    const config = getGasConfig();
+    if (config.url) {
+        await pullFromCloud(true);
+    } else {
+        updateSyncStatusUI('unconfigured', 'ローカルのみ');
+    }
+});
+
+// Auto-pull when returning to the tab/app on PC or smartphone
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+        const config = getGasConfig();
+        if (config.url) {
+            await pullFromCloud(true);
+        }
+    }
 });
