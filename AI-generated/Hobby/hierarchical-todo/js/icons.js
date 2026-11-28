@@ -1,0 +1,1 @@
+(function(){const map={check:'✓',plus:'＋',chevron:'⌄',grip:'⠿',edit:'✎',trash:'⌫',more:'⋮',folder:'▣'};window.TodoIcons={get:function(n){return map[n]||'•';},init:function(){}};})();

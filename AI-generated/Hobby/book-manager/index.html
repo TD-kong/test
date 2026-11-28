@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Book Manager</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%234f46e5'/%3E%3Cpath d='M8 9h10a4 4 0 0 1 4 4v19a4 4 0 0 0-4-4H8zM32 9H22v23a4 4 0 0 1 4-4h6z' fill='white'/%3E%3C/svg%3E">
+<script>
+(function(){try{var d=localStorage.getItem('ndl_book_manager_v1');var p=d?JSON.parse(d).preferences:null;var t=p&&p.theme||'system';if(t==='system')t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}}());
+</script>
+<link rel="stylesheet" href="css/style.css">
+<script defer src="js/ndl.js"></script><script defer src="js/store.js"></script><script defer src="js/io.js"></script><script defer src="js/app.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-icon" aria-hidden="true">▤</span><div><strong>Book Manager</strong><small>Personal Library · NDL / NDC</small></div></div>
+  <div class="head-actions"><button id="themeBtn" class="icon-btn" title="テーマ切替" aria-label="テーマ切替">◐</button><button id="helpBtn" class="icon-btn" title="使い方" aria-label="使い方">?</button><button id="addBtn" class="primary">＋ 新しい本</button></div>
+</header>
+<main class="app">
+<section class="toolbar">
+  <div class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="タイトル・著者・NDC・ISBN・メモを検索（ / ）" autocomplete="off"><button id="clearSearch" class="clear-btn" aria-label="検索をクリア">×</button></div>
+  <div class="filters">
+    <select id="statusFilter" aria-label="読書ステータス"><option value="all">すべての状態</option><option value="unread">未読</option><option value="reading">読書中</option><option value="completed">読了</option><option value="wishlist">積読・購入予定</option></select>
+    <select id="ndcFilter" aria-label="NDC分類"><option value="all">すべての分類</option><option value="unclassified">未分類</option></select>
+    <select id="tagFilter" aria-label="タグ"><option value="all">すべてのタグ</option></select>
+    <select id="sortBy" aria-label="並び替え"><option value="updatedAt">更新日</option><option value="createdAt">登録日</option><option value="ndc">NDC順</option><option value="title">タイトル</option><option value="rating">評価</option></select>
+    <button id="sortOrder" class="icon-btn" title="昇順/降順">↓</button>
+    <button id="resetFilter" class="secondary">リセット</button>
+  </div>
+  <div class="view-tools"><span id="count" class="count">0冊</span><label class="switch-label"><input id="groupNdc" type="checkbox"> NDCで分類</label><div class="segmented"><button data-view="card" class="active">カード</button><button data-view="list">リスト</button></div><button id="bulkBtn" class="secondary">一括操作</button></div>
+</section>
+<section id="welcome" class="welcome hidden"><div class="welcome-book">▤</div><h2>本棚をつくりましょう</h2><p>最初の1冊を登録するか、サンプル蔵書で機能を試せます。</p><div><button id="welcomeAdd" class="primary">＋ 最初の1冊を登録</button><button id="sampleBtn" class="secondary">サンプル5冊を追加</button></div></section>
+<section id="bulkBar" class="bulkbar hidden"><span id="selectedCount">0冊選択</span><select id="bulkStatus"><option value="">状態を一括変更…</option><option value="unread">未読</option><option value="reading">読書中</option><option value="completed">読了</option><option value="wishlist">積読・購入予定</option></select><button id="bulkApply" class="secondary">適用</button><button id="bulkDelete" class="danger">選択を削除</button><button id="bulkCancel" class="secondary">終了</button></section>
+<section id="bookArea" aria-live="polite"></section>
+</main>
+<button id="fab" class="fab" aria-label="新しい本を登録">＋</button>
+<div id="toast" class="toast" role="status"></div>
+<dialog id="bookDialog" class="book-dialog"><form id="bookForm" method="dialog">
+  <div class="dialog-head"><div><h2 id="dialogTitle">本を登録</h2><p>書誌情報と読書状況を管理</p></div><button type="button" id="closeDialog" class="icon-btn" aria-label="閉じる">×</button></div>
+  <input type="hidden" id="bookId">
+  <div class="form-grid">
+    <label class="field span2"><span>タイトル <b>*</b></span><input id="title" maxlength="500" required></label>
+    <label class="field"><span>著者</span><input id="author" maxlength="300"></label><label class="field"><span>出版社</span><input id="publisher" maxlength="300"></label>
+    <label class="field"><span>NDC（例：007.64）</span><input id="ndc" inputmode="decimal" maxlength="8"><small id="ndcHelp">大分類・綱目の参考情報を表示</small><em id="ndcError" class="error"></em></label>
+    <label class="field"><span>読書ステータス</span><select id="status"><option value="unread">未読</option><option value="reading">読書中</option><option value="completed">読了</option><option value="wishlist">積読・購入予定</option></select></label>
+    <label class="field"><span>JP番号</span><input id="jpNumber" maxlength="30" placeholder="例：23456789"></label><label class="field"><span>NDL書誌ID</span><input id="ndlBibId" maxlength="30" placeholder="例：031234567"></label>
+    <label class="field"><span>ISBN</span><input id="isbn" maxlength="20" placeholder="ハイフン可"></label><label class="field"><span>評価</span><select id="rating"><option value="0">未評価</option><option value="1">★☆☆☆☆</option><option value="2">★★☆☆☆</option><option value="3">★★★☆☆</option><option value="4">★★★★☆</option><option value="5">★★★★★</option></select></label>
+    <label class="field"><span>読了日</span><input id="completedDate" type="date"></label><label class="field"><span>タグ（カンマ区切り）</span><input id="tags" placeholder="技術書, 設計"></label>
+    <label class="field span2"><span>表紙画像URL（http/https）</span><input id="coverUrl" placeholder="https://..."></label>
+    <label class="field span2"><span>または表紙画像ファイル</span><input id="coverFile" type="file" accept="image/*"><small>長辺300px以下に縮小・圧縮して保存します。</small></label>
+    <label class="field span2"><span>メモ・保管場所</span><textarea id="memo" rows="3"></textarea></label>
+  </div><div class="form-error" id="formError"></div>
+  <div class="dialog-actions"><button type="button" id="cancelDialog" class="secondary">キャンセル</button><button type="submit" class="primary">保存する</button></div>
+</form></dialog>
+<dialog id="helpDialog" class="help-dialog"><div class="dialog-head"><div><h2>使い方</h2><p>分類して、探して、読書を記録</p></div><button id="closeHelp" class="icon-btn">×</button></div>
+<div class="help-content"><h3>NDC 0〜9類</h3><div class="ndc-guide" id="ndcGuide"></div><h3>書誌識別子</h3><p><b>JP番号</b>は全国書誌番号、<b>NDL書誌ID</b>は国立国会図書館の書誌レコード識別子、<b>ISBN</b>は書籍の国際標準番号です。入力した番号やNDCを使ってNDL Searchを検索できます。</p><h3>操作</h3><p><kbd>/</kbd> 検索へフォーカス　<kbd>Esc</kbd> モーダルを閉じる</p><p>設定・蔵書メニューからJSONバックアップを出力し、別環境でインポートできます。データはこのブラウザのlocalStorageに保存されます。</p></div></dialog>
+<dialog id="dataDialog" class="help-dialog"><div class="dialog-head"><div><h2>データ管理</h2><p>バックアップ・復元・保存容量</p></div><button id="closeData" class="icon-btn">×</button></div><div class="data-actions"><button id="exportBtn" class="secondary">JSONエクスポート</button><label class="secondary file-button">JSONインポート<input id="importFile" type="file" accept=".json,application/json"></label><div id="storageUsage" class="usage"></div></div></dialog>
+<script>/* menu trigger rendered in app */</script>
+</body></html>
