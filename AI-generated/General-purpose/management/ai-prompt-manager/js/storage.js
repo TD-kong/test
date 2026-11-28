@@ -12,6 +12,8 @@ const DEFAULT_PROMPTS = [
         tags: ['refactor', 'clean-code'],
         description: '提出されたコードを保守性の高いコードにリファクタリングするためのシステムプロンプト。',
         content: `# 役割\nあなたはシニアソフトウェアエンジニアです。\n\n# 指示\n以下の原則に従ってコードをリファクタリングしてください：\n1. 読みやすさの向上\n2. 適切な命名規則\n3. 冗長な処理の削除`,
+        pinned: true,
+        favorite: true,
         updatedAt: new Date().toISOString()
     }
 ];
@@ -25,7 +27,8 @@ function saveToStorage() {
 function exportAllAsMarkdown() {
     let md = `# AI Prompt / Instruction Context List\n\nGenerated at: ${new Date().toLocaleString()}\n\n`;
     prompts.forEach((p) => {
-        md += `## [${p.category || 'General'}] ${p.title}\n`;
+        const flags = [p.pinned ? '📌' : '', p.favorite ? '⭐' : ''].filter(Boolean).join('');
+        md += `## ${flags ? flags + ' ' : ''}[${p.category || 'General'}] ${p.title}\n`;
         if (p.description) md += `> ${p.description}\n\n`;
         md += `\`\`\`markdown\n${p.content}\n\`\`\`\n\n---\n\n`;
     });
@@ -49,7 +52,11 @@ async function importData(event) {
         try {
             const imported = JSON.parse(e.target.result);
             if (Array.isArray(imported)) {
-                prompts = imported;
+                prompts = imported.map(item => ({
+                    ...item,
+                    pinned: Boolean(item.pinned),
+                    favorite: Boolean(item.favorite)
+                }));
                 saveToStorage();
                 renderCategories();
                 renderPrompts();

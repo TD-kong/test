@@ -8,6 +8,8 @@ async function savePrompt(e) {
     const title = document.getElementById('formTitle').value;
     const category = document.getElementById('formCategory').value.trim();
     const tags = document.getElementById('formTags').value.split(',').map(t => t.trim()).filter(Boolean);
+    const pinned = document.getElementById('formPinned').checked;
+    const favorite = document.getElementById('formFavorite').checked;
     const description = document.getElementById('formDescription').value;
     const content = document.getElementById('formContent').value;
 
@@ -19,6 +21,8 @@ async function savePrompt(e) {
                 title,
                 category,
                 tags,
+                pinned,
+                favorite,
                 description,
                 content,
                 updatedAt: new Date().toISOString()
@@ -30,6 +34,8 @@ async function savePrompt(e) {
             title,
             category,
             tags,
+            pinned,
+            favorite,
             description,
             content,
             updatedAt: new Date().toISOString()
@@ -43,8 +49,55 @@ async function savePrompt(e) {
     renderPrompts();
     showToast('保存しました');
 
-    // Push changes to GAS cloud
     await pushToCloud(false);
+}
+
+async function togglePin(id) {
+    const index = prompts.findIndex(p => p.id === id);
+    if (index === -1) return;
+
+    const nextState = !prompts[index].pinned;
+    prompts[index] = {
+        ...prompts[index],
+        pinned: nextState,
+        updatedAt: new Date().toISOString()
+    };
+
+    saveToStorage();
+    renderPrompts();
+    refreshDetailModalState();
+    showToast(nextState ? '上部にピン留めしました' : 'ピン留めを解除しました');
+
+    await pushToCloud(false);
+}
+
+async function toggleFavorite(id) {
+    const index = prompts.findIndex(p => p.id === id);
+    if (index === -1) return;
+
+    const nextState = !prompts[index].favorite;
+    prompts[index] = {
+        ...prompts[index],
+        favorite: nextState,
+        updatedAt: new Date().toISOString()
+    };
+
+    saveToStorage();
+    renderPrompts();
+    refreshDetailModalState();
+    showToast(nextState ? 'お気に入りに追加しました' : 'お気に入りを解除しました');
+
+    await pushToCloud(false);
+}
+
+async function toggleDetailPin() {
+    if (!activeDetailPrompt) return;
+    await togglePin(activeDetailPrompt.id);
+}
+
+async function toggleDetailFavorite() {
+    if (!activeDetailPrompt) return;
+    await toggleFavorite(activeDetailPrompt.id);
 }
 
 async function deletePrompt(id) {
@@ -55,7 +108,6 @@ async function deletePrompt(id) {
         renderPrompts();
         showToast('削除しました');
 
-        // Push deletion to GAS cloud
         await pushToCloud(false);
     }
 }
@@ -78,7 +130,6 @@ function downloadActiveMd() {
     }
 }
 
-// Initial Render & Cloud Sync on page load
 document.addEventListener('DOMContentLoaded', async () => {
     renderCategories();
     renderPrompts();
@@ -91,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Auto-pull when returning to the tab/app on PC or smartphone
 document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible') {
         const config = getGasConfig();

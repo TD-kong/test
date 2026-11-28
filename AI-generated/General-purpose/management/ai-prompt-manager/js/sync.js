@@ -63,9 +63,6 @@ function updateSyncStatusUI(state, text) {
     }
 }
 
-/**
- * Pull latest prompts from GAS (doGet)
- */
 async function pullFromCloud(silent = false) {
     const config = getGasConfig();
     if (!config.url) {
@@ -92,7 +89,6 @@ async function pullFromCloud(silent = false) {
             return false;
         }
 
-        // サーバーにまだデータが空で、ローカルにデータがある場合は初回アップロードを促す
         if ((!data.prompts || data.prompts.length === 0) && !data.updatedAt && prompts.length > 0) {
             await pushToCloud(true);
             return true;
@@ -104,6 +100,9 @@ async function pullFromCloud(silent = false) {
 
         renderCategories();
         renderPrompts();
+        if (typeof refreshDetailModalState === 'function') {
+            refreshDetailModalState();
+        }
         updateSyncStatusUI('synced', '同期済み');
         if (!silent) showToast('クラウドから最新データを取得しました');
         return true;
@@ -115,10 +114,6 @@ async function pullFromCloud(silent = false) {
     }
 }
 
-/**
- * Push local prompts to GAS (doPost)
- * Note: Uses text/plain to avoid CORS preflight (OPTIONS) issues with GAS Web Apps
- */
 async function pushToCloud(force = false) {
     const config = getGasConfig();
     if (!config.url) {
@@ -179,7 +174,6 @@ async function manualSyncFromCloud() {
     await pullFromCloud(false);
 }
 
-// Conflict Modal Handlers
 function openConflictModal(conflictData) {
     const serverTime = conflictData.serverUpdatedAt
         ? new Date(conflictData.serverUpdatedAt).toLocaleString()
@@ -217,7 +211,6 @@ async function resolveConflictForcePush() {
     }
 }
 
-// Sync Settings Modal Handlers
 function openSyncSettingsModal() {
     const config = getGasConfig();
     document.getElementById('gasUrlInput').value = config.url || '';
